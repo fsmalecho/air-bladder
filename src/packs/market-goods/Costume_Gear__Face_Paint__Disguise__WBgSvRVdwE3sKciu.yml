@@ -1,12 +1,12 @@
 _id: WBgSvRVdwE3sKciu
 name: Costume Gear (Face Paint, Disguise)
 type: item
-img: systems/air-bladder/art/game-icons/body/duality.svg
+img: systems/mondolme/art/game-icons/body/duality.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     marketSource: 2e
 system:
   description: Paint, wigs, and props for becoming someone you're not.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!WBgSvRVdwE3sKciu'

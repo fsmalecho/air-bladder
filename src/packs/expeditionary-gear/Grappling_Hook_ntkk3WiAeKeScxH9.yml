@@ -2,7 +2,7 @@ name: Grappling Hook
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/grapple.svg
+img: systems/mondolme/art/game-icons/tools/grapple.svg
 effects: []
 _id: ntkk3WiAeKeScxH9
 _stats:

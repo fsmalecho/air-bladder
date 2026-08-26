@@ -3,7 +3,7 @@ name: Blank Book
 type: item
 flags:
   core: {}
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 _stats:
   coreVersion: '14.365'

@@ -63,8 +63,8 @@ const ARMOR_NAMES = ["Tough Hide", "Carapace", "Shell", "Scales"];
 // wearing the shape of a flake. Filled from game.cairn.monsterGenerator below,
 // which is the same module the generator itself reads, so the two cannot part.
 let CREATURE_CATEGORIES = null;
-const ICON_PREFIX = "systems/air-bladder/art/game-icons/";
-const ICON_FALLBACK = "systems/air-bladder/icons/monster.svg";
+const ICON_PREFIX = "systems/mondolme/art/game-icons/";
+const ICON_FALLBACK = "systems/mondolme/icons/monster.svg";
 const CORE_BAG = "icons/svg/item-bag.svg";
 
 let failed = false;
@@ -206,13 +206,13 @@ try {
       // Stale actors first: a leftover from an aborted run would satisfy the
       // regenerate leg's "name kept" check without the fix ever running.
       for (const s of game.actors.filter((a) => a.name.startsWith(prefix))) await s.delete();
-      await game.settings.set("air-bladder", "show-generate-header", true);
+      await game.settings.set("mondolme", "show-generate-header", true);
       await ui.sidebar.changeTab?.("actors", "primary");
       await new Promise((res) => setTimeout(res, 600));
       // The Warden tables' drawn counts BEFORE any generation. Asserted as a
       // delta, not as zero: a human may have drawn on the world copies, and
       // that stale state must not be able to fail (or green) this probe.
-      const pack = game.packs.get("air-bladder.warden-monsters");
+      const pack = game.packs.get("mondolme.warden-monsters");
       const tables = await pack.getDocuments();
       return {
         button: !!document.querySelector("#cairn-character-gen-button .create-monster-button"),
@@ -327,7 +327,7 @@ try {
     /* --- roll(), never draw() -------------------------------------------- */
 
     const drawnAfter = await page.evaluate(async () => {
-      const pack = game.packs.get("air-bladder.warden-monsters");
+      const pack = game.packs.get("mondolme.warden-monsters");
       const tables = await pack.getDocuments();
       return tables.map((t) => `${t.name}:${t.results.filter((r) => r.drawn).length}`).sort();
     });
@@ -487,8 +487,8 @@ try {
   });
   if (!permsPrior) fail("no Alice user in the world — run `npm run dev:players` first");
   genPrior = await page.evaluate(async () => {
-    const prior = game.settings.get("air-bladder", "allow-player-generate");
-    if (!prior) await game.settings.set("air-bladder", "allow-player-generate", true);
+    const prior = game.settings.get("mondolme", "allow-player-generate");
+    if (!prior) await game.settings.set("mondolme", "allow-player-generate", true);
     return prior;
   });
 
@@ -525,7 +525,7 @@ try {
   }
   if (genPrior === false) {
     await page.evaluate(async () => {
-      await game.settings.set("air-bladder", "allow-player-generate", false);
+      await game.settings.set("mondolme", "allow-player-generate", false);
     }).catch(() => {});
   }
   await page.evaluate(async (prefix) => {

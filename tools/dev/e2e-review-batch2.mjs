@@ -82,10 +82,10 @@ try {
     // (prepareData runs once, under the new value, exactly as it would after).
     // Snapshot BEFORE the first write, not after — the value this world had is
     // the only thing that can be put back.
-    cleanup.panicWas = await page.evaluate(() => game.settings.get("air-bladder", "use-panic"));
+    cleanup.panicWas = await page.evaluate(() => game.settings.get("mondolme", "use-panic"));
 
     const panicOn = await page.evaluate(async () => {
-      await game.settings.set("air-bladder", "use-panic", true);
+      await game.settings.set("mondolme", "use-panic", true);
       const settle = (ms) => new Promise((r) => setTimeout(r, ms));
       const a = await CONFIG.Actor.documentClass.create({
         name: "ZZ PROBE B2 PanicOn", type: "character",
@@ -116,7 +116,7 @@ try {
     }
 
     const panicOff = await page.evaluate(async () => {
-      await game.settings.set("air-bladder", "use-panic", false);
+      await game.settings.set("mondolme", "use-panic", false);
       const settle = (ms) => new Promise((r) => setTimeout(r, ms));
       const a = await CONFIG.Actor.documentClass.create({
         name: "ZZ PROBE B2 PanicOff", type: "character",
@@ -151,7 +151,7 @@ try {
     console.log("\nhireling-typed docs in the npc gates");
 
     const hire = await page.evaluate(async () => {
-      const maxEquip = Number(game.settings.get("air-bladder", "max-equip-slots"));
+      const maxEquip = Number(game.settings.get("mondolme", "max-equip-slots"));
       const want = maxEquip + 3;
       // role container: the Kind parity contract lives in the SHEET now
       // (kindDisplay; system.classLabel is deleted, review #6 batch 3), and
@@ -192,7 +192,7 @@ try {
     // the mule arrived wearing a random HUMAN portrait — which passed a
     // mystery-man check just fine. The container branch runs after the
     // portrait one and must win with a glyph from the icon dir.
-    hire.img?.startsWith("systems/air-bladder/icons/")
+    hire.img?.startsWith("systems/mondolme/icons/")
       ? ok("container art stamped at creation", hire.img.split("/").pop())
       : fail(`hireling mount got ${hire.img ?? "no img"}`, "isContainerish still keys type === \"npc\" (a person portrait is the old behaviour)");
 
@@ -242,8 +242,8 @@ try {
     console.log("\nread actions on a locked compendium sheet");
 
     const packPrep = await page.evaluate(async () => {
-      const pack = game.packs.get("air-bladder.monsters");
-      if (!pack) return { error: "no air-bladder.monsters pack" };
+      const pack = game.packs.get("mondolme.monsters");
+      if (!pack) return { error: "no mondolme.monsters pack" };
       const wasUnlocked = !pack.locked;
       if (wasUnlocked) await pack.configure({ locked: true });
       const idx = await pack.getIndex();
@@ -254,7 +254,7 @@ try {
       cleanup.packWasUnlocked = packPrep.wasUnlocked;
       const locked = await page.evaluate(async ({ docId }) => {
         const settle = (ms) => new Promise((r) => setTimeout(r, ms));
-        const pack = game.packs.get("air-bladder.monsters");
+        const pack = game.packs.get("mondolme.monsters");
         const doc = await pack.getDocument(docId);
         const sheet = doc.sheet;
         await sheet.render(true);
@@ -420,7 +420,7 @@ try {
         if (!game.user.hasPermission("ACTOR_CREATE")) {
           return { error: "Alice lacks ACTOR_CREATE — the widen never reached her client" };
         }
-        const gen = await import("/systems/air-bladder/module/character-generator.js");
+        const gen = await import("/systems/mondolme/module/character-generator.js");
         const pc = await fromUuid(pcUuid);
         const made = await gen.grantContainers(pc, [{ name: "Rivertooth", slots: 6, grantSource: "question:9" }]);
         const L = CONST.DOCUMENT_OWNERSHIP_LEVELS;
@@ -441,7 +441,7 @@ try {
           synced,
           def: horse.ownership.default,
           aliceOwner: horse.ownership[game.user.id] === L.OWNER,
-          flagCleared: horse.getFlag("air-bladder", "ownershipSyncPending") === undefined,
+          flagCleared: horse.getFlag("mondolme", "ownershipSyncPending") === undefined,
         };
       }, { pcUuid: grantPrep.pcUuid });
       if (granted.error) fail("player grant", granted.error);
@@ -470,7 +470,7 @@ try {
           const orig = game.settings.set;
           globalThis.__b2Settle = { orig, last: Date.now() };
           game.settings.set = function (ns, key, ...rest) {
-            if (ns === "air-bladder" && key === "custom-portrait-list") {
+            if (ns === "mondolme" && key === "custom-portrait-list") {
               globalThis.__b2Settle.last = Date.now();
             }
             return orig.call(this, ns, key, ...rest);
@@ -524,7 +524,7 @@ try {
         const orig = game.settings.set;
         globalThis.__b2SetSpy = { orig, count: 0 };
         game.settings.set = function (ns, key, ...rest) {
-          if (ns === "air-bladder" && key === "custom-portrait-list") globalThis.__b2SetSpy.count++;
+          if (ns === "mondolme" && key === "custom-portrait-list") globalThis.__b2SetSpy.count++;
           return orig.call(this, ns, key, ...rest);
         };
       });
@@ -534,7 +534,7 @@ try {
     // one that clicked.
     cleanup.portraitDir = "zz-probe-b2-portraits";
     await idlePage.evaluate(async () => {
-      await game.settings.set("air-bladder", "custom-portrait-folder", "zz-probe-b2-portraits");
+      await game.settings.set("mondolme", "custom-portrait-folder", "zz-probe-b2-portraits");
     });
     await page.waitForTimeout(4000);
     const counts = [];
@@ -570,10 +570,10 @@ try {
       if (permSnap && JSON.stringify(game.settings.get("core", "permissions")) !== permSnap) {
         await game.settings.set("core", "permissions", JSON.parse(permSnap));
       }
-      if (packWasUnlocked) await game.packs.get("air-bladder.monsters")?.configure({ locked: false });
+      if (packWasUnlocked) await game.packs.get("mondolme.monsters")?.configure({ locked: false });
       if (gm2Made) await game.users.getName("ZZ PROBE GM2")?.delete();
-      if (panicWas !== null && game.settings.get("air-bladder", "use-panic") !== panicWas) {
-        await game.settings.set("air-bladder", "use-panic", panicWas);
+      if (panicWas !== null && game.settings.get("mondolme", "use-panic") !== panicWas) {
+        await game.settings.set("mondolme", "use-panic", panicWas);
       }
     }, cleanup);
   } catch (e) {

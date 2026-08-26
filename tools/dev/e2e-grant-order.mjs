@@ -133,7 +133,7 @@ try {
   /* --- setup ----------------------------------------------------------------- */
 
   const setup = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     // A stale actor from an aborted run would satisfy preconditions this run
     // never established.
     for (const a of game.actors.filter((a) => a.name?.startsWith("ZZ GrantOrder"))) await a.delete();
@@ -149,9 +149,9 @@ try {
       const hit = (await pack.getIndex()).find((e) => e.name === name);
       return hit ? (await pack.getDocument(hit._id))?.uuid ?? null : null;
     };
-    out.marchguard = await bg("air-bladder.backgrounds-2e", "Marchguard");
-    out.oilCollector = await bg("air-bladder.backgrounds-barebones", "Oil Collector");
-    out.acolyte = await bg("air-bladder.backgrounds-barebones", "Acolyte");
+    out.marchguard = await bg("mondolme.backgrounds-2e", "Marchguard");
+    out.oilCollector = await bg("mondolme.backgrounds-barebones", "Oil Collector");
+    out.acolyte = await bg("mondolme.backgrounds-barebones", "Acolyte");
     return out;
   });
   saved = setup.saved;
@@ -166,7 +166,7 @@ try {
 
   const generate = (kind, bgUuid) => page.evaluate(async ({ kind, bgUuid, helpers }) => {
     const H = new Function(helpers)();
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     let actor = null;
     try {
       if (kind === "2e" || kind === "barebones") {
@@ -408,7 +408,7 @@ try {
       // sort, then group each book's pages under it. Asked with the namespace
       // _prepareContext uses. This asserts the SHARED ordering, not a rendered
       // print page — dev:print covers the page itself.
-      const { groupPagesUnderBooks } = await import("/systems/air-bladder/module/grimoire.js");
+      const { groupPagesUnderBooks } = await import("/systems/mondolme/module/grimoire.js");
       const ns = sheet._itemNamespaces().nameNs;
       const viaHelper = groupPagesUnderBooks(
         actor, sheet._sortItemsForDisplay(actor.items.contents, ns), (i) => i.id,

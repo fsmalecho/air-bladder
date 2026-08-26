@@ -1,17 +1,17 @@
 _id: pqAZIXEBPlCn9kEH
 name: Heavy Destrier
 type: npc
-img: systems/air-bladder/icons/horse.svg
+img: systems/mondolme/icons/horse.svg
 prototypeToken:
   name: Heavy Destrier
   texture:
-    src: systems/air-bladder/icons/horse.svg
+    src: systems/mondolme/icons/horse.svg
 items: []
 effects: []
 folder: CCMtMzMwK7XAuWfq
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: background-2e
 system:
   description: 'From the Outrider background. A beast built for war, an imposing creature. 8 HP, 1 Armor, hooves (d10+d10), +2 slots.'
@@ -27,6 +27,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!pqAZIXEBPlCn9kEH'

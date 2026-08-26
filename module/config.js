@@ -31,14 +31,14 @@ Cairn.characterGenerator2e = {
     // dice instead.)
     age: "2d20 + 10",
     items: {
-      physique: "air-bladder.tables-2e;Physique",
-      skin: "air-bladder.tables-2e;Skin",
-      hair: "air-bladder.tables-2e;Hair",
-      face: "air-bladder.tables-2e;Face",
-      speech: "air-bladder.tables-2e;Speech",
-      clothing: "air-bladder.tables-2e;Clothing",
-      vice: "air-bladder.tables-2e;Vice",
-      virtue: "air-bladder.tables-2e;Virtue"
+      physique: "mondolme.tables-2e;Physique",
+      skin: "mondolme.tables-2e;Skin",
+      hair: "mondolme.tables-2e;Hair",
+      face: "mondolme.tables-2e;Face",
+      speech: "mondolme.tables-2e;Speech",
+      clothing: "mondolme.tables-2e;Clothing",
+      vice: "mondolme.tables-2e;Vice",
+      virtue: "mondolme.tables-2e;Virtue"
     }
   }
 };
@@ -64,7 +64,7 @@ Cairn.characterGenerator2e = {
 // WORLD table — findTableByName resolves world-first — which is exactly why it
 // is on the roll() path and must stay there.
 Cairn.npcGenerator = {
-  name: "air-bladder.warden-npcs;Warden: NPC - Name",
+  name: "mondolme.warden-npcs;Warden: NPC - Name",
   // The Faction die's table, by NAME ONLY — no pack prefix, deliberately: it
   // resolves world-first (findTableByName), so a Warden's own RollTable named
   // "Warden: NPC - Faction" always beats the shipped warden-npcs copy and
@@ -73,16 +73,16 @@ Cairn.npcGenerator = {
   // Role `npc` only. `background` answers the same question `profession` does
   // for a hireling, off a different table — which is the whole of what
   // separates the two generators.
-  background: "air-bladder.warden-npcs;Warden: NPC - Background",
+  background: "mondolme.warden-npcs;Warden: NPC - Background",
   // The four NPC traits. `virtue` and `vice` deliberately COLLIDE by key with
   // the 2e biography tables above and differ by SOURCE: an NPC is "Shrewd" off
   // the Warden's Guide list, a character "Honest" off tables-2e. Same stored
   // key, so nothing is lost when a Warden changes an actor's role.
   traits: {
-    quirk: "air-bladder.warden-npcs;Warden: NPC - Quirk",
-    goal: "air-bladder.warden-npcs;Warden: NPC - Goal",
-    virtue: "air-bladder.warden-npcs;Warden: NPC - Virtue",
-    vice: "air-bladder.warden-npcs;Warden: NPC - Vice",
+    quirk: "mondolme.warden-npcs;Warden: NPC - Quirk",
+    goal: "mondolme.warden-npcs;Warden: NPC - Goal",
+    virtue: "mondolme.warden-npcs;Warden: NPC - Virtue",
+    vice: "mondolme.warden-npcs;Warden: NPC - Vice",
   },
   // Role `npc` only, and the one thing here that is NOT a Warden's Guide table
   // (2026-08-20, user ask). A hireling's statblock comes off its career; an NPC
@@ -146,21 +146,21 @@ Cairn.npcGenerator = {
 // them with table.roll(), never draw(), so their drawn state stays clean —
 // the same invariant rollNameFromTable documents for the NPC name table.
 Cairn.monsterGenerator = {
-  physique: "air-bladder.warden-monsters;Warden: Monster - Appearance (Physique)",
-  feature: "air-bladder.warden-monsters;Warden: Monster - Appearance (Feature)",
-  quirk: "air-bladder.warden-monsters;Warden: Monster - Trait (Quirk)",
-  weakness: "air-bladder.warden-monsters;Warden: Monster - Trait (Weakness)",
-  attackType: "air-bladder.warden-monsters;Warden: Monster - Attack (Type)",
-  criticalDamage: "air-bladder.warden-monsters;Warden: Monster - Attack (Critical Damage)",
-  abilityPower: "air-bladder.warden-monsters;Warden: Monster - Ability (Power)",
-  abilityTarget: "air-bladder.warden-monsters;Warden: Monster - Ability (Target)",
+  physique: "mondolme.warden-monsters;Warden: Monster - Appearance (Physique)",
+  feature: "mondolme.warden-monsters;Warden: Monster - Appearance (Feature)",
+  quirk: "mondolme.warden-monsters;Warden: Monster - Trait (Quirk)",
+  weakness: "mondolme.warden-monsters;Warden: Monster - Trait (Weakness)",
+  attackType: "mondolme.warden-monsters;Warden: Monster - Attack (Type)",
+  criticalDamage: "mondolme.warden-monsters;Warden: Monster - Attack (Critical Damage)",
+  abilityPower: "mondolme.warden-monsters;Warden: Monster - Ability (Power)",
+  abilityTarget: "mondolme.warden-monsters;Warden: Monster - Ability (Target)",
 };
 
 // Cairn Barebones creation. Abilities/HP/coins follow the SRD; the name comes
 // from the same Warden NPC name table the NPC generator uses, because 2e
 // dropped 1e's name tables and Barebones ships none of its own.
 Cairn.barebonesGenerator = {
-  name: "air-bladder.warden-npcs;Warden: NPC - Name",
+  name: "mondolme.warden-npcs;Warden: NPC - Name",
   ability: "3d6",
   hitProtection: "1d6",
   gold: "3d6",

@@ -31,13 +31,13 @@ results:
   - _id: TCtSCOXooo1QMPeR
     type: document
     name: Shield
-    img: systems/air-bladder/art/game-icons/shields/round-shield.svg
+    img: systems/mondolme/art/game-icons/shields/round-shield.svg
     weight: 1
     range:
       - 2
       - 2
     drawn: false
-    documentUuid: Compendium.air-bladder.armor.Item.7r2YpGYPQI2SarO3
+    documentUuid: Compendium.mondolme.armor.Item.7r2YpGYPQI2SarO3
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -54,13 +54,13 @@ results:
   - _id: BnjeqKy4EVqTh0Gb
     type: document
     name: Helmet
-    img: systems/air-bladder/art/game-icons/armor/crested-helmet.svg
+    img: systems/mondolme/art/game-icons/armor/crested-helmet.svg
     weight: 1
     range:
       - 3
       - 3
     drawn: false
-    documentUuid: Compendium.air-bladder.armor.Item.XGxHc7C2FIIhbNuE
+    documentUuid: Compendium.mondolme.armor.Item.XGxHc7C2FIIhbNuE
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -77,13 +77,13 @@ results:
   - _id: BXHDUAscrQcHtSVq
     type: document
     name: Gambeson
-    img: systems/air-bladder/art/game-icons/armor/layered-armor.svg
+    img: systems/mondolme/art/game-icons/armor/layered-armor.svg
     weight: 1
     range:
       - 4
       - 4
     drawn: false
-    documentUuid: Compendium.air-bladder.armor.Item.pC4sMCtdCmuqIRp6
+    documentUuid: Compendium.mondolme.armor.Item.pC4sMCtdCmuqIRp6
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -100,13 +100,13 @@ results:
   - _id: 0uU5HGaXVlt169Ub
     type: document
     name: Chainmail
-    img: systems/air-bladder/art/game-icons/armor/chain-mail.svg
+    img: systems/mondolme/art/game-icons/armor/chain-mail.svg
     weight: 1
     range:
       - 5
       - 5
     drawn: false
-    documentUuid: Compendium.air-bladder.armor.Item.B0naZm8GOX3x222S
+    documentUuid: Compendium.mondolme.armor.Item.B0naZm8GOX3x222S
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -123,13 +123,13 @@ results:
   - _id: Gi8M1P4eBWIympjA
     type: document
     name: Plate Mail
-    img: systems/air-bladder/art/game-icons/armor/breastplate.svg
+    img: systems/mondolme/art/game-icons/armor/breastplate.svg
     weight: 1
     range:
       - 6
       - 6
     drawn: false
-    documentUuid: Compendium.air-bladder.armor.Item.ymce9Te4HU42dJS9
+    documentUuid: Compendium.mondolme.armor.Item.ymce9Te4HU42dJS9
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -147,14 +147,14 @@ formula: 1d6
 replacement: true
 displayRoll: true
 flags:
-  air-bladder:
+  mondolme:
     tableSource: barebones
 folder: null
 sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

@@ -93,9 +93,9 @@ for (let i = 0; i < MISHAPS.length; i++) {
 }
 
 const TABLE_NAME = "GLOG Magic: Mishaps";
-const tid = idFor("air-bladder-glog-mishaps-table");
+const tid = idFor("mondolme-glog-mishaps-table");
 const tableResults = MISHAPS.map(([sum, text]) => {
-  const rid = idFor(`air-bladder-glog-mishap:${sum}`);
+  const rid = idFor(`mondolme-glog-mishap:${sum}`);
   return [
     `  - _id: ${rid}`,
     "    type: text",
@@ -126,7 +126,7 @@ const tableYaml = [
   "ownership:",
   "  default: 0",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!tables!${tid}'`,
   "",
@@ -169,12 +169,12 @@ const pct = (x) => {
 
 /* ------------------------------------------------------------- names + ids */
 const JOURNAL_NAME = "GLOG Magic — Player Rules";
-const jid = idFor("air-bladder-glog-handout");
-const pid = idFor("air-bladder-glog-handout-page");
-const mpid = idFor("air-bladder-glog-handout-mishaps-page");
+const jid = idFor("mondolme-glog-handout");
+const pid = idFor("mondolme-glog-handout-page");
+const mpid = idFor("mondolme-glog-handout-mishaps-page");
 const SPELLS_JOURNAL_NAME = "GLOG Magic — Spells";
-const sjid = idFor("air-bladder-glog-spells-journal");
-const spid = idFor("air-bladder-glog-spells-journal-page");
+const sjid = idFor("mondolme-glog-spells-journal");
+const spid = idFor("mondolme-glog-spells-journal-page");
 
 /* ------------------------------------------------------ the player handout */
 const p = (t) => `<p>${t}</p>`;
@@ -199,7 +199,7 @@ const HANDOUT = [
   p("The spell contained within the Scroll becomes the first recorded spell."),
   p("<em>GLOG Magic, cairnrpg.com/hacks/glog-magic/ — CC BY-SA 4.0.</em>"),
   // Ours, not the hack's: the companion journal, one click away.
-  p(`<em>The full spell list: @UUID[Compendium.air-bladder.journals-glog.JournalEntry.${sjid}]{${SPELLS_JOURNAL_NAME}}.</em>`),
+  p(`<em>The full spell list: @UUID[Compendium.mondolme.journals-glog.JournalEntry.${sjid}]{${SPELLS_JOURNAL_NAME}}.</em>`),
 ].join("");   // NO newlines: the y() quoter emits one single-quoted line, and a
               // raw newline inside it is the YAML indentation error the first
               // build caught ("deficient indentation") — HTML needs none.
@@ -251,7 +251,7 @@ const journalShell = (id, name, pages) => [
   "  default: 0",
   "flags: {}",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!journal!${id}'`,
   "",
@@ -276,7 +276,7 @@ const spellEntries = spells.map(({ name, desc }) => {
   return `<p><strong>${name}.</strong> ${m[1]}</p>`;
 }).join("");
 const SPELLS_PAGE = [
-  p(`The GLOG spell list — the canon hundred re-worded to scale with casting: [dice] is the Magic Dice invested, [sum] their total. How casting works: @UUID[Compendium.air-bladder.journals-glog.JournalEntry.${jid}]{${JOURNAL_NAME}}.`),
+  p(`The GLOG spell list — the canon hundred re-worded to scale with casting: [dice] is the Magic Dice invested, [sum] their total. How casting works: @UUID[Compendium.mondolme.journals-glog.JournalEntry.${jid}]{${JOURNAL_NAME}}.`),
   spellEntries,
   p("<em>GLOG Spells, cairnrpg.com/hacks/glog-spells/ — CC BY-SA 4.0.</em>"),
 ].join("");

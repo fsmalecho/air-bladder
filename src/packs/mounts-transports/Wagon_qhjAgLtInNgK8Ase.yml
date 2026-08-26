@@ -1,17 +1,17 @@
 _id: qhjAgLtInNgK8Ase
 name: Wagon
 type: npc
-img: systems/air-bladder/icons/wagon.svg
+img: systems/mondolme/icons/wagon.svg
 prototypeToken:
   name: Wagon
   texture:
-    src: systems/air-bladder/icons/wagon.svg
+    src: systems/mondolme/icons/wagon.svg
 items: []
 effects: []
 folder: Y7FAeuwxTR9cyRtC
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: 'A large four-wheeled wagon. Hauls eight slots of gear, but needs a beast to draw it and travels slow.'
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!qhjAgLtInNgK8Ase'

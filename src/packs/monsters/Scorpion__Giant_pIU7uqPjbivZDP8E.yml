@@ -3,7 +3,7 @@ name: Scorpion, Giant
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/scorpion.svg
+img: systems/mondolme/art/game-icons/animals/scorpion.svg
 items:
   - _id: WpG8LNkKzCe4us6B
     name: Chiteneous Skin
@@ -200,7 +200,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/scorpion.svg
+    src: systems/mondolme/art/game-icons/animals/scorpion.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

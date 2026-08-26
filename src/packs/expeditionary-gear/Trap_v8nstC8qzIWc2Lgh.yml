@@ -1,12 +1,12 @@
 _id: v8nstC8qzIWc2Lgh
 name: Trap
 type: item
-img: systems/air-bladder/art/game-icons/spike/wolf-trap.svg
+img: systems/mondolme/art/game-icons/spike/wolf-trap.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: d6 STR damage
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!v8nstC8qzIWc2Lgh'

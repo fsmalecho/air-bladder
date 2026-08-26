@@ -110,7 +110,7 @@ const out = await page.evaluate(async () => {
   const [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
     await pc.getTokenDocument({ x: 100, y: 100 }),
   ]);
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
   const prev = canvas.scene;
   if (canvas.scene?.id !== scene.id) await scene.view();
 
@@ -325,11 +325,11 @@ const out = await page.evaluate(async () => {
   // and macros.js): render the template with `;`-joined ids, ship it as roll
   // flavor. A dieless formula, so the total the handler reads out of
   // .dice-total is a known 2 rather than a parsed random d6.
-  const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+  const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
   const postCard = async (targets = [t1.id, t2.id], speakerToken = null) => {
     const roll = await evaluateFormula("2", {});
     const flavor = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      "systems/mondolme/templates/chat/dmg-roll-card.html",
       { label: "probe damage", targets: targets.join(";") },
     );
     // A token speaker records `scene: token.parent.id` (chat-message.mjs:271),
@@ -510,7 +510,7 @@ const scar = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
   const r = {};
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
 
   // Give the VIEWER a character, so the pre-fix speaker has something wrong to
   // be: with none assigned the default speaker is already blank and the leg
@@ -598,8 +598,8 @@ const scar = await page.evaluate(async () => {
   // the control for the dice block: draw() forwards the roll, so this card MUST
   // show one — otherwise the table has displayRoll off and the leg above proves
   // nothing about our change.
-  const { findCompendiumItem } = await import("/systems/air-bladder/module/compendium.js");
-  const table = await findCompendiumItem("air-bladder.utils", "Scars");
+  const { findCompendiumItem } = await import("/systems/mondolme/module/compendium.js");
+  const table = await findCompendiumItem("mondolme.utils", "Scars");
   const beforeCtl = new Set(game.messages.filter(isTableCard).map((m) => m.id));
   await table.draw({ roll: new Roll("3") });
   let ctl = null;
@@ -659,8 +659,8 @@ const scar = await page.evaluate(async () => {
 const autoScar = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
-  const NS = "air-bladder";
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
+  const NS = "mondolme";
   const r = {};
   const prevAuto = game.settings.get(NS, "auto-record-scars");
   const prevLog = game.settings.get(NS, "change-log");
@@ -701,8 +701,8 @@ const autoScar = await page.evaluate(async () => {
     // The draw is DETERMINISTIC — the roll is the constant damage (3) — so the
     // recorded value can be asserted against the exact table row, in the same
     // English source text the checklist stores.
-    const { resultText, findCompendiumItem } = await import("/systems/air-bladder/module/compendium.js");
-    const scarsTable = await findCompendiumItem("air-bladder.utils", "Scars");
+    const { resultText, findCompendiumItem } = await import("/systems/mondolme/module/compendium.js");
+    const scarsTable = await findCompendiumItem("mondolme.utils", "Scars");
     const expectedRow = scarsTable?.results.find((x) => x.range[0] <= 3 && 3 <= x.range[1]);
     r.expectedName = expectedRow ? resultText(expectedRow) : null;
     // Ledger silence: a fixed window, because nothing announces "no card is
@@ -739,10 +739,10 @@ try {
   const alicePage = await browser.newPage({ viewport: VIEWPORT });
   await joinAs(alicePage, "Alice");
   const posted = await page.evaluate(async () => {
-    const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+    const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
     const roll = await evaluateFormula("2", {});
     const flavor = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      "systems/mondolme/templates/chat/dmg-roll-card.html",
       { label: "ZZ warden-only probe", targets: "nonexistent" },
     );
     return { id: (await roll.toMessage({ speaker: ChatMessage.getSpeaker(), flavor })).id };
@@ -833,10 +833,10 @@ const applied = await page.evaluate(async () => {
   const scene = await Scene.create({ name: "ZZ Applied Scene", width: 1000, height: 1000 });
   const [tok] = await scene.createEmbeddedDocuments("Token", [await foe.getTokenDocument({ x: 100, y: 100 })]);
 
-  const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+  const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
   const roll = await evaluateFormula("3", {});
   const flavor = await foundry.applications.handlebars.renderTemplate(
-    "systems/air-bladder/templates/chat/dmg-roll-card.html",
+    "systems/mondolme/templates/chat/dmg-roll-card.html",
     { label: "ZZ apply-once probe", targets: tok.id },
   );
   const msg = await roll.toMessage({ speaker: ChatMessage.getSpeaker({ token: tok }), flavor });
@@ -864,8 +864,8 @@ const applied = await page.evaluate(async () => {
   r.hpAfterFirst = hp();
 
   // The flag is what survives a re-render, so wait for it rather than for paint.
-  for (let i = 0; i < 40 && !msg.getFlag("air-bladder", "damageApplied"); i++) await sleep(150);
-  r.flagged = !!msg.getFlag("air-bladder", "damageApplied");
+  for (let i = 0; i < 40 && !msg.getFlag("mondolme", "damageApplied"); i++) await sleep(150);
+  r.flagged = !!msg.getFlag("mondolme", "damageApplied");
   await sleep(400);
   const row = document.querySelector(`[data-message-id="${msg.id}"]`);
   r.summary = (row?.querySelector(".dmg-applied")?.textContent ?? "").trim();
@@ -878,7 +878,7 @@ const applied = await page.evaluate(async () => {
   // pointer-events:none means a real click never lands — and "the CSS stopped it"
   // is exactly the reassurance this leg must not accept. This reaches the handler
   // the way a devtools-enabled or stale-DOM click would.
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
   await Damage.onClickChatMessageApplyButton(
     { currentTarget: { dataset: { targets: tok.id } }, shiftKey: false },
     row, {}, scene, msg,
@@ -950,11 +950,11 @@ try {
     const uTok = await mk(unseen, 500, true);
     const eTok = await mk(evil, 700, false);
 
-    const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+    const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
     const post = async (ids) => {
       const roll = await evaluateFormula("2", {});
       const flavor = await foundry.applications.handlebars.renderTemplate(
-        "systems/air-bladder/templates/chat/dmg-roll-card.html",
+        "systems/mondolme/templates/chat/dmg-roll-card.html",
         { label: "ZZ weapon sentence", weapon: "ZZ Probe Mace", targets: ids.join(";") },
       );
       const msg = await roll.toMessage({
@@ -1073,7 +1073,7 @@ try {
     const bTok = await mk(bowman, 100);
     const vTok = await mk(victim, 300);
 
-    const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+    const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
     // Post a roll card, click its REAL control, and hand back the DETAIL card it
     // produced. Clicking the control rather than calling applyToTargets is the
     // point: the source is read off the clicked card, so a leg that called the
@@ -1082,7 +1082,7 @@ try {
       const before = new Set(game.messages.contents.map((m) => m.id));
       const roll = await evaluateFormula("2", {});
       const flavor = await foundry.applications.handlebars.renderTemplate(
-        "systems/air-bladder/templates/chat/dmg-roll-card.html",
+        "systems/mondolme/templates/chat/dmg-roll-card.html",
         { label: "ZZ source probe", weapon, targets: vTok.id },
       );
       const msg = await roll.toMessage({ speaker: ChatMessage.getSpeaker({ token: bTok }), flavor });
@@ -1098,7 +1098,7 @@ try {
           .find((m) => !before.has(m.id) && m.id !== msg.id && m.speaker?.token === vTok.id);
         if (!detail) await sleep(150);
       }
-      const flag = detail?.getFlag("air-bladder", "damageSource") ?? null;
+      const flag = detail?.getFlag("mondolme", "damageSource") ?? null;
       return {
         rollId: msg.id, detailId: detail?.id ?? null,
         flagged: !!flag, flagWeapon: flag?.weapon ?? null, flagToken: flag?.token ?? null,
@@ -1198,13 +1198,13 @@ const untargeted = await page.evaluate(async () => {
   const [foeTok] = await scene.createEmbeddedDocuments("Token", [await foe.getTokenDocument({ x: 100, y: 100 })]);
   const [pcTok] = await scene.createEmbeddedDocuments("Token", [await pc.getTokenDocument({ x: 300, y: 100 })]);
 
-  const { evaluateFormula, askDamageTargets } = await import("/systems/air-bladder/module/utils.js");
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
+  const { evaluateFormula, askDamageTargets } = await import("/systems/mondolme/module/utils.js");
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
 
   // EXACTLY what both real producers ship when game.user.targets is empty.
   const roll = await evaluateFormula("3", {});
   const flavor = await foundry.applications.handlebars.renderTemplate(
-    "systems/air-bladder/templates/chat/dmg-roll-card.html",
+    "systems/mondolme/templates/chat/dmg-roll-card.html",
     { label: "ZZ untargeted probe", weapon: "ZZ Probe Sling", targets: null },
   );
   const msg = await roll.toMessage({ speaker: ChatMessage.getSpeaker({ token: foeTok }), flavor });
@@ -1345,8 +1345,8 @@ const untargeted = await page.evaluate(async () => {
   await sleep(400);
   r.hpAfter = `${hpFoe()},${hpPc()}`;
 
-  for (let i = 0; i < 40 && !msg.getFlag("air-bladder", "damageApplied"); i++) await sleep(150);
-  r.flagged = !!msg.getFlag("air-bladder", "damageApplied");
+  for (let i = 0; i < 40 && !msg.getFlag("mondolme", "damageApplied"); i++) await sleep(150);
+  r.flagged = !!msg.getFlag("mondolme", "damageApplied");
   await sleep(400);
   const after = document.querySelector(`[data-message-id="${msg.id}"] .apply-dmg`);
   r.spent = !!after?.classList.contains("spent");
@@ -1410,7 +1410,7 @@ const untargeted = await page.evaluate(async () => {
 const breakdown = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const { Damage } = await import("/systems/air-bladder/module/damage.js");
+  const { Damage } = await import("/systems/mondolme/module/damage.js");
   const r = {};
   const scene = await Scene.create({ name: "ZZ Breakdown Scene", width: 1000, height: 1000 });
   const made = [];
@@ -1568,7 +1568,7 @@ try {
   Object.assign(status, await page.evaluate(async () => {
     const ActorImpl = CONFIG.Actor.documentClass;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const { Damage } = await import("/systems/air-bladder/module/damage.js");
+    const { Damage } = await import("/systems/mondolme/module/damage.js");
     const r = {};
     const foe = await ActorImpl.create({
       name: "ZZ Dying Foe", type: "npc",
@@ -1607,9 +1607,9 @@ try {
   Object.assign(status, await page.evaluate(async () => {
     const ActorImpl = CONFIG.Actor.documentClass;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const { Damage } = await import("/systems/air-bladder/module/damage.js");
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
-    const mon = await import("/systems/air-bladder/module/monster-generator.js");
+    const { Damage } = await import("/systems/mondolme/module/damage.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
+    const mon = await import("/systems/mondolme/module/monster-generator.js");
     const r = {};
     const stabilizedIn = (cards) => cards.filter((m) => /status-stabilized/.test(String(m.content ?? ""))).length;
     const fresh = async (fn) => {

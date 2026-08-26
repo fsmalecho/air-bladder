@@ -39,7 +39,7 @@ try {
   await dismissChrome(page);
 
   const out = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const made = [];
     const gen = game.cairn.characterGenerator;
 
@@ -291,7 +291,7 @@ try {
     const Cls = CONFIG.Actor.documentClass;
     let a = null;
     try {
-      await game.settings.set("air-bladder", "show-generate-header", false);
+      await game.settings.set("mondolme", "show-generate-header", false);
       a = await Cls.create({ name: "ZZ Header Lock", type: "character" });
       await a.sheet.render(true);
       for (let i = 0; i < 40 && !a.sheet.element; i++) await new Promise((r) => setTimeout(r, 100));
@@ -302,7 +302,7 @@ try {
         toggleExists: !!header?.querySelector('button[data-action="toggleGeneration"]'),
       };
     } finally {
-      await game.settings.set("air-bladder", "show-generate-header", true);
+      await game.settings.set("mondolme", "show-generate-header", true);
       await a?.sheet?.close();
       await a?.delete();
     }

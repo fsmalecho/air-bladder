@@ -34,8 +34,8 @@ import { chromium } from "playwright";
 import { VIEWPORT, joinAsGM, watchErrors, watchdog } from "./lib.mjs";
 
 const TABLE_NAME = "Spells — Canon (1d100)";
-const TABLES_PACK = "air-bladder.tables-2e";
-const CANON = "air-bladder.spellbooks";
+const TABLES_PACK = "mondolme.tables-2e";
+const CANON = "mondolme.spellbooks";
 
 const browser = await chromium.launch();
 watchdog(180000, "spell-tables probe");
@@ -76,7 +76,7 @@ try {
     }
     // CONTROL: a broken uuid must read as null, or "every row resolved" is
     // a fromUuid that cannot fail.
-    out.brokenResolves = await fromUuid(`Compendium.air-bladder.no-such-pack.Item.aaaabbbbccccdddd`)
+    out.brokenResolves = await fromUuid(`Compendium.mondolme.no-such-pack.Item.aaaabbbbccccdddd`)
       .then((d) => d !== null).catch(() => false);
     return out;
   }, { TABLES_PACK, TABLE_NAME, CANON });
@@ -122,7 +122,7 @@ try {
     : fail(`world copy holds ${planted.rowsAfterPlant} rows, expected 101 — the transition below is not being witnessed`);
 
   const reseeded = await page.evaluate(async ({ tableId, CANON }) => {
-    const { reseedTableFromPack } = await import("/systems/air-bladder/module/spell-tables.js");
+    const { reseedTableFromPack } = await import("/systems/mondolme/module/spell-tables.js");
     const table = game.tables.get(tableId);
     const written = await reseedTableFromPack(table, game.packs.get(CANON));
     // Order lives in each row's RANGE, not in collection iteration order —
@@ -156,7 +156,7 @@ try {
   /* --- 3. an empty source refuses ------------------------------------------ */
 
   const refusal = await page.evaluate(async ({ tableId, scratchId }) => {
-    const { reseedTableFromPack } = await import("/systems/air-bladder/module/spell-tables.js");
+    const { reseedTableFromPack } = await import("/systems/mondolme/module/spell-tables.js");
     const table = game.tables.get(tableId);
     const written = await reseedTableFromPack(table, game.packs.get(scratchId));
     return { written, rows: table.results.size, formula: table.formula };
@@ -179,7 +179,7 @@ try {
   // EMPTY with no undo — a world table is not in git and LevelDB keeps no
   // history. New order: the create throws before anything is deleted.
   const survives = await page.evaluate(async ({ tableId, CANON }) => {
-    const { reseedTableFromPack } = await import("/systems/air-bladder/module/spell-tables.js");
+    const { reseedTableFromPack } = await import("/systems/mondolme/module/spell-tables.js");
     const table = game.tables.get(tableId);
     const before = table.results.size;
     table.createEmbeddedDocuments = async () => { throw new Error("zz-planted create failure"); };

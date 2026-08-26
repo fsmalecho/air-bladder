@@ -31,13 +31,13 @@ try {
   // sequence.
 
   const r = await page.evaluate(async (hadTab) => {
-    const NS = "air-bladder";
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const NS = "mondolme";
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const out = { made: [] };
     const was = game.settings.get(NS, "show-generate-header");
     await game.settings.set(NS, "show-generate-header", true);
 
-    const pack = game.packs.get("air-bladder.backgrounds-2e");
+    const pack = game.packs.get("mondolme.backgrounds-2e");
     const bg = (await pack.getDocuments())[0];
     const c = await gen.generate2eCharacter(bg);
     const actor = await gen.createActorWithCharacter(c);
@@ -301,7 +301,7 @@ try {
     // Which group each setting ACTUALLY renders in: open every submenu app and
     // read its rows in DOM order. The rendered truth, as opposed to
     // dev:settings' read of the declaration and the registration Map.
-    const settings = await import("/systems/air-bladder/module/settings.js");
+    const settings = await import("/systems/mondolme/module/settings.js");
     out.grouped = {};
     out.expectedGroups = [];
     for (const g of settings.SETTING_GROUPS) {
@@ -474,8 +474,8 @@ try {
     ? ok(`the settings window shows one submenu button per declared group (${r.settingButtons.join(" / ")})`)
     : fail(`expected ${r.expectedGroups?.length} submenu buttons, got ${JSON.stringify(r.settingButtons)}`);
   r.looseRows?.length === 0
-    ? ok("no air-bladder setting renders as a loose row on the flat list — all behind submenus (2026-08-22)")
-    : fail(`loose air-bladder rows on the main settings window: ${r.looseRows?.join(", ")}`);
+    ? ok("no mondolme setting renders as a loose row on the flat list — all behind submenus (2026-08-22)")
+    : fail(`loose mondolme rows on the main settings window: ${r.looseRows?.join(", ")}`);
   r.settingsUnmapped === false
     ? ok("no settings land in Foundry's \"Unmapped\" bucket")
     : fail("some settings are still Unmapped");

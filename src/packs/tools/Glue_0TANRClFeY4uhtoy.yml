@@ -2,7 +2,7 @@ name: Glue
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/bottles/oil-can.svg
+img: systems/mondolme/art/game-icons/bottles/oil-can.svg
 effects: []
 _id: 0TANRClFeY4uhtoy
 system:

@@ -1,12 +1,12 @@
 _id: n9tYr8THPkcrF0tp
 name: Root Knife
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: >-
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!n9tYr8THPkcrF0tp'

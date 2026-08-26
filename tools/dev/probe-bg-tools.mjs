@@ -57,7 +57,7 @@ const result = await page.evaluate(async () => {
   const pre = game.packs.get("world.custom-backgrounds");
   if (pre) await pre.deleteCompendium();
 
-  const shipped = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())[0];
+  const shipped = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())[0];
   const copy = await CG.duplicateBackgroundToWorld(shipped);
   out.copyName = copy?.name;
   out.copySource = copy?.system?.source;
@@ -68,7 +68,7 @@ const result = await page.evaluate(async () => {
   // Regression: the index-first world/module scan still surfaces a world-pack
   // background. Turn the custom source on so getBackgroundsFor unions it in, then
   // confirm the freshly-duplicated copy is discovered by id.
-  const NS = "air-bladder";
+  const NS = "mondolme";
   const priorCustom = game.settings.get(NS, "content-source-custom");
   await game.settings.set(NS, "content-source-custom", true);
   const pool = await CG.getBackgroundsFor("2e");

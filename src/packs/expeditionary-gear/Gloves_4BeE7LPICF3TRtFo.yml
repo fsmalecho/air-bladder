@@ -1,12 +1,12 @@
 _id: 4BeE7LPICF3TRtFo
 name: Gloves
 type: item
-img: systems/air-bladder/art/game-icons/clothing/gloves.svg
+img: systems/mondolme/art/game-icons/clothing/gloves.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A plain pair of gloves against cold, thorns, and rough work.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!4BeE7LPICF3TRtFo'

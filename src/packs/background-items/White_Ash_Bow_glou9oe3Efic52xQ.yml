@@ -1,12 +1,12 @@
 _id: glou9oe3Efic52xQ
 name: White Ash Bow
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Can be used in place of a shield in melee combat (+1 Armor).
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!glou9oe3Efic52xQ'

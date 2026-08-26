@@ -9,13 +9,13 @@ results:
   - _id: HF4NlpsmII7Gz6IB
     type: document
     name: Halberd
-    img: systems/air-bladder/art/game-icons/blade/glaive.svg
+    img: systems/mondolme/art/game-icons/blade/glaive.svg
     weight: 1
     range:
       - 1
       - 1
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.bBxRixn3s83nf22t
+    documentUuid: Compendium.mondolme.weapons.Item.bBxRixn3s83nf22t
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -32,13 +32,13 @@ results:
   - _id: MnohVuPxCFOZn4vc
     type: document
     name: War Hammer
-    img: systems/air-bladder/art/game-icons/weapons/warhammer.svg
+    img: systems/mondolme/art/game-icons/weapons/warhammer.svg
     weight: 1
     range:
       - 2
       - 2
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.79R642H2PeClxCNZ
+    documentUuid: Compendium.mondolme.weapons.Item.79R642H2PeClxCNZ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -55,13 +55,13 @@ results:
   - _id: 1C5nWvXmHHtsz74z
     type: document
     name: Long Sword
-    img: systems/air-bladder/art/game-icons/blade/broadsword.svg
+    img: systems/mondolme/art/game-icons/blade/broadsword.svg
     weight: 1
     range:
       - 3
       - 3
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.guIdahhZ813WVHLy
+    documentUuid: Compendium.mondolme.weapons.Item.guIdahhZ813WVHLy
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -79,14 +79,14 @@ formula: 1d3
 replacement: true
 displayRoll: true
 flags:
-  air-bladder:
+  mondolme:
     tableSource: barebones
 folder: null
 sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

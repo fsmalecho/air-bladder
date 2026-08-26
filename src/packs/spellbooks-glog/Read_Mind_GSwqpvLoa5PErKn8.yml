@@ -1,12 +1,12 @@
 _id: GSwqpvLoa5PErKn8
 name: Read Mind
 type: spellbook
-img: systems/air-bladder/icons/spellscroll.svg
+img: systems/mondolme/icons/spellscroll.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: glog-spells
 system:
   cost: 0
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!GSwqpvLoa5PErKn8'

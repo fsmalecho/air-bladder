@@ -54,7 +54,7 @@ const BG_ES = "ZZ-TRASFONDO-TRADUCIDO";
 // Section 6 reads a SHIPPED entry rather than planting one, because the
 // compendium sidebar searches pack INDEXES and a world document is invisible to
 // it. One word, so the query is a single term either way.
-const SIDEBAR_PACK = "air-bladder.monsters";
+const SIDEBAR_PACK = "mondolme.monsters";
 const SIDEBAR_EN = "Gorilla";
 const SIDEBAR_ES = "ZZ-BICHO-TRADUCIDO";
 
@@ -79,7 +79,7 @@ await dismissChrome(page);
 const planted = { actorIds: [], itemIds: [], combatId: null };
 
 const out = await page.evaluate(async (fx) => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const res = { planted: { actorIds: [], itemIds: [], combatId: null } };
   const nameOf = (id) => document
     .querySelector(`#actors [data-entry-id="${id}"] .entry-name, #items [data-entry-id="${id}"] .entry-name`)
@@ -241,7 +241,7 @@ else {
 // here.
 console.log("\nthe compendium sidebar's document search");
 const sidebar = await page.evaluate(async (fx) => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const res = {};
   const dir = ui.compendium;
@@ -316,7 +316,7 @@ else {
 console.log("\na late overlay load repairs what is already drawn");
 
 const late = await page.evaluate(async (fx) => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Actor = CONFIG.Actor.documentClass;
   const out = { ids: [] };

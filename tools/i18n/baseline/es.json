@@ -347,7 +347,7 @@
   "CAIRN.NpcRegeneratorTitle": "Roll this NPC again?",
   "CAIRN.Omen": "Omen",
   "CAIRN.OmenPlaceholder": "If you are the youngest member of the party, check the Omen box and the roll button to receive an omen.",
-  "CAIRN.OmenTableMissing": "The Omens table (air-bladder.tables-2e) could not be found.",
+  "CAIRN.OmenTableMissing": "The Omens table (mondolme.tables-2e) could not be found.",
   "CAIRN.OverburdenByGold": "Character may be overburdened by gold",
   "CAIRN.Overburdened": "Overburdened",
   "CAIRN.OverburdenedBanner": "Over capacity — HP stays 0 until you free a slot.",

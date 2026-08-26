@@ -6,7 +6,7 @@
  * installed package renders every setting under a bucket called "Unmapped" —
  * present in the data, invisible in the UI, and unreachable. This system shipped
  * that way: 16 settings registered under "cairn", inherited from the system it
- * descends from, while the package id is "air-bladder".
+ * descends from, while the package id is "mondolme".
  *
  * Nothing else catches it. The settings still register, still read, still take
  * their defaults, and every other probe passes — the only symptom is a GM who
@@ -16,7 +16,7 @@
  * Warden-facing setting is registered `config: false` and lives behind one of
  * `registerMenu` submenus (module/settings-menus.js; four since the GLOG &
  * Other Hacks ruling), so the flat list shows one button per group and no
- * air-bladder rows. A setting that is registered, in SETTING_KEYS and in no
+ * mondolme rows. A setting that is registered, in SETTING_KEYS and in no
  * group is registered, migrated — and unreachable. The declaration is
  * SETTING_GROUPS; this probe checks membership against it, then opens every
  * app and reads what it actually renders.
@@ -47,17 +47,17 @@ try {
 
     // Expected count comes from the module's own key list, not a magic number —
     // adding a setting should not fail this probe, only a MISFILED one should.
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     out.declared = mod.SETTING_KEYS.length;
     out.missing = mod.SETTING_KEYS.filter((k) => !game.settings.settings.has(`${mod.SETTINGS_NS}.${k}`));
-    // Since the submenus (2026-08-22) EVERY air-bladder setting is config:false —
+    // Since the submenus (2026-08-22) EVERY mondolme setting is config:false —
     // the grouped ones because their rows live in the apps, the internal ones
     // because nothing shows them. So these two must both be zero: a key that
     // reads config:true has escaped back onto the flat list.
     out.flatVisible = mod.SETTING_KEYS.filter(
       (k) => game.settings.settings.get(`${mod.SETTINGS_NS}.${k}`)?.config
     );
-    // The REVERSE walk (review #9): every registered air-bladder key must be
+    // The REVERSE walk (review #9): every registered mondolme key must be
     // in SETTING_KEYS or be one of the named migration markers. The forward
     // walk alone let `disabled-backgrounds` — Warden configuration, which
     // must ride the namespace migration — register unlisted and stay
@@ -106,20 +106,20 @@ try {
     out.internalGrouped = mod.INTERNAL_SETTING_KEYS.filter((k) => out.grouped.includes(k));
 
     out.systemId = game.system.id;
-    out.knownPackage = !!(game.system.id === "air-bladder");
+    out.knownPackage = !!(game.system.id === "mondolme");
 
     // what a value reads as now (bonds left this sample 2026-08-09 with the
     // retired show-bonds-barebones — an unregistered get THROWS)
     out.sample = {
-      panic: game.settings.get("air-bladder", "use-panic"),
-      goldThreshold: game.settings.get("air-bladder", "use-gold-threshold"),
-      failedCareer: game.settings.get("air-bladder", "barebones-failed-career"),
+      panic: game.settings.get("mondolme", "use-panic"),
+      goldThreshold: game.settings.get("mondolme", "use-gold-threshold"),
+      failedCareer: game.settings.get("mondolme", "barebones-failed-career"),
     };
 
     // stored world documents, old namespace vs new
     const store = game.settings.storage.get("world");
     out.storedOld = store.filter((s) => s.key.startsWith("cairn.")).map((s) => s.key);
-    out.storedNew = store.filter((s) => s.key.startsWith("air-bladder.")).map((s) => s.key);
+    out.storedNew = store.filter((s) => s.key.startsWith("mondolme.")).map((s) => s.key);
 
     out.users = game.users.map((u) => `${u.name} (role ${u.role})`);
     return out;
@@ -128,14 +128,14 @@ try {
   console.log(`  system id: ${r.systemId}`);
   console.log(`  config-visible settings by namespace: ${JSON.stringify(r.namespaces)}`);
 
-  const mine = r.namespaces["air-bladder"] ?? 0;
+  const mine = r.namespaces["mondolme"] ?? 0;
   const stale = r.namespaces["cairn"] ?? 0;
   !r.missing.length
-    ? ok(`all ${r.declared} declared settings are registered under "air-bladder" — Foundry can map them`)
+    ? ok(`all ${r.declared} declared settings are registered under "mondolme" — Foundry can map them`)
     : fail(`declared settings missing from the registry: ${r.missing.join(", ")}`);
   mine === 0 && !r.flatVisible.length
-    ? ok("no air-bladder setting is config-visible on the flat list — every one lives behind a submenu")
-    : fail(`${mine} air-bladder setting(s) still render as loose rows on the flat list: ${r.flatVisible.join(", ")}`);
+    ? ok("no mondolme setting is config-visible on the flat list — every one lives behind a submenu")
+    : fail(`${mine} mondolme setting(s) still render as loose rows on the flat list: ${r.flatVisible.join(", ")}`);
   stale === 0 ? ok(`nothing left under the unmappable "cairn" namespace`)
               : fail(`${stale} setting(s) still under "cairn" — they render as Unmapped`);
   !r.unlisted.length
@@ -161,7 +161,7 @@ try {
     : fail(`INTERNAL_SETTING_KEYS exposed in a submenu: ${r.internalGrouped.join(", ")}`);
 
   console.log(`  values now: ${JSON.stringify(r.sample)}`);
-  console.log(`  stored (old cairn.*): ${r.storedOld.length} | stored (air-bladder.*): ${r.storedNew.length}`);
+  console.log(`  stored (old cairn.*): ${r.storedOld.length} | stored (mondolme.*): ${r.storedNew.length}`);
 
   // A player account in the dev world, so permission-dependent behaviour can be
   // exercised as a non-GM rather than assumed.
@@ -178,7 +178,7 @@ try {
   const ui = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     const app = new foundry.applications.settings.SettingsConfig();
     await app.render(true);
@@ -251,8 +251,8 @@ try {
     ? ok(`settings window renders the ${r.expectedMenus.length} submenu buttons in group order + a search box`)
     : fail(`expected buttons ${JSON.stringify(r.expectedMenus)} + search, got ${JSON.stringify(ui.buttonKeys)} (search: ${ui.hasSearch})`);
   ui.looseRows?.length === 0
-    ? ok("...and no loose air-bladder row beside them")
-    : fail(`loose air-bladder rows on the main window: ${ui.looseRows?.join(", ")}`);
+    ? ok("...and no loose mondolme row beside them")
+    : fail(`loose mondolme rows on the main window: ${ui.looseRows?.join(", ")}`);
   ui.indexed?.every(Boolean)
     ? ok("each button row carries a [data-searchable] index of its settings")
     : fail(`button rows without a searchable index: ${JSON.stringify(ui.indexed)}`);
@@ -279,7 +279,7 @@ try {
   const apps = await page.evaluate(async () => {
     const out = { groups: [] };
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     for (const g of mod.SETTING_GROUPS) {
       const menu = game.settings.menus.get(`${NS}.${g.id}`);
@@ -343,7 +343,7 @@ try {
   const save = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     const KEY = "show-grant-tags-print";
     const before = game.settings.get(NS, KEY);
@@ -406,7 +406,7 @@ try {
   const floor = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     const KEYS = ["content-source-2e", "content-source-custom", "content-source-barebones"];
     const defaults = Object.fromEntries(KEYS.map((k) => [k, game.settings.settings.get(`${NS}.${k}`).default]));
@@ -477,7 +477,7 @@ try {
   const reset = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     const KEY = "show-grant-tags-print";
     out.def = game.settings.settings.get(`${NS}.${KEY}`).default;
@@ -521,7 +521,7 @@ try {
   const subs = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     const NS = mod.SETTINGS_NS;
     const MASTER = "content-source-barebones";
     const stored = game.settings.get(NS, MASTER);
@@ -589,16 +589,16 @@ try {
   const bold = await page.evaluate(async () => {
     const out = {};
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const cfg = game.settings.settings.get("air-bladder.content-source-custom");
+    const cfg = game.settings.settings.get("mondolme.content-source-custom");
     const origName = cfg.name;
     const origPhrase = foundry.utils.getProperty(game.i18n.translations, "CAIRN.ContentSourceCustom");
     try {
       cfg.name = "Sentinel offering ZZQX custom sheets";
       foundry.utils.setProperty(game.i18n.translations, "CAIRN.ContentSourceCustom", "ZZQX custom");
-      const app = new (game.settings.menus.get("air-bladder.generation").type)();
+      const app = new (game.settings.menus.get("mondolme.generation").type)();
       await app.render(true);
       await sleep(800);
-      const label = app.element.querySelector('[name="air-bladder.content-source-custom"]')
+      const label = app.element.querySelector('[name="mondolme.content-source-custom"]')
         ?.closest(".form-group")?.querySelector("label");
       out.labelText = label?.textContent ?? null;
       out.bolded = label?.querySelector("strong")?.textContent ?? null;
@@ -632,11 +632,11 @@ try {
   // sentinels — open the real submenu and read the real labels.
   const real = await page.evaluate(async () => {
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-    const app = new (game.settings.menus.get("air-bladder.generation").type)();
+    const app = new (game.settings.menus.get("mondolme.generation").type)();
     await app.render(true);
     await sleep(800);
     const read = (key, phraseKey) => {
-      const label = app.element.querySelector(`[name="air-bladder.${key}"]`)
+      const label = app.element.querySelector(`[name="mondolme.${key}"]`)
         ?.closest(".form-group")?.querySelector("label");
       return {
         key,

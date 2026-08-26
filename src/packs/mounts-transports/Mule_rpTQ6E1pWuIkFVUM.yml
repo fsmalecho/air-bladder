@@ -1,17 +1,17 @@
 _id: rpTQ6E1pWuIkFVUM
 name: Mule
 type: npc
-img: systems/air-bladder/icons/donkey.svg
+img: systems/mondolme/icons/donkey.svg
 prototypeToken:
   name: Mule
   texture:
-    src: systems/air-bladder/icons/donkey.svg
+    src: systems/mondolme/icons/donkey.svg
 items: []
 effects: []
 folder: CCMtMzMwK7XAuWfq
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: 'A stubborn but tireless pack animal. Carries six slots of gear, and sets its own unhurried pace (slow).'
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!rpTQ6E1pWuIkFVUM'

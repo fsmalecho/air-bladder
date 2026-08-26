@@ -1,12 +1,12 @@
 _id: hB3wYtQs9nZfKdVm
 name: Robes
 type: item
-img: systems/air-bladder/art/game-icons/clothing/robe.svg
+img: systems/mondolme/art/game-icons/clothing/robe.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Long scholarly robes, deep-sleeved and ink-stained at the cuff.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!hB3wYtQs9nZfKdVm'

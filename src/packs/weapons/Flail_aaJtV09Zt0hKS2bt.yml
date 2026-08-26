@@ -2,7 +2,7 @@ name: Flail
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/flail.svg
+img: systems/mondolme/art/game-icons/weapons/flail.svg
 effects: []
 _id: aaJtV09Zt0hKS2bt
 _stats:

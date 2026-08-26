@@ -2,7 +2,7 @@ name: Axe
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/wood-axe.svg
+img: systems/mondolme/art/game-icons/tools/wood-axe.svg
 effects: []
 _id: SXlTyf9AwMrZPkIi
 _stats:

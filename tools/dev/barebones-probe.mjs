@@ -42,7 +42,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const made = [];
     const track = (a) => { if (a) made.push(a); return a; };
     const containersOf = (actor) =>
@@ -53,13 +53,13 @@ try {
     const named = (actor, re) => actor.items.filter((i) => re.test(i.name));
 
     // 1. Packs + every reference resolves.
-    const bgPack = game.packs.get("air-bladder.backgrounds-barebones");
-    const tPack = game.packs.get("air-bladder.tables-barebones");
+    const bgPack = game.packs.get("mondolme.backgrounds-barebones");
+    const tPack = game.packs.get("mondolme.tables-barebones");
     if (!bgPack || !tPack) return { error: "backgrounds-barebones or tables-barebones pack is not registered" };
     const bgs = await bgPack.getDocuments();
     const tables = await tPack.getDocuments();
 
-    const { resolveGearItem } = await import("/systems/air-bladder/module/gear.js");
+    const { resolveGearItem } = await import("/systems/mondolme/module/gear.js");
     const refNames = new Set();
     for (const bg of bgs) for (const g of bg.system.startingGear ?? []) refNames.add(g.name);
     const META = new Set(["Spellbook", "Random Spellbook", "Scroll of Random Spellbook", "Random Additional Gear"]);
@@ -110,7 +110,7 @@ try {
       armorEquipped: armors.length === 0 || armors.some((a) => a.system.equipped),
       // The background's own gear is source-tagged so the sheet can chip it.
       taggedBackgroundGear: actor.items.filter(
-        (i) => i.getFlag("air-bladder", "grantSource") === "background").length,
+        (i) => i.getFlag("mondolme", "grantSource") === "background").length,
       // 2e-only structures must be absent.
       noQuestions: (actor.system.questions ?? []).length === 0,
       traits: Object.values(actor.system.traits ?? {}).filter(Boolean).length,
@@ -119,7 +119,7 @@ try {
 
     // 3. Edit a pool weapon -> regenerate -> the edit is on the character.
     //    Uses the character's OWN weapon so the assertion cannot miss.
-    const wPack = game.packs.get("air-bladder.weapons");
+    const wPack = game.packs.get("mondolme.weapons");
     const poolWeapon = (await wPack.getDocuments()).find((d) => d.name === weapons[0]?.name);
     let edit = { skipped: true };
     if (poolWeapon) {
@@ -208,7 +208,7 @@ try {
     const bonds = {
       count: (bonded.bonds ?? []).length,
       taggedItems: bonded.items.filter((i) =>
-        String(i.flags?.["air-bladder"]?.grantSource ?? "").startsWith("bond:")).length,
+        String(i.flags?.["mondolme"]?.grantSource ?? "").startsWith("bond:")).length,
     };
     const bondActor = track(await gen.createActorWithCharacter(bonded));
     const freshCtx = await bondActor.sheet._prepareContext({});
@@ -271,15 +271,15 @@ try {
     const colActor = track(await gen.createActorWithCharacter(await gen.generateBarebonesCharacter(colBgA)));
     for (const c of containersOf(colActor)) made.push(c);
     const staleKeep = colActor.items
-      .filter((i) => i.getFlag("air-bladder", "grantSource") === "failed-career").map((i) => i.id);
+      .filter((i) => i.getFlag("mondolme", "grantSource") === "failed-career").map((i) => i.id);
     if (staleKeep.length) await colActor.deleteEmbeddedDocuments("Item", staleKeep, { abNoStatusCard: true });
     await colActor.update({ "system.failedCareer": colBgB.name }, { abNoStatusCard: true });
     await colActor.createEmbeddedDocuments("Item", [{
       name: "PROBE-COLLIDE-KEEPSAKE", type: "item",
-      flags: { "air-bladder": { grantSource: "failed-career" } },
+      flags: { "mondolme": { grantSource: "failed-career" } },
     }], { abNoStatusCard: true });
     const keepsakes = () => colActor.items
-      .filter((i) => i.getFlag("air-bladder", "grantSource") === "failed-career");
+      .filter((i) => i.getFlag("mondolme", "grantSource") === "failed-career");
 
     await gen.changeBackground(colActor, colBgC);
     const control = {
@@ -307,7 +307,7 @@ try {
     //    onChange render is async), never close the sheet. One toggle carries
     //    the leg; the other two share the same onChange body, so three
     //    repeats would witness one line three times.
-    const fcWas = game.settings.get("air-bladder", "barebones-failed-career");
+    const fcWas = game.settings.get("mondolme", "barebones-failed-career");
     const sheet = colActor.sheet;
     await sheet.render(true);
     for (let i = 0; i < 30 && !sheet.element; i++) await new Promise((res) => setTimeout(res, 150));
@@ -316,11 +316,11 @@ try {
       while (!test() && Date.now() < deadline) await new Promise((res) => setTimeout(res, 150));
       return test();
     };
-    await game.settings.set("air-bladder", "barebones-failed-career", true);
+    await game.settings.set("mondolme", "barebones-failed-career", true);
     const liveOn = await pollFor(() => !!sheet.element?.querySelector(".failed-career-block"));
-    await game.settings.set("air-bladder", "barebones-failed-career", false);
+    await game.settings.set("mondolme", "barebones-failed-career", false);
     const liveOff = await pollFor(() => !sheet.element?.querySelector(".failed-career-block"));
-    await game.settings.set("air-bladder", "barebones-failed-career", fcWas);
+    await game.settings.set("mondolme", "barebones-failed-career", fcWas);
     await sheet.close();
     const liveFlip = { on: liveOn, off: liveOff };
 

@@ -1,17 +1,17 @@
 _id: tNOuZB6B0zC8Qi4k
 name: Blacklegged Dandy
 type: npc
-img: systems/air-bladder/icons/horse.svg
+img: systems/mondolme/icons/horse.svg
 prototypeToken:
   name: Blacklegged Dandy
   texture:
-    src: systems/air-bladder/icons/horse.svg
+    src: systems/mondolme/icons/horse.svg
 items: []
 effects: []
 folder: CCMtMzMwK7XAuWfq
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: background-2e
 system:
   description: From the Outrider background. Hardy and adaptable. Tough or Perilous terrain are one step easier. 6 HP. +4 slots.
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!tNOuZB6B0zC8Qi4k'

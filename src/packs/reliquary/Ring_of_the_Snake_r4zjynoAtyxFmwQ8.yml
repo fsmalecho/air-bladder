@@ -1,12 +1,12 @@
 _id: r4zjynoAtyxFmwQ8
 name: Ring of the Snake
 type: item
-img: systems/air-bladder/art/game-icons/skull/skull-ring.svg
+img: systems/mondolme/art/game-icons/skull/skull-ring.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -29,6 +29,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!r4zjynoAtyxFmwQ8'

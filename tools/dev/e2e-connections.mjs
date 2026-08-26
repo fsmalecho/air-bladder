@@ -7,7 +7,7 @@
  * broken → {default: LIMITED, connection-granted OWNER stripped} — but a
  * player's client is forbidden by the SERVER to write either shape
  * (sanitizeDocumentOwnershipField refuses non-GM ownership updates), so the
- * player folds `flags.air-bladder.ownershipSyncPending` into their own write
+ * player folds `flags.mondolme.ownershipSyncPending` into their own write
  * and the active GM's client answers, recomputing the shape from DOCUMENT
  * STATE. The flag is the authorization: only the child's owners can set it,
  * and nothing in the socket message is trusted at all.
@@ -84,7 +84,7 @@ const scene = await gmPage.evaluate(async () => {
   const [bait] = await pc.createEmbeddedDocuments("Item", [{ name: "ZZ Conn Bait", type: "item" }]);
 
   // The cap pair: a PC of Alice's at the ceiling, and the extra she will try.
-  const { maxConnections } = await import("/systems/air-bladder/module/connections.js");
+  const { maxConnections } = await import("/systems/mondolme/module/connections.js");
   const capPc = await Cls.create({ name: "ZZ Conn Cap PC", type: "character", ownership: own });
   for (let i = 0; i < maxConnections(); i++) {
     await Cls.create({ name: `ZZ Conn Cap Kid ${i}`, type: "npc", system: { ...sackSys, connectedTo: capPc.uuid } });
@@ -98,7 +98,7 @@ const scene = await gmPage.evaluate(async () => {
   const crafted = await Cls.create({ name: "ZZ Conn Crafted", type: "npc", ownership: own, system: sackSys });
   const strangerPc = await Cls.create({ name: "ZZ Conn Stranger PC", type: "character", ownership: { default: 0 } });
 
-  const packActor = game.packs.get("air-bladder.mounts-transports")?.index.contents[0];
+  const packActor = game.packs.get("mondolme.mounts-transports")?.index.contents[0];
   return {
     aliceId: alice.id,
     pcUuid: pc.uuid, freeUuid: free.uuid, sackUuid: sack.uuid, foreignUuid: foreign.uuid,
@@ -275,7 +275,7 @@ const verb = await alicePage.evaluate(async ({ aliceId, pcUuid, freeUuid, sackUu
     await sleep(250);
     settled = free.ownership.default === L.OBSERVER
       && free.ownership[aliceId] === L.OWNER
-      && free.getFlag("air-bladder", "ownershipSyncPending") === undefined;
+      && free.getFlag("mondolme", "ownershipSyncPending") === undefined;
   }
   const connectedShape = { ...free.ownership };
   const shapeClean = Object.keys(connectedShape).every((id) =>
@@ -286,7 +286,7 @@ const verb = await alicePage.evaluate(async ({ aliceId, pcUuid, freeUuid, sackUu
   const foreignState = {
     link: foreign.system.connectedTo || "",
     dflt: foreign.ownership.default ?? 0,
-    flag: foreign.getFlag("air-bladder", "ownershipSyncPending"),
+    flag: foreign.getFlag("mondolme", "ownershipSyncPending"),
   };
 
   // 5. The cap, from the player's side: she owns both ends, so only the
@@ -390,12 +390,12 @@ hostile.pcDefault === 0 && hostile.pcAliceOwner === 3
 // come from somebody else's browser.
 console.log("\na crafted connect to a stranger's PC is refused");
 const crafted = await gmPage.evaluate(async ({ craftedUuid, strangerPcUuid, pcUuid, aliceId }) => {
-  const conn = await import("/systems/air-bladder/module/connections.js");
+  const conn = await import("/systems/mondolme/module/connections.js");
   const c = await fromUuid(craftedUuid);
   const alice = game.users.get(aliceId);
   const arm = (link) => c.update({
     "system.connectedTo": link,
-    "flags.air-bladder.ownershipSyncPending": true,
+    "flags.mondolme.ownershipSyncPending": true,
     ownership: foundry.data.operators.ForcedReplacement.create({
       default: 0, [aliceId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER,
     }),
@@ -406,7 +406,7 @@ const crafted = await gmPage.evaluate(async ({ craftedUuid, strangerPcUuid, pcUu
   await conn.syncPendingOwnership(c, { requester: alice });
   const refused = {
     dflt: c.ownership.default,
-    flag: c.getFlag("air-bladder", "ownershipSyncPending"),
+    flag: c.getFlag("mondolme", "ownershipSyncPending"),
     stillLinked: c.system.connectedTo,
   };
 
@@ -418,7 +418,7 @@ const crafted = await gmPage.evaluate(async ({ craftedUuid, strangerPcUuid, pcUu
   const signed = {
     dflt: c.ownership.default,
     aliceLevel: c.ownership[aliceId] ?? null,
-    flag: c.getFlag("air-bladder", "ownershipSyncPending"),
+    flag: c.getFlag("mondolme", "ownershipSyncPending"),
   };
   return { refused, signed };
 }, scene);
@@ -452,7 +452,7 @@ const sweepSet = await alicePage.evaluate(async ({ pcUuid, sweepUuid }) => {
   return {
     returned,
     linked: sweepChild.system.connectedTo === pc.uuid,
-    flagStillSet: sweepChild.getFlag("air-bladder", "ownershipSyncPending") === true,
+    flagStillSet: sweepChild.getFlag("mondolme", "ownershipSyncPending") === true,
     dflt: sweepChild.ownership.default,
   };
 }, scene);
@@ -475,7 +475,7 @@ const swept = await gmPage.evaluate(async ({ sweepUuid, aliceId }) => {
     await sleep(250);
     done = child.ownership.default === L.OBSERVER
       && child.ownership[aliceId] === L.OWNER
-      && child.getFlag("air-bladder", "ownershipSyncPending") === undefined;
+      && child.getFlag("mondolme", "ownershipSyncPending") === undefined;
   }
   return { done, shape: { ...child.ownership } };
 }, scene);

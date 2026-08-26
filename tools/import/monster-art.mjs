@@ -32,7 +32,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MONSTERS = path.join(ROOT, "src", "packs", "monsters");
 const MANIFEST = path.join(ROOT, "module", "game-icons-manifest.json");
-const GALLERY = "systems/air-bladder/art/game-icons";
+const GALLERY = "systems/mondolme/art/game-icons";
 
 const APPLY = process.argv.includes("--apply");
 const ALL = process.argv.includes("--all");

@@ -1,12 +1,12 @@
 _id: Fik2Qov1w6sWAdBA
 name: Soul Clump
 type: item
-img: systems/air-bladder/art/game-icons/creatures/transparent-slime.svg
+img: systems/mondolme/art/game-icons/creatures/transparent-slime.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -27,6 +27,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!Fik2Qov1w6sWAdBA'

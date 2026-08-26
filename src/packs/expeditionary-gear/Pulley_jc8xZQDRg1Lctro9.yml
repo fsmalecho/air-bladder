@@ -2,7 +2,7 @@ name: Pulley
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/rope-coil.svg
+img: systems/mondolme/art/game-icons/tools/rope-coil.svg
 effects: []
 _id: jc8xZQDRg1Lctro9
 _stats:

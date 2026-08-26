@@ -74,7 +74,7 @@ const r = await page.evaluate(async ({ xssName }) => {
     name: "ZZ Print Hero", type: "character",
     // A REAL Aspeheim gallery path — the credits footer picks its
     // attribution line from the portrait's path.
-    img: "systems/air-bladder/art/jon-aspeheim/portraits/dwarf_01.webp",
+    img: "systems/mondolme/art/jon-aspeheim/portraits/dwarf_01.webp",
     system: {
       background: "Greenwise",
       backgroundUuid: bgItem.uuid,
@@ -124,7 +124,7 @@ const r = await page.evaluate(async ({ xssName }) => {
       // Carries a grant-source flag for the printed-tag legs — "background"
       // is the commonest source and its label localizes.
       { name: "Rations", type: "item", system: { uses: { value: 3, max: 3 } },
-        flags: { "air-bladder": { grantSource: "background" } } },
+        flags: { "mondolme": { grantSource: "background" } } },
       { name: "Signet Ring", type: "item", system: { weightless: true } },
       // The three spellbook shapes the prefix logic distinguishes (user report
       // 2026-08-08: the printed sheet dropped the prefixes): a bare-named book,
@@ -144,7 +144,7 @@ const r = await page.evaluate(async ({ xssName }) => {
         system: { grimoire: true, grimoirePages: 4, bulky: true } },
       { name: "Zephyr", type: "spellbook",
         system: { bound: true, weightless: true },
-        flags: { "air-bladder": { grantSource: "background" } } },
+        flags: { "mondolme": { grantSource: "background" } } },
       { name: "Anthem", type: "spellbook", system: { bound: true, weightless: true } },
       { name: xssName, type: "item" },
     ]);
@@ -186,7 +186,7 @@ const r = await page.evaluate(async ({ xssName }) => {
     name: "ZZ Print Foe", type: "npc",
     // A Tlomdev gallery path — the monster page must credit TLOMDEV, and
     // never Aspeheim.
-    img: "systems/air-bladder/art/tlomdev/kettlewright-portraits/portrait1.webp",
+    img: "systems/mondolme/art/tlomdev/kettlewright-portraits/portrait1.webp",
     system: {
       role: "monster", generationEnabled: false,
       hp: { value: 6, max: 6 },
@@ -528,7 +528,7 @@ const r = await page.evaluate(async ({ xssName }) => {
   // the other two can reach the branch: pass 1's background is a world item
   // (custom by MEMBERSHIP, whatever contentSource says) and pass 2 is
   // Barebones — so this needs a background from the shipped pack.
-  const canonBg = (await game.packs.get("air-bladder.backgrounds-2e")?.getDocuments())?.[0];
+  const canonBg = (await game.packs.get("mondolme.backgrounds-2e")?.getDocuments())?.[0];
   out.canonBgFound = !!canonBg;
   if (canonBg) {
     // BOTH fields: `backgroundUuid` is what decides custom-vs-canon, and
@@ -876,9 +876,9 @@ const r = await page.evaluate(async ({ xssName }) => {
   // the page as TEXT, never as markup.
   // The portrait is restored first: the art line and the credit line have to
   // coexist, and the route-prefix pass left the image pointing at nothing.
-  await pc.update({ img: "systems/air-bladder/art/jon-aspeheim/portraits/dwarf_01.webp",
+  await pc.update({ img: "systems/mondolme/art/jon-aspeheim/portraits/dwarf_01.webp",
     "system.contentSource": "2e" }, { render: false });
-  const cleric = (await game.packs.get("air-bladder.backgrounds-custom")?.getDocuments() ?? [])
+  const cleric = (await game.packs.get("mondolme.backgrounds-custom")?.getDocuments() ?? [])
     .find((d) => d.name === "Cleric");
   out.clericAttribution = cleric?.system?.attribution ?? null;
   // A world copy with the credit CLEARED — a Warden who rewrote it. Its uuid,
@@ -1171,7 +1171,7 @@ check("and the fixture's content source is restored", r.omenSourceRestored === t
   `was ${r.omenSourceBefore} — later passes read this same actor`);
 
 console.log("\nthe route prefix");
-check("a prefixed host keeps its portraits", (r.prefixedSrc ?? "").includes("/pfx-probe/systems/air-bladder/"),
+check("a prefixed host keeps its portraits", (r.prefixedSrc ?? "").includes("/pfx-probe/systems/mondolme/"),
   `src="${r.prefixedSrc}" — abs() goes through getRoute, so ROUTE_PREFIX survives into the print page`);
 check("an absolute URL passes through untouched", r.absoluteSrc === "https://example.invalid/zz-remote.png",
   `src="${r.absoluteSrc}" — getRoute must never see a scheme'd URL (it re-joins slashes and mangles it)`);
@@ -1203,7 +1203,7 @@ const ZERO_MARGIN = { top: "0", bottom: "0", left: "0", right: "0" };
 const pdfPages = (buf) => (buf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
 
 const pagerId = await page.evaluate(async () => {
-  const bg = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())
+  const bg = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())
     .find((d) => d.name === "Prowler");
   const actor = await CONFIG.Actor.documentClass.create({
     name: "ZZ Print Pager", type: "character",

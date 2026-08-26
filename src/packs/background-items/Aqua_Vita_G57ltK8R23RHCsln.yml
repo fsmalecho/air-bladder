@@ -1,12 +1,12 @@
 _id: G57ltK8R23RHCsln
 name: Aqua Vita
 type: item
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Purifies any liquid, converting it to pure water. Drinking it cures 1d6 STR.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!G57ltK8R23RHCsln'

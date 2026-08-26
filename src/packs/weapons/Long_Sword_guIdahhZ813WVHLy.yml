@@ -2,7 +2,7 @@ name: Long Sword
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/blade/broadsword.svg
+img: systems/mondolme/art/game-icons/blade/broadsword.svg
 effects: []
 _id: guIdahhZ813WVHLy
 _stats:

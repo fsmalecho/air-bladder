@@ -30,7 +30,7 @@ results:
   - _id: eaEUXerx9wG4gi30
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.dJAN3KJC2pvioawd]{Tritons}
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.dJAN3KJC2pvioawd]{Tritons}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -53,7 +53,7 @@ results:
   - _id: tVusBKLyAnWBuFwI
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.Qos89zK4mdNg1rO7]{Sea Hag}
+      1 @UUID[Compendium.mondolme.monsters.Actor.Qos89zK4mdNg1rO7]{Sea Hag}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -120,7 +120,7 @@ results:
   - _id: ZHCleaAIOFU1OT36
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.J6kjuBfXIWRP0fxm]{Deep
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.J6kjuBfXIWRP0fxm]{Deep
       Ones}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -144,7 +144,7 @@ results:
   - _id: nn0btQsIDAR7YF9k
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.NY94UhmWTBgw3gMC]{Water
+      1 @UUID[Compendium.mondolme.monsters.Actor.NY94UhmWTBgw3gMC]{Water
       Elemental}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -174,7 +174,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

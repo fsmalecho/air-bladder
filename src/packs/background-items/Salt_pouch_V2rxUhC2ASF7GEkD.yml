@@ -1,12 +1,12 @@
 _id: V2rxUhC2ASF7GEkD
 name: Salt pouch
 type: item
-img: systems/air-bladder/icons/sack.svg
+img: systems/mondolme/icons/sack.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: >-
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!V2rxUhC2ASF7GEkD'

@@ -3,7 +3,7 @@ name: Efrreti
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/heads/pyromaniac.svg
+img: systems/mondolme/art/game-icons/heads/pyromaniac.svg
 items:
   - _id: mtutsvMqqVMDrwp8
     name: Flaming Sword
@@ -159,7 +159,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/heads/pyromaniac.svg
+    src: systems/mondolme/art/game-icons/heads/pyromaniac.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

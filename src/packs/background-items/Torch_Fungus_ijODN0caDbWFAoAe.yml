@@ -1,12 +1,12 @@
 _id: ijODN0caDbWFAoAe
 name: Torch Fungus
 type: item
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: When crushed, it creates a heatless light for ten minutes.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!ijODN0caDbWFAoAe'

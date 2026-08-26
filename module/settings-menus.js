@@ -77,7 +77,7 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
 
   /** @override */
   static PARTS = {
-    body: { template: "systems/air-bladder/templates/settings/group-menu.html" },
+    body: { template: "systems/mondolme/templates/settings/group-menu.html" },
     footer: { template: "templates/generic/form-footer.hbs" },
   };
 
@@ -113,7 +113,7 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
       // Reset Defaults beside Save, because core's own Reset Defaults button
       // (the main window's sidebar footer) skips every `config: false` setting
       // (config.mjs:223-234) — which since the submenus is all of them. Before
-      // the submenus that button restored every Air Bladder setting; without
+      // the submenus that button restored every Mondolme setting; without
       // this it restored none, silently (review #18). Both labels and the
       // toast are core's own keys, so the two buttons read identically.
       buttons: [

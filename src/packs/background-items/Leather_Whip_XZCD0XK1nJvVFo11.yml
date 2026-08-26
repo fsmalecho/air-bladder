@@ -1,12 +1,12 @@
 _id: XZCD0XK1nJvVFo11
 name: Leather Whip
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A long braided whip for driving beasts or keeping foes at arm's length.
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!XZCD0XK1nJvVFo11'

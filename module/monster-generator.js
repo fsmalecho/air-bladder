@@ -60,7 +60,7 @@ const ARMORED_FEATURES = ["Carapace", "Shell", "Scales"];
 // a flake, and this project's own rule is that a probe failing once and passing
 // on re-run is a race, not a flake. It was neither. It was a second copy.
 export const CREATURE_CATEGORIES = ["animals", "birds", "creatures", "fish", "heads", "mammals", "reptiles", "skull"];
-const MONSTER_ICON_FALLBACK = "systems/air-bladder/icons/monster.svg";
+const MONSTER_ICON_FALLBACK = "systems/mondolme/icons/monster.svg";
 
 /** One weighted pick. @param {Array<[any, Number]>} pairs @returns {any} */
 const pickWeighted = (pairs) => {

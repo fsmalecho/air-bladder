@@ -1,17 +1,17 @@
 _id: YPOEKdtzFyz82J7J
 name: Donkey
 type: npc
-img: systems/air-bladder/icons/donkey.svg
+img: systems/mondolme/icons/donkey.svg
 prototypeToken:
   name: Donkey
   texture:
-    src: systems/air-bladder/icons/donkey.svg
+    src: systems/mondolme/icons/donkey.svg
 items: []
 effects: []
 folder: CCMtMzMwK7XAuWfq
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: background-2e
 system:
   description: Granted by the Bonekeeper and Kettlewright backgrounds. Carries 4 slots.
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!YPOEKdtzFyz82J7J'

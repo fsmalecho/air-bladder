@@ -1,4 +1,4 @@
-name: "Air Bladder CodeQL config"
+name: "Mondolme CodeQL config"
 
 # `tools/` is developer/build tooling (importers, pack build, i18n, release, dev
 # probes). It is NOT part of the shipped system (see the release zip's file list in

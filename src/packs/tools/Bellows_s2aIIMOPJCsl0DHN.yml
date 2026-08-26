@@ -2,7 +2,7 @@ name: Bellows
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/bellows.svg
+img: systems/mondolme/art/game-icons/tools/bellows.svg
 effects: []
 _id: s2aIIMOPJCsl0DHN
 _stats:

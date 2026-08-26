@@ -2,7 +2,7 @@ name: Cudgel
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/wood-club.svg
+img: systems/mondolme/art/game-icons/weapons/wood-club.svg
 effects: []
 _id: PtHPURu548JUKwuU
 _stats:

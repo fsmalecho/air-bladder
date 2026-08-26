@@ -190,22 +190,22 @@ export async function pickArt({
   const showCustom = custom && (customPaths.length > 0 || isGM);
 
   const manifest = shipped ? await getPortraitManifest() : null;
-  const portraitDir = manifest?.portraitDir ?? "systems/air-bladder/art/jon-aspeheim/portraits";
+  const portraitDir = manifest?.portraitDir ?? "systems/mondolme/art/jon-aspeheim/portraits";
   const shippedNames = manifest?.names ?? [];
   const showShipped = shipped && shippedNames.length > 0;
 
   const iconManifest = gameIcons ? await getGameIconManifest() : null;
-  const iconDir = iconManifest?.iconDir ?? "systems/air-bladder/art/game-icons";
+  const iconDir = iconManifest?.iconDir ?? "systems/mondolme/art/game-icons";
   const iconCats = iconManifest?.categories ?? [];
   const showIcons = gameIcons && iconCats.length > 0;
 
   const tlomdevManifest = tlomdev ? await getTlomdevManifest() : null;
-  const tlomdevDir = tlomdevManifest?.artDir ?? "systems/air-bladder/art/tlomdev";
+  const tlomdevDir = tlomdevManifest?.artDir ?? "systems/mondolme/art/tlomdev";
   const tlomdevCats = tlomdevManifest?.categories ?? [];
   const showTlomdev = tlomdev && tlomdevCats.length > 0;
 
   const lydiaManifest = lydia ? await getLydiaManifest() : null;
-  const lydiaDir = lydiaManifest?.portraitDir ?? "systems/air-bladder/art/lydia-comer/portraits";
+  const lydiaDir = lydiaManifest?.portraitDir ?? "systems/mondolme/art/lydia-comer/portraits";
   const lydiaPairs = lydiaManifest?.pairs ?? [];
   const showLydia = lydia && lydiaPairs.length > 0;
 
@@ -487,7 +487,7 @@ export async function pickArt({
     try {
       await onPick(src);
     } catch (err) {
-      console.error("Air Bladder | art pick failed:", err);
+      console.error("Mondolme | art pick failed:", err);
       ui.notifications.error(game.i18n.localize("CAIRN.Notify.DropFailed"));
     } finally {
       dialog.close();
@@ -565,7 +565,7 @@ export async function pickArt({
         wireFolders(pane, customRoot, splitCustomPaths(list, customRoot).cats, stripExt);
         wireRefresh(pane);
       } catch (err) {
-        console.error("Air Bladder | custom portrait refresh failed:", err);
+        console.error("Mondolme | custom portrait refresh failed:", err);
         btn.disabled = false;
       }
     });

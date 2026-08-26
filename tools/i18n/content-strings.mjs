@@ -212,7 +212,7 @@ export function* stringsFromDoc(doc, pack) {
       // English however complete the overlay was. Its own namespace rather than
       // table.result because the taxonomy mirrors the FIELD, not the document: this
       // is not the row's rolled text and must not key against it.
-      const rowDesc = r.flags?.["air-bladder"]?.description ?? "";
+      const rowDesc = r.flags?.["mondolme"]?.description ?? "";
       if (rowDesc) yield* emit({ ns: "table.resultDesc", en: rowDesc, context: `${name} · ${range} · detail`.trim() });
     }
     return;

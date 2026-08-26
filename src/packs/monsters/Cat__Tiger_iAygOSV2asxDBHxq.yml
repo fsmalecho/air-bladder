@@ -3,7 +3,7 @@ name: Cat, Tiger
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/tiger-head.svg
+img: systems/mondolme/art/game-icons/animals/tiger-head.svg
 items:
   - _id: TmzqEowP36jUpMBf
     name: Bite
@@ -120,7 +120,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/tiger-head.svg
+    src: systems/mondolme/art/game-icons/animals/tiger-head.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

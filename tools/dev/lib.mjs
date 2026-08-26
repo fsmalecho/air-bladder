@@ -32,7 +32,7 @@ export const VIEWPORT = { width: 1600, height: 1000 };
  * leaks on every run.
  */
 export async function withSettings(page, fn) {
-  const NS = "air-bladder";
+  const NS = "mondolme";
   const snapshot = await page.evaluate((ns) => {
     const out = {};
     for (const [key, cfg] of game.settings.settings) {

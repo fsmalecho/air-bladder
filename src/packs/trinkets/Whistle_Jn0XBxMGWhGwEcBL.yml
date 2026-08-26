@@ -3,7 +3,7 @@ name: Whistle
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/sounds/whistle.svg
+img: systems/mondolme/art/game-icons/sounds/whistle.svg
 effects: []
 _stats:
   coreVersion: '14.365'

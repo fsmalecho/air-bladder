@@ -3,7 +3,7 @@ name: Cave Locust
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/insects/praying-mantis.svg
+img: systems/mondolme/art/game-icons/insects/praying-mantis.svg
 items:
   - _id: u3uU7lYUxcQUd7US
     name: Bite
@@ -122,7 +122,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/insects/praying-mantis.svg
+    src: systems/mondolme/art/game-icons/insects/praying-mantis.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

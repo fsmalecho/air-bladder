@@ -1,17 +1,17 @@
 _id: DsjQCsICN2ddggmr
 name: Handcart
 type: npc
-img: systems/air-bladder/icons/handcart.svg
+img: systems/mondolme/icons/handcart.svg
 prototypeToken:
   name: Handcart
   texture:
-    src: systems/air-bladder/icons/handcart.svg
+    src: systems/mondolme/icons/handcart.svg
 items: []
 effects: []
 folder: Y7FAeuwxTR9cyRtC
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: 'A small cart pulled by hand. Holds four slots — no beast required, but you are the one doing the hauling.'
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!DsjQCsICN2ddggmr'

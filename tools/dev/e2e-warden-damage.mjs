@@ -81,7 +81,7 @@ try {
     ui.controls.activate({ control: "tokens" });
     await sleep(500);
     const before = game.messages.size;
-    const { openWardenDamage } = await import("/systems/air-bladder/module/warden-damage.js");
+    const { openWardenDamage } = await import("/systems/mondolme/module/warden-damage.js");
     // RACED, and this is not belt-and-braces. With the refusal removed the call
     // OPENS THE DIALOG instead of returning, and a DialogV2 nobody answers never
     // settles — so the bare `await` here hung the whole run at the watchdog
@@ -292,7 +292,7 @@ const builder = await page.evaluate(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const r = {};
   const { composeDiceFormula, parseDiceFormula, evaluateFormula } =
-    await import("/systems/air-bladder/module/utils.js");
+    await import("/systems/mondolme/module/utils.js");
 
   // The composer's table, then the loop closed through the evaluator.
   r.cOne = composeDiceFormula([6], "sum");                                //  1d6
@@ -379,7 +379,7 @@ const builder = await page.evaluate(async () => {
   r.uiKhOff = f?.value ?? null;                                      // {1d6,1d6}kh
   delete settings.get;
   r.settingRestored = settings.get(
-    "air-bladder", "use-cairn-dice-notation") === true;
+    "mondolme", "use-cairn-dice-notation") === true;
   q('button[data-action="cancel"]')?.click();
   await sleep(300);
   return r;
@@ -444,14 +444,14 @@ const pools = await page.evaluate(async () => {
   const oldV = await mk("ZZ Pool Legacy", { hp: { value: 5, max: 5 }, armor: 0 }, 900);
   const badV = await mk("ZZ Pool Bogus", { hp: { value: 5, max: 5 }, armor: 0 }, 1100);
 
-  const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+  const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
   // Post a card with a given pool, click its REAL control, and hand back what
   // the detail cards said in ORDER.
   const spend = async (tok, damage, pool) => {
     const before = new Set(game.messages.contents.map((m) => m.id));
     const roll = await evaluateFormula(String(damage), {});
     const flavor = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      "systems/mondolme/templates/chat/dmg-roll-card.html",
       { label: "ZZ pool probe", targets: tok.id, pool, hazard: !!pool },
     );
     const msg = await roll.toMessage({
@@ -605,14 +605,14 @@ const lines = await page.evaluate(async () => {
   const dexB = await mk("ZZ Line Shadow", { hp: { value: 9, max: 9 }, armor: 0, abilities: { DEX: { value: 2, max: 2 } } }, 300);
   const hpV = await mk("ZZ Line Combat", { hp: { value: 5, max: 5 }, armor: 0 }, 500);
 
-  const { evaluateFormula } = await import("/systems/air-bladder/module/utils.js");
+  const { evaluateFormula } = await import("/systems/mondolme/module/utils.js");
   // Same real-button drive as section 4: post a card, click its Apply control,
   // hand back the fresh messages' content in order.
   const spend = async (tok, damage, pool) => {
     const before = new Set(game.messages.contents.map((m) => m.id));
     const roll = await evaluateFormula(String(damage), {});
     const flavor = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      "systems/mondolme/templates/chat/dmg-roll-card.html",
       { label: "ZZ line probe", targets: tok.id, pool, hazard: !!pool },
     );
     const msg = await roll.toMessage({

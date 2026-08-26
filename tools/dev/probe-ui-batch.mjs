@@ -34,7 +34,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const out = { made: [] };
 
     // 1. Generate-character button icon (rendered into the actor directory).
@@ -42,7 +42,7 @@ try {
     out.genBtnIconClass = genBtnIcon ? genBtnIcon.className : null;
 
     // A character to serve as the "not greyed" control in the directory.
-    const pack = game.packs.get("air-bladder.backgrounds-2e");
+    const pack = game.packs.get("mondolme.backgrounds-2e");
     const bg = (await pack.getDocuments())[0];
     const actor = await gen.createActorWithCharacter(await gen.generate2eCharacter(bg));
     out.made.push(actor.id);

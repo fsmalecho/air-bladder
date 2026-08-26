@@ -3,7 +3,7 @@ name: Pseudo-Dragon
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/dragon-head-lorc.svg
+img: systems/mondolme/art/game-icons/creatures/dragon-head-lorc.svg
 items:
   - _id: 52NDAeoMsBNXazzf
     name: Sting*
@@ -122,7 +122,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/dragon-head-lorc.svg
+    src: systems/mondolme/art/game-icons/creatures/dragon-head-lorc.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

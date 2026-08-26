@@ -1,12 +1,12 @@
 _id: ak7C1lTBLNidwFc3
 name: Last Breath
 type: weapon
-img: systems/air-bladder/art/game-icons/mouth/energy-breath.svg
+img: systems/mondolme/art/game-icons/mouth/energy-breath.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -32,6 +32,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!ak7C1lTBLNidwFc3'

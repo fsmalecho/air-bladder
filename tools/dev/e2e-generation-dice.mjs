@@ -45,7 +45,7 @@ try {
   await joinAsGM(page);
 
   const r = await withSettings(page, () => page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const out = { legs: {} };
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -53,7 +53,7 @@ try {
     // evaluate throws before returning.
     const track = (globalThis.__genDiceProbe = { actors: [], messages: [] });
 
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
 
     // Poll for the pack and its documents rather than assuming they are loaded.
     const pack = game.packs.get(`${NS}.backgrounds-2e`);
@@ -268,14 +268,14 @@ try {
   // it, the ordering check above is measuring nothing.
   const order = await page.evaluate(async () => {
     if (typeof game.dice3d?.waitFor3DAnimationByMessageID !== "function") return { skipped: true };
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const track = (globalThis.__genDiceProbe ??= { actors: [], messages: [] });
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     // This leg runs OUTSIDE withSettings, so state its own preconditions rather
     // than inheriting whatever the previous block restored to: no card means no
     // dice, and the ordering would be unobservable in a way that reads as green.
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const wasShowing = game.settings.get(NS, "show-generation-rolls");
     if (!wasShowing) await game.settings.set(NS, "show-generation-rolls", true);
 

@@ -44,15 +44,15 @@ import { VIEWPORT, joinAsGM, watchErrors, dismissChrome } from "./lib.mjs";
 // produce; writing both out rather than deriving the expectation means a broken
 // ART_MOVES table cannot make this file agree with it.
 const MOVES = [
-  ["systems/air-bladder/character_portraits/dwarf_01.webp", "systems/air-bladder/art/jon-aspeheim/portraits/dwarf_01.webp"],
-  ["systems/air-bladder/character_tokens/dwarf_01.webp", "systems/air-bladder/art/jon-aspeheim/tokens/dwarf_01.webp"],
+  ["systems/mondolme/character_portraits/dwarf_01.webp", "systems/mondolme/art/jon-aspeheim/portraits/dwarf_01.webp"],
+  ["systems/mondolme/character_tokens/dwarf_01.webp", "systems/mondolme/art/jon-aspeheim/tokens/dwarf_01.webp"],
   // Chains too, since 2026-08-04 — tlomdev's categories became WebP the same
   // day Lydia's did. This line said `.png` on both sides for one commit, which
   // is the whole argument for writing the expectation out by hand: the entry
   // was correct when it described a move, and a change three files away turned
   // it into a claim that the migration must NOT finish its job.
-  ["systems/air-bladder/tlomdev/beast/beast1.png", "systems/air-bladder/art/tlomdev/beast/beast1.webp"],
-  ["systems/air-bladder/game-icons/weapons/axe-swing.svg", "systems/air-bladder/art/game-icons/weapons/axe-swing.svg"],
+  ["systems/mondolme/tlomdev/beast/beast1.png", "systems/mondolme/art/tlomdev/beast/beast1.webp"],
+  ["systems/mondolme/game-icons/weapons/axe-swing.svg", "systems/mondolme/art/game-icons/weapons/axe-swing.svg"],
   // TWO migrations on ONE path, and the only leg that chains across DIFFERENT
   // extensions. A world last opened before the art/ restructure holds Lydia's
   // gallery at the old PREFIX *and* in the old FORMAT — she shipped .jpg
@@ -61,7 +61,7 @@ const MOVES = [
   // different way; and the migration runs once, so there is no second pass.
   // This leg is what caught the chain being real: it was written expecting the
   // prefix move alone and went red the moment the re-encode rule landed.
-  ["systems/air-bladder/lydia-comer/portraits/Dragon.jpg", "systems/air-bladder/art/lydia-comer/portraits/Dragon.webp"],
+  ["systems/mondolme/lydia-comer/portraits/Dragon.jpg", "systems/mondolme/art/lydia-comer/portraits/Dragon.webp"],
 ];
 // Already under art/, wrong format only — a world made AFTER the restructure but
 // BEFORE the WebP conversion. The prefix rule cannot see these at all, so this
@@ -73,8 +73,8 @@ const MOVES = [
 // conversion is the state of every world that has been tracking `dev`, and the
 // two galleries converted in different commits.
 const REENCODED = [
-  ["systems/air-bladder/art/lydia-comer/tokens/Dragon.png", "systems/air-bladder/art/lydia-comer/tokens/Dragon.webp"],
-  ["systems/air-bladder/art/tlomdev/beast/beast1.png", "systems/air-bladder/art/tlomdev/beast/beast1.webp"],
+  ["systems/mondolme/art/lydia-comer/tokens/Dragon.png", "systems/mondolme/art/lydia-comer/tokens/Dragon.webp"],
+  ["systems/mondolme/art/tlomdev/beast/beast1.png", "systems/mondolme/art/tlomdev/beast/beast1.webp"],
 ];
 // The two tlomdev folders that lost their SPACES (2026-08-04). Each is a
 // specific ART_MOVES rule that must win BEFORE the generic tlomdev rule —
@@ -83,15 +83,15 @@ const REENCODED = [
 // that no longer exists. One leg per folder, each also exercising a chain —
 // the KW leg crosses the old prefix, the npc leg adds the re-encode.
 const RENAMED = [
-  ["systems/air-bladder/tlomdev/Kettlewright Portraits/portrait17.webp",
-    "systems/air-bladder/art/tlomdev/kettlewright-portraits/portrait17.webp"],
-  ["systems/air-bladder/art/tlomdev/human npcs for itmod/npc1.png",
-    "systems/air-bladder/art/tlomdev/human-npcs-for-itmod/npc1.webp"],
+  ["systems/mondolme/tlomdev/Kettlewright Portraits/portrait17.webp",
+    "systems/mondolme/art/tlomdev/kettlewright-portraits/portrait17.webp"],
+  ["systems/mondolme/art/tlomdev/human npcs for itmod/npc1.png",
+    "systems/mondolme/art/tlomdev/human-npcs-for-itmod/npc1.webp"],
 ];
 // Must survive UNCHANGED. icons/ is stamped class art and stayed put; the URL is
 // a Warden's own image and was never ours to rewrite.
 const UNTOUCHED = [
-  "systems/air-bladder/icons/generic-item.svg",
+  "systems/mondolme/icons/generic-item.svg",
   "https://example.invalid/some/portrait.png",
 ];
 
@@ -248,7 +248,7 @@ try {
   // its writes land, which the poll below waits for and the assertion after it
   // checks — the world ends exactly where it began.
   const gen = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const before = game.settings.get(NS, "art-migration-generation");
     await game.settings.set(NS, "art-migration-generation", 0);
     return { before };
@@ -284,7 +284,7 @@ try {
       controls: p.controlIds.map((id) => game.items.get(id)?.img ?? null),
       // The generation marker: re-stamped only after the sweep's last write,
       // so it is the one "done" signal that cannot be read too early.
-      generation: game.settings.get("air-bladder", "art-migration-generation"),
+      generation: game.settings.get("mondolme", "art-migration-generation"),
     };
   }, planted);
 
@@ -299,11 +299,11 @@ try {
   // tlomdev out would not fail anything; it would make the poll stop early and
   // the assertions below race the migration, which is the failure mode that
   // passes on a re-run and gets called a flake.
-  const STALE_PREFIX = /systems\/air-bladder\/(character_|tlomdev\/|game-icons\/|lydia-comer\/)/;
-  const STALE_FORMAT = /systems\/air-bladder\/art\/(lydia-comer\/.*\.(jpe?g|png)|tlomdev\/.*\.png)$/i;
+  const STALE_PREFIX = /systems\/mondolme\/(character_|tlomdev\/|game-icons\/|lydia-comer\/)/;
+  const STALE_FORMAT = /systems\/mondolme\/art\/(lydia-comer\/.*\.(jpe?g|png)|tlomdev\/.*\.png)$/i;
   // The art/-era SPACED folder paths carry no old prefix and (for the KW half)
   // no stale extension either — a third stale shape, or the poll stops early.
-  const STALE_SPACED = /systems\/air-bladder\/art\/tlomdev\/(human npcs for itmod|Kettlewright Portraits)\//;
+  const STALE_SPACED = /systems\/mondolme\/art\/tlomdev\/(human npcs for itmod|Kettlewright Portraits)\//;
   // packLocked is part of "done": the migration re-locks the world pack in a
   // finally AFTER its last document write, as a settings round-trip. A poll
   // that stops when the PATHS are right reads the lock inside that window and
@@ -330,25 +330,25 @@ try {
     ["a RollTable result's img snapshot", "result", MOVES[0][1]],
   ]) {
     after[key] === want
-      ? ok(`migrated: ${label}`, want.replace("systems/air-bladder/art/", ""))
+      ? ok(`migrated: ${label}`, want.replace("systems/mondolme/art/", ""))
       : fail(`migrated: ${label}`, `got "${after[key]}", wanted "${want}"`);
   }
   // One per renamed folder — the ORDERING leg: the specific rule must beat the
   // generic one (first match wins), and each chains at least one more rewrite.
   for (const [i, [, want]] of RENAMED.entries()) {
-    const folder = want.replace("systems/air-bladder/art/tlomdev/", "").split("/")[0];
+    const folder = want.replace("systems/mondolme/art/tlomdev/", "").split("/")[0];
     const label = `renamed: ${folder}, spaces gone, rule order held`;
     after.renamed[i] === want
-      ? ok(`migrated: ${label}`, want.replace("systems/air-bladder/art/", ""))
+      ? ok(`migrated: ${label}`, want.replace("systems/mondolme/art/", ""))
       : fail(`migrated: ${label}`, `got "${after.renamed[i]}", wanted "${want}"`);
   }
   // One per re-encoded gallery, named by the gallery so a miss says which rule
   // is absent rather than "the re-encode leg".
   for (const [i, [from, want]] of REENCODED.entries()) {
-    const gallery = from.replace("systems/air-bladder/art/", "").split("/")[0];
+    const gallery = from.replace("systems/mondolme/art/", "").split("/")[0];
     const label = `re-encoded: ${gallery}, art/ already right, format was not`;
     after.reencs[i] === want
-      ? ok(`migrated: ${label}`, want.replace("systems/air-bladder/art/", ""))
+      ? ok(`migrated: ${label}`, want.replace("systems/mondolme/art/", ""))
       : fail(`migrated: ${label}`, `got "${after.reencs[i]}", wanted "${want}"`);
   }
   console.log(`        (migration settled after ${waited}ms)`);

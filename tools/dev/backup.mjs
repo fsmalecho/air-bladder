@@ -40,7 +40,7 @@ const KEEP = 24;
 /** What gets copied. A missing source is skipped with a warning, never fatal. */
 const SOURCES = [
   { name: "packs", from: path.join(ROOT, "packs") },
-  { name: "world-air-bladder-dev", from: path.join(FOUNDRY, "data", "Data", "worlds", "air-bladder-dev") },
+  { name: "world-mondolme-dev", from: path.join(FOUNDRY, "data", "Data", "worlds", "mondolme-dev") },
   { name: "world-ab019", from: path.join(FOUNDRY, "ghtest-data", "Data", "worlds", "ab019") },
 ];
 
@@ -139,7 +139,7 @@ fs.writeFileSync(path.join(dir, "README.txt"),
   + "packs/                  -> copy back into the repo as packs/, then run\n"
   + "                           `npm run extract:packs` to fold the content into\n"
   + "                           src/packs/ YAML where git can see it.\n"
-  + "world-air-bladder-dev/  -> copy back over foundry/data/Data/worlds/air-bladder-dev\n"
+  + "world-mondolme-dev/  -> copy back over foundry/data/Data/worlds/mondolme-dev\n"
   + "world-ab019/            -> copy back over foundry/ghtest-data/Data/worlds/ab019\n\n"
   + "Stop Foundry before restoring anything: LevelDB holds a lock and a restore\n"
   + "under a running server produces a corrupt mix of both states.\n");

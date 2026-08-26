@@ -46,7 +46,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const made = [];
     const track = (a) => { if (a) made.push(a); return a; };
     const containersOf = (actor) =>
@@ -71,7 +71,7 @@ try {
     // went red in any world that had ever authored one, blaming the grouping.
     // Assert instead that every SHIPPED background survives the grouping, and read
     // the roster from the pack so it cannot drift when the content changes.
-    const shipped2e = (await game.packs.get("air-bladder.backgrounds-2e")?.getIndex())
+    const shipped2e = (await game.packs.get("mondolme.backgrounds-2e")?.getIndex())
       ?.contents.map((d) => d.name) ?? [];
     const seen2e = new Set(g2e.flatMap((g) => g.backgrounds).map((b) => b.name));
     const grouping = {
@@ -137,7 +137,7 @@ try {
     //     disabled rows greyed so a disable can be undone. Preconditions are
     //     established here and restored in the teardown below — a leftover
     //     disabled uuid would silently shrink every later pool count.
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const offWas = game.settings.get(NS, "disabled-backgrounds") ?? [];
     const customWas = game.settings.get(NS, "content-source-custom");
     const disable = {};
@@ -218,12 +218,12 @@ try {
       bondIds: (actor.system.bonds ?? []).map((b) => b.id),
       secondBondGold: (actor.system.bonds ?? [])[1]?.gold ?? 0,
       secondBondItemIds: actor.items
-        .filter((i) => i.getFlag("air-bladder", "grantSource") === `bond:${(actor.system.bonds ?? [])[1]?.id}`)
+        .filter((i) => i.getFlag("mondolme", "grantSource") === `bond:${(actor.system.bonds ?? [])[1]?.id}`)
         .map((i) => i.id),
       img: actor.img,
       gold: actor.system.gold,
       qGold: (actor.system.questions ?? []).reduce((n, q) => n + (q.gold ?? 0), 0),
-      bgGear: actor.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "background").map((i) => i.name),
+      bgGear: actor.items.filter((i) => i.getFlag("mondolme", "grantSource") === "background").map((i) => i.name),
     };
     // Something the player owns, which must never be touched by a swap.
     const [bought] = await actor.createEmbeddedDocuments("Item", [{ name: "PROBE Bought Lantern", type: "item" }]);
@@ -234,12 +234,12 @@ try {
     // Compare against RESOLVED names, not reference names: an alias resolves to a
     // different canonical item ("Torches" -> "Torch"), so matching the raw
     // reference would fail on a swap that actually worked.
-    const { resolveGearItem } = await import("/systems/air-bladder/module/gear.js");
+    const { resolveGearItem } = await import("/systems/mondolme/module/gear.js");
     const resolvedNames = async (b) => (await Promise.all(
       (b.system.startingGear ?? []).map((g) => resolveGearItem(g.name))
     )).filter(Boolean).map((i) => i.name);
     const newRefs = await resolvedNames(kettle);
-    const nowBgGear = actor.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "background");
+    const nowBgGear = actor.items.filter((i) => i.getFlag("mondolme", "grantSource") === "background");
     const swap = {
       background: actor.system.background,
       uuidLinked: actor.system.backgroundUuid === kettle.uuid,
@@ -285,11 +285,11 @@ try {
     const outrider = bgs2e.find((b) => b.name === "Outrider");
     await gen.changeBackground(actor, outrider);
     for (const c of containersOf(actor)) made.push(c);
-    const withHorse = containersOf(actor).filter((c) => c.getFlag("air-bladder", "grantSource"));
+    const withHorse = containersOf(actor).filter((c) => c.getFlag("mondolme", "grantSource"));
     const bonekeeper = bgs2e.find((b) => b.name === "Bonekeeper");
     await gen.changeBackground(actor, bonekeeper);
     for (const c of containersOf(actor)) made.push(c);
-    const afterSwapAway = containersOf(actor).filter((c) => c.getFlag("air-bladder", "grantSource"));
+    const afterSwapAway = containersOf(actor).filter((c) => c.getFlag("mondolme", "grantSource"));
     const containers = {
       gotHorse: withHorse.length === 1,
       horse: withHorse[0]?.name,
@@ -331,7 +331,7 @@ try {
       gearPresent: (await resolvedNames(merchant)).every((n) =>
         bbActor.items.some((i) => i.name === n)),
       taggedCount: bbActor.items.filter(
-        (i) => i.getFlag("air-bladder", "grantSource") === "background").length,
+        (i) => i.getFlag("mondolme", "grantSource") === "background").length,
       refCount: (merchant.system.startingGear ?? []).length,
     };
 
@@ -381,7 +381,7 @@ try {
     // and a delta hides the case where the handler orphans exactly as many as
     // it cleans up.
     const stranded = raceActor.items.filter((i) => {
-      const src = String(i.getFlag("air-bladder", "grantSource") ?? "");
+      const src = String(i.getFlag("mondolme", "grantSource") ?? "");
       return src.startsWith("bond:") && src !== `bond:${keptBond[0]?.id}`;
     }).map((i) => i.id);
     if (stranded.length) await raceActor.deleteEmbeddedDocuments("Item", stranded);
@@ -406,8 +406,8 @@ try {
       bondRace.after = bonds.length;
       const live = new Set(bonds.map((b) => `bond:${b.id}`));
       bondRace.orphanedGrants = raceActor.items
-        .filter((i) => String(i.getFlag("air-bladder", "grantSource") ?? "").startsWith("bond:"))
-        .filter((i) => !live.has(i.getFlag("air-bladder", "grantSource")))
+        .filter((i) => String(i.getFlag("mondolme", "grantSource") ?? "").startsWith("bond:"))
+        .filter((i) => !live.has(i.getFlag("mondolme", "grantSource")))
         .map((i) => i.name);
     }
     await sheet.close();

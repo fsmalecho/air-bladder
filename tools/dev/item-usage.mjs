@@ -82,11 +82,11 @@ for (const bg of readPack("backgrounds-2e")) {
 for (const bg of readPack("backgrounds-barebones"))
   for (const g of bg.system?.startingGear ?? []) add(g.name, "bg");
 
-// 2e Bonds table: per-result flag items (scope air-bladder or legacy cairn)
+// 2e Bonds table: per-result flag items (scope mondolme or legacy cairn)
 for (const t of readPack("tables-2e"))
   for (const r of t.results ?? []) {
     const f = r.flags ?? {};
-    for (const scope of ["air-bladder", "cairn"])
+    for (const scope of ["mondolme", "cairn"])
       for (const it of f[scope]?.items ?? []) add(it.name ?? it, "bg");
   }
 

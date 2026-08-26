@@ -33,8 +33,8 @@
 import { chromium } from "playwright";
 import { VIEWPORT, joinAsGM, watchErrors, dismissChrome, watchdog, withHookOff } from "./lib.mjs";
 
-const BOOK_ICON = "systems/air-bladder/icons/spellbook.svg";
-const SCROLL_ICON = "systems/air-bladder/icons/spellscroll.svg";
+const BOOK_ICON = "systems/mondolme/icons/spellbook.svg";
+const SCROLL_ICON = "systems/mondolme/icons/spellscroll.svg";
 
 let failed = false;
 const ok = (m) => console.log(`  ok    ${m}`);
@@ -76,7 +76,7 @@ const flag = await page.evaluate(async () => {
   const it = await getDocumentClass("Item").create({
     name: "zz-scroll-probe",
     type: "spellbook",
-    img: "systems/air-bladder/icons/spellbook.svg",
+    img: "systems/mondolme/icons/spellbook.svg",
     system: { description: "<p>Sticky.</p>", equipped: true },
   });
   const out = { book: snap(it) };
@@ -197,8 +197,8 @@ eq("glog survives unticking too (BOOK_PINNED restores the book, not the wording)
 
 console.log("\ngenerated scrolls");
 const gen = await page.evaluate(async () => {
-  const { spellScrollItem, spellNameFromGrant, isScrollGrant } = await import("/systems/air-bladder/module/gear.js");
-  const pack = game.packs.get("air-bladder.spellbooks");
+  const { spellScrollItem, spellNameFromGrant, isScrollGrant } = await import("/systems/mondolme/module/gear.js");
+  const pack = game.packs.get("mondolme.spellbooks");
   const entry = (await pack.getIndex()).contents[0];
   const book = await pack.getDocument(entry._id);
   const built = spellScrollItem(book);
@@ -442,9 +442,9 @@ const planted = await page.evaluate(async () => {
   const legacy = (name) => ({
     name,
     type: "item",                                  // the old shape
-    img: "systems/air-bladder/icons/spellscroll.svg",
+    img: "systems/mondolme/icons/spellscroll.svg",
     sort: 4200,
-    flags: { "air-bladder": { grantSource: "bond:zz" } },
+    flags: { "mondolme": { grantSource: "bond:zz" } },
     system: { description: "<p>Sticky.</p>", weightless: true, uses: { value: 0, max: 1 }, cost: 3, quantity: 1 },
   });
 
@@ -531,7 +531,7 @@ const after = await page.evaluate(async (p) => {
   const shape = (i) => i && ({
     name: i.name, type: i.type, scroll: i.system.scroll, weightless: i.system.weightless,
     uses: { value: i.system.uses.value, max: i.system.uses.max },
-    sort: i.sort, grantSource: i.getFlag("air-bladder", "grantSource"),
+    sort: i.sort, grantSource: i.getFlag("mondolme", "grantSource"),
     description: i.system.description,
     folder: i.folder?.id ?? null, ownerDefault: i.ownership?.default ?? null,
   });

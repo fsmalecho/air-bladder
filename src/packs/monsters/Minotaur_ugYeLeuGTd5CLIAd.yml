@@ -3,7 +3,7 @@ name: Minotaur
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/minotaur.svg
+img: systems/mondolme/art/game-icons/creatures/minotaur.svg
 items:
   - _id: nlqAHpekbcM5OUaD
     name: Gambeson
@@ -194,7 +194,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/minotaur.svg
+    src: systems/mondolme/art/game-icons/creatures/minotaur.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

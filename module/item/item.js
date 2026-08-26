@@ -460,7 +460,7 @@ export class CairnItem extends Item {
     // Grant-source chip (Background / Bond / Question) shown beside the item's
     // other tags, so the three sources are distinguishable. Starting gear and
     // bought items get none. The source rides on the item as
-    // flags.air-bladder.grantSource ("background" / "bond:<id>" / "question:<i>"),
+    // flags.mondolme.grantSource ("background" / "bond:<id>" / "question:<i>"),
     // set at generation; the re-roll/replacement machinery keys off it, so the
     // display-only "show-grant-tags" setting never affects the flag itself.
     // A container that a background/question rolled, but recorded as a plain
@@ -469,8 +469,8 @@ export class CairnItem extends Item {
     // separate flag and takes precedence over the source label. That flag also
     // suppresses the "Petty" (weightless) chip in the inventory row — a cart isn't
     // a petty item, it just isn't tracked as cargo when the feature is off.
-    const grantSource = this.getFlag("air-bladder", "grantSource");
-    const isContainerItem = !!this.getFlag("air-bladder", "containerItem");
+    const grantSource = this.getFlag("mondolme", "grantSource");
+    const isContainerItem = !!this.getFlag("mondolme", "containerItem");
     this.system.isContainerItem = isContainerItem;
     // The UNGATED label first — the mapping alone, no setting. The printed
     // sheet shows the tag under its OWN switch (show-grant-tags-print), so

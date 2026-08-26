@@ -2,7 +2,7 @@ name: Manacles
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/metal/manacles.svg
+img: systems/mondolme/art/game-icons/metal/manacles.svg
 effects: []
 _id: svKvQb02QkTdbuTS
 _stats:

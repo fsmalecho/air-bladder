@@ -1,7 +1,7 @@
 _id: RMhB2Jq8c9cf7eRe
 name: Grimoire
 type: item
-img: systems/air-bladder/art/game-icons/book/burning-book.svg
+img: systems/mondolme/art/game-icons/book/burning-book.svg
 effects: []
 folder: null
 sort: 0
@@ -37,7 +37,7 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

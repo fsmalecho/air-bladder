@@ -1,12 +1,12 @@
 _id: Is2QxBP02EPE8uv6
 name: Leather Jerkin
 type: armor
-img: systems/air-bladder/art/game-icons/armor/leather-vest.svg
+img: systems/mondolme/art/game-icons/armor/leather-vest.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: >-
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!Is2QxBP02EPE8uv6'

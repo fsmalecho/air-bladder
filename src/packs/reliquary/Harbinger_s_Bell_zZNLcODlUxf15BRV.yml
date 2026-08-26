@@ -1,12 +1,12 @@
 _id: zZNLcODlUxf15BRV
 name: Harbinger's Bell
 type: item
-img: systems/air-bladder/art/game-icons/metal/ringing-bell.svg
+img: systems/mondolme/art/game-icons/metal/ringing-bell.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: Hang at chest height to ring when danger is imminent.
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!zZNLcODlUxf15BRV'

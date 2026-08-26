@@ -1,12 +1,12 @@
 _id: 5Zt217PY4f5ZBEfQ
 name: Serrated Knife
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A saw-edged knife that tears as it cuts. Ugly and hard to clean.
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!5Zt217PY4f5ZBEfQ'

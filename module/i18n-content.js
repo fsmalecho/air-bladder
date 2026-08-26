@@ -1,5 +1,5 @@
 /**
- * Content-localization overlay for Air Bladder — DISPLAY-ONLY.
+ * Content-localization overlay for Mondolme — DISPLAY-ONLY.
  *
  * UI strings go through Foundry i18n (lang/*.json, merged over English). Compendium
  * CONTENT — item / background / table / monster names and descriptions — does not:

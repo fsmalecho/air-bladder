@@ -118,7 +118,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/reptiles/dimetrodon.svg
+    src: systems/mondolme/art/game-icons/reptiles/dimetrodon.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1
@@ -158,6 +158,6 @@ prototypeToken:
     src: null
     disposition: false
   movementAction: null
-img: systems/air-bladder/art/game-icons/reptiles/dimetrodon.svg
+img: systems/mondolme/art/game-icons/reptiles/dimetrodon.svg
 folder: null
 _key: '!actors!cSdhdfVtAJpLaChL'

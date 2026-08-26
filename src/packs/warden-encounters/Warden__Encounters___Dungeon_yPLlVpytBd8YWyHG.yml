@@ -9,7 +9,7 @@ results:
   - _id: ofl2sABWKdQVXmg9
     type: text
     description: >-
-      1d6 @UUID[Compendium.air-bladder.monsters.Actor.S6lcn0jsoTeJgqst]{Goblins}
+      1d6 @UUID[Compendium.mondolme.monsters.Actor.S6lcn0jsoTeJgqst]{Goblins}
       — squabbling over something they found
     img: icons/svg/d20-black.svg
     weight: 1
@@ -33,7 +33,7 @@ results:
   - _id: 1LvQnCyxB9g7NFsH
     type: text
     description: >-
-      1d2 @UUID[Compendium.air-bladder.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres} —
+      1d2 @UUID[Compendium.mondolme.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres} —
       hungry, and between the party and the way out
     img: icons/svg/d20-black.svg
     weight: 1
@@ -79,7 +79,7 @@ results:
   - _id: GIvYhU9Dorc6DWOx
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.X827Q1OhOMlNkNvm]{Root
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.X827Q1OhOMlNkNvm]{Root
       Goblins} — dragging a sack the wrong way
     img: icons/svg/d20-black.svg
     weight: 1
@@ -103,7 +103,7 @@ results:
   - _id: oilIhfBRTDpFYQMu
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.4mXfyxLUlRQzgnvt]{Mimic} —
+      1 @UUID[Compendium.mondolme.monsters.Actor.4mXfyxLUlRQzgnvt]{Mimic} —
       patient, and shaped like something worth opening
     img: icons/svg/d20-black.svg
     weight: 1
@@ -155,7 +155,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

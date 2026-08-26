@@ -1,12 +1,12 @@
 _id: HdUqTpHBUSQGCh86
 name: Barbed Epaulets
 type: armor
-img: systems/air-bladder/art/game-icons/spike/spiked-shoulder-armor.svg
+img: systems/mondolme/art/game-icons/spike/spiked-shoulder-armor.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!HdUqTpHBUSQGCh86'

@@ -24,7 +24,7 @@
 import { chromium } from "playwright";
 import { VIEWPORT, joinAsGM, watchErrors, dismissChrome } from "./lib.mjs";
 
-const NS = "air-bladder";
+const NS = "mondolme";
 const ORIGINAL = "Gamemaster";
 const DELIBERATE = "Bilbo the Warden";
 

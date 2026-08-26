@@ -3,7 +3,7 @@ name: Turtle, Giant Sea
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/turtle.svg
+img: systems/mondolme/art/game-icons/animals/turtle.svg
 items:
   - _id: VPeMOZr6rqWpXBap
     name: Hard Shell
@@ -153,7 +153,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/turtle.svg
+    src: systems/mondolme/art/game-icons/animals/turtle.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

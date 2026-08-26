@@ -521,7 +521,7 @@ try {
   console.log("\nthe ceiling: ten connections, the eleventh refused");
   const cap = await page.evaluate(async () => {
     const Cls = CONFIG.Actor.documentClass;
-    const { maxConnections } = await import("/systems/air-bladder/module/connections.js");
+    const { maxConnections } = await import("/systems/mondolme/module/connections.js");
     const max = maxConnections();
     const pc = await Cls.create({ name: "ZZ Roles Cap PC", type: "character" });
     // Seeded through CREATION DATA, the way every mint flow writes the link —
@@ -1058,7 +1058,7 @@ try {
     const titles = cells.map((c) => c.getAttribute("title"));
     // The two files that spent a year as the same cartwheel glyph.
     const [cartSvg, wagonSvg] = await Promise.all(
-      ["cart", "wagon"].map((n) => fetch(`systems/air-bladder/icons/${n}.svg`).then((r) => r.text())));
+      ["cart", "wagon"].map((n) => fetch(`systems/mondolme/icons/${n}.svg`).then((r) => r.text())));
     const hasBrowse = !!dlg?.querySelector(".cairn-portrait-browse");
     const barrel = cells.find((c) => /barrel\.svg$/.test(c.dataset.src ?? ""));
     barrel?.click();
@@ -1087,7 +1087,7 @@ try {
     // A capacity someone typed must survive a later art change — which writes
     // art alone now (single argument; the class parameter is gone).
     await a.update({ "system.slots": 12 });
-    await sheet._setContainerArt("systems/air-bladder/icons/crate.svg");
+    await sheet._setContainerArt("systems/mondolme/icons/crate.svg");
     const afterSecond = { cls: a.system.containerClass, slots: a.system.slots, img: a.img };
 
     // The Browse escape must leave the Kind ALONE — custom art is just art,
@@ -1338,7 +1338,7 @@ try {
         await sleep(250);
         shapeSettled = free.ownership.default === L.OBSERVER
           && free.ownership[aliceId] === L.OWNER
-          && free.getFlag("air-bladder", "ownershipSyncPending") === undefined;
+          && free.getFlag("mondolme", "ownershipSyncPending") === undefined;
       }
       const freeShape = { ...free.ownership };
 

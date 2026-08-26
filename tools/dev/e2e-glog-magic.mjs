@@ -74,10 +74,10 @@
 import { chromium } from "playwright";
 import { VIEWPORT, joinAsGM, watchErrors, watchdog, withSettings } from "./lib.mjs";
 
-const NS = "air-bladder";
-const CANON = "air-bladder.spellbooks";
-const GLOG = "air-bladder.spellbooks-glog";
-const MORE = "air-bladder.more-spellbooks";
+const NS = "mondolme";
+const CANON = "mondolme.spellbooks";
+const GLOG = "mondolme.spellbooks-glog";
+const MORE = "mondolme.more-spellbooks";
 
 const browser = await chromium.launch();
 watchdog(300000, "glog-magic probe");
@@ -159,7 +159,7 @@ try {
       // RENAMED (aliased in module/glog.js) and two have no counterpart at all.
       // Everything below derives from the live packs + the live alias map, so a
       // content edit moves the probe rather than silently invalidating it.
-      const { GLOG_NAME_ALIASES } = await import("/systems/air-bladder/module/glog.js");
+      const { GLOG_NAME_ALIASES } = await import("/systems/mondolme/module/glog.js");
       const glogTextFor = (key) => (key in glogByName) ? glogByName[key] : glogByName[GLOG_NAME_ALIASES.get(key)];
       const canonKeys = Object.keys(canonByName);
       const withCounterpart = canonKeys.filter((n) => glogTextFor(n) !== undefined);
@@ -183,7 +183,7 @@ try {
         glogText: pick ? glogByName[pick] : null,
         aliasCase,
         canonByName,
-        settingOn: game.settings.get("air-bladder", "enable-glog-magic") === true,
+        settingOn: game.settings.get("mondolme", "enable-glog-magic") === true,
       };
     }, { CANON, GLOG, MORE });
 
@@ -194,7 +194,7 @@ try {
       // and the create seam consult. The mid-run flip below turns it back ON,
       // which is the state teardown leaves: withSettings' entry snapshot was
       // ON, so its restore finds no diff and writes nothing.
-      await page.evaluate(() => game.settings.set("air-bladder", "enable-glog-magic", false));
+      await page.evaluate(() => game.settings.set("mondolme", "enable-glog-magic", false));
       note("world arrived converted (setting ON) — flipped OFF for the canon legs; the mid-run flip re-converts and teardown leaves it ON as found");
     }
     pre.canonSize > 0 && pre.glogSize > 0
@@ -215,7 +215,7 @@ try {
 
     const off = await page.evaluate(async ({ NAME, ALIAS, canonByName }) => {
       const out = {};
-      const gear = await import("/systems/air-bladder/module/gear.js");
+      const gear = await import("/systems/mondolme/module/gear.js");
       const CG = game.cairn.characterGenerator;
       const grant = await gear.resolveGearItem(`Spellbook (${NAME})`);
       out.grantType = grant?.type;
@@ -346,7 +346,7 @@ try {
 
     /* --- 3. flip, then generation legs while the sweep runs ----------------- */
 
-    await page.evaluate(() => game.settings.set("air-bladder", "enable-glog-magic", true));
+    await page.evaluate(() => game.settings.set("mondolme", "enable-glog-magic", true));
     ok("flipped enable-glog-magic ON (the sweep starts on this client — the active GM)");
 
     const on = await page.evaluate(async ({ NAME, ALIAS, glogText, CANON, GLOG, MORE }) => {
@@ -361,7 +361,7 @@ try {
         };
       }
       try {
-        const gear = await import("/systems/air-bladder/module/gear.js");
+        const gear = await import("/systems/mondolme/module/gear.js");
         const CG = game.cairn.characterGenerator;
         const glogIds = new Set(game.packs.get(GLOG).index.map((e) => e._id));
         const moreIds = new Set((game.packs.get(MORE)?.index ?? []).map((e) => e._id));
@@ -487,7 +487,7 @@ try {
         ].map((d) => d?._stats?.modifiedTime ?? null);
       };
       const beforeTimes = await stamp();
-      const { runGlogConversion } = await import("/systems/air-bladder/module/glog.js");
+      const { runGlogConversion } = await import("/systems/mondolme/module/glog.js");
       await runGlogConversion();
       const afterTimes = await stamp();
       return { unchanged: JSON.stringify(beforeTimes) === JSON.stringify(afterTimes), beforeTimes, afterTimes };
@@ -549,7 +549,7 @@ try {
       // function the sweep calls — running the real sweep against a defeated
       // skip would be a real write against the shared world, so the witness
       // for the skip is the diff itself.
-      const glogMod = await import("/systems/air-bladder/module/glog.js");
+      const glogMod = await import("/systems/mondolme/module/glog.js");
       const map = await glogMod.glogTextCached();
       out.mapSize = map.size;
       out.pageDiffNull = glogMod.glogConversionDiff(

@@ -3,7 +3,7 @@ name: Snake, Spitting Cobra
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/snake.svg
+img: systems/mondolme/art/game-icons/animals/snake.svg
 items:
   - _id: 4gFADFfroenWnT8P
     name: Bite*
@@ -153,7 +153,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/snake.svg
+    src: systems/mondolme/art/game-icons/animals/snake.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

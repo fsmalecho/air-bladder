@@ -3,7 +3,7 @@ name: Satyr
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/goat.svg
+img: systems/mondolme/art/game-icons/animals/goat.svg
 items:
   - _id: uQieSzOotoRLs8Eh
     name: Horns*
@@ -166,7 +166,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/goat.svg
+    src: systems/mondolme/art/game-icons/animals/goat.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

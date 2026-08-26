@@ -58,7 +58,7 @@ try {
     // generator — and in a world carrying custom portraits they simply fail,
     // naming a path that is not a defect. Read-shadow only, never a write.
     const tl = await CG.getTlomdevManifest();
-    const defDir = `${tl?.artDir ?? "systems/air-bladder/art/tlomdev"}/humanoid`;
+    const defDir = `${tl?.artDir ?? "systems/mondolme/art/tlomdev"}/humanoid`;
     const defNames = (tl?.categories ?? []).find((c) => c.key === "humanoid")?.names ?? [];
     const origGet = game.settings.get;
     game.settings.get = function (ns, key, ...rest) {

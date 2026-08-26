@@ -1,12 +1,12 @@
 _id: iQuW35aGbm3BnzEu
 name: Stone Eater
 type: item
-img: systems/air-bladder/art/game-icons/insects/centipede.svg
+img: systems/mondolme/art/game-icons/insects/centipede.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -26,7 +26,7 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: 1785862071154

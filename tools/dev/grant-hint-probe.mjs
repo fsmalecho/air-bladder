@@ -20,9 +20,9 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const out = {};
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const pack = game.packs.get(`${NS}.backgrounds-2e`);
     const bg = (await pack.getDocuments())[0];
     const actor = await gen.createActorWithCharacter(await gen.generate2eCharacter(bg));

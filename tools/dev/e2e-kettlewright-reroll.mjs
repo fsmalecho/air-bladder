@@ -48,7 +48,7 @@ await page.waitForSelector(".application.sheet", { timeout: 15000 }).catch(() =>
 await page.waitForTimeout(2500);
 
 const out = await page.evaluate(async () => {
-  const SCOPE = "air-bladder";
+  const SCOPE = "mondolme";
   const a = game.actors.getName("Solene");
   const srcOf = (i) => i.getFlag(SCOPE, "grantSource") ?? "";
   const snapshot = () => a.items.map((i) => `${i.name} [${srcOf(i)}]`).sort();

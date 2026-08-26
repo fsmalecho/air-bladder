@@ -265,7 +265,7 @@ try {
     // gear is folded into `items`, tagged grantSource "background"; the question's
     // rolled option tags its grant "question:0".
     const cd = await game.cairn.characterGenerator.generate2eCharacter(bg);
-    const gs = (g) => g.flags?.["air-bladder"]?.grantSource;
+    const gs = (g) => g.flags?.["mondolme"]?.grantSource;
     out.genItemNames = (cd?.items ?? []).map((g) => g.name);
     out.genHasSnapshotGear = (cd?.items ?? []).some((g) => g.name === SWORD && gs(g) === "background");
     out.genQuestionGrantedSnapshot = (cd?.items ?? []).filter((g) => g.name === SWORD && String(gs(g)).startsWith("question:")).length;
@@ -445,7 +445,7 @@ try {
         inView: r.height > 0 && r.top >= s.top - 1 && r.bottom <= s.bottom + 1,
       };
     };
-    const roPack = game.packs.get("air-bladder.backgrounds-2e");
+    const roPack = game.packs.get("mondolme.backgrounds-2e");
     const roDocs = await roPack.getDocuments();
     const roBg = roDocs.find((d) => d.name === "Jongleur") ?? roDocs[0];
     const roSheet = roBg.sheet;
@@ -484,7 +484,7 @@ try {
     // precondition trap in its other direction — stale world state SATISFYING an
     // assertion is the documented one, and world state DEFEATING one costs the
     // same hour. Restored in the finally below, and the restore is asserted.
-    const cbPack = game.packs.get("air-bladder.backgrounds-custom");
+    const cbPack = game.packs.get("mondolme.backgrounds-custom");
     const lockWas = cbPack?.locked ?? null;
     const cleric = (await cbPack?.getDocuments() ?? []).find((d) => d.name === "Cleric");
     if (cleric) {
@@ -552,9 +552,9 @@ try {
       await actor.delete();
       return out;
     };
-    const cleric = (await game.packs.get("air-bladder.backgrounds-custom")?.getDocuments() ?? [])
+    const cleric = (await game.packs.get("mondolme.backgrounds-custom")?.getDocuments() ?? [])
       .find((d) => d.name === "Cleric");
-    const canon = (await game.packs.get("air-bladder.backgrounds-2e")?.getDocuments() ?? [])
+    const canon = (await game.packs.get("mondolme.backgrounds-2e")?.getDocuments() ?? [])
       .find((d) => d.name === "Jongleur");
     const out = { credited: cleric ? await creditOf(cleric) : null,
                   uncredited: canon ? await creditOf(canon) : null };

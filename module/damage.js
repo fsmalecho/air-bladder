@@ -4,7 +4,7 @@ import { evaluateFormula, askDamageTargets, concealmentWhisper } from './utils.j
 import { postStatusCard } from './actor/actor.js'
 
 // The system's flag namespace, imported rather than re-declared: a second
-// "air-bladder" literal is a second thing that can drift, and a flag written
+// "mondolme" literal is a second thing that can drift, and a flag written
 // under one namespace and read under another is invisible until it is missing.
 // FLAG_SCOPE's home in character-generator.js is historical; nothing there
 // imports this file, so there is no cycle.
@@ -452,7 +452,7 @@ export class Damage {
             // and the draw is slower than it. Catch here -- an unhandled
             // rejection mid-damage-resolution is silent.
             this._rollScarsTable(dmg, token).catch((err) => {
-                console.error("Air Bladder | the Scars draw failed:", err);
+                console.error("Mondolme | the Scars draw failed:", err);
             });
         }
 
@@ -564,7 +564,7 @@ export class Damage {
         // pack were absent, renamed, or the table deleted from the world copy.
         // Failing loudly but harmlessly is right here: the Warden asked for a scar
         // and needs to know it did not happen.
-        const table = await findCompendiumItem("air-bladder.utils", "Scars");
+        const table = await findCompendiumItem("mondolme.utils", "Scars");
         if (!table) {
             ui.notifications?.warn(game.i18n.localize("CAIRN.Notify.NoScarsTable"));
             return;

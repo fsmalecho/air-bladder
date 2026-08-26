@@ -1,12 +1,12 @@
 _id: z8LgxWkUqjz8qsk4
 name: Bandages
 type: item
-img: systems/air-bladder/art/game-icons/body/knee-bandage.svg
+img: systems/mondolme/art/game-icons/body/knee-bandage.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Clean linen strips for binding wounds and stanching blood.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!z8LgxWkUqjz8qsk4'

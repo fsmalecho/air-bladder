@@ -51,7 +51,7 @@ await joinAsGM(page);
 await dismissChrome(page);
 
 const out = await page.evaluate(async () => {
-  const sys = "/systems/air-bladder/module";
+  const sys = "/systems/mondolme/module";
   const comp = await import(`${sys}/compendium.js`);
   const mk = await import(`${sys}/marketplace.js`);
   const cg = await import(`${sys}/character-generator.js`);
@@ -89,7 +89,7 @@ const out = await page.evaluate(async () => {
     await step("findTableItems over every shipped RollTable", async () => {
       let n = 0;
       for (const pack of game.packs.filter((p) => p.metadata.type === "RollTable"
-          && p.metadata.packageName === "air-bladder")) {
+          && p.metadata.packageName === "mondolme")) {
         for (const table of await pack.getDocuments()) n += (await comp.findTableItems([...table.results])).length;
       }
       res.shippedResolved = n;
@@ -128,7 +128,7 @@ const out = await page.evaluate(async () => {
 
   /* ---- PHASE 2: a WORLD document row resolves ---------------------------- */
   const worldItem = await CONFIG.Item.documentClass.create({ name: "ZZ TR World Dagger", type: "weapon" });
-  const packItem = await fromUuid("Compendium.air-bladder.weapons.Item.bBxRixn3s83nf22t");
+  const packItem = await fromUuid("Compendium.mondolme.weapons.Item.bBxRixn3s83nf22t");
   const table = await RollTable.create({
     name: "ZZ TR Mixed Table",
     results: [
@@ -197,7 +197,7 @@ const out = await page.evaluate(async () => {
   // This mutates a SHIPPED pack table, so the row is removed again from Node's
   // finally as well as here; `res.phase4.rowId` carries it out for that.
   res.phase4 = { ran: false };
-  const pack = game.packs.get("air-bladder.marketplace");
+  const pack = game.packs.get("mondolme.marketplace");
   const wasLocked = pack?.locked ?? null;
   res.phase4.wasLocked = wasLocked;
   try {
@@ -331,7 +331,7 @@ if (!out.phase4?.ran) {
 // inside page.evaluate still lands.
 if (out.phase4?.rowId || out.phase4?.wasLocked) {
   const swept = await page.evaluate(async ({ tableUuid, rowId, wasLocked }) => {
-    const pack = game.packs.get("air-bladder.marketplace");
+    const pack = game.packs.get("mondolme.marketplace");
     if (pack?.locked && rowId) await pack.configure({ locked: false });
     if (rowId && tableUuid) {
       const t = await fromUuid(tableUuid);

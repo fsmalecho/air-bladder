@@ -2,7 +2,7 @@ name: Fire Oil
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/fire/molotov.svg
+img: systems/mondolme/art/game-icons/fire/molotov.svg
 effects: []
 _id: zE6jUE5pJ3D6aya6
 _stats:

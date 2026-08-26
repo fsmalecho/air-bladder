@@ -16,7 +16,7 @@ results:
       - 1
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Single Gem
@@ -44,7 +44,7 @@ results:
       - 2
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 20
         items:
           - name: Ornate Compass
@@ -72,7 +72,7 @@ results:
       - 3
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Locket
@@ -101,7 +101,7 @@ results:
       - 4
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Tiny Crystal Prism
@@ -130,7 +130,7 @@ results:
       - 5
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Silver Moss
@@ -159,7 +159,7 @@ results:
       - 6
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Journal
@@ -188,7 +188,7 @@ results:
       - 7
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Ancient Key Half
@@ -217,7 +217,7 @@ results:
       - 8
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Letter
@@ -246,7 +246,7 @@ results:
       - 9
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Signet Ring
@@ -275,7 +275,7 @@ results:
       - 10
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Mischievous Spirit
@@ -304,7 +304,7 @@ results:
       - 11
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Rolled-Up Map
@@ -333,7 +333,7 @@ results:
       - 12
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Letter
@@ -362,7 +362,7 @@ results:
       - 13
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items: []
     _stats:
@@ -390,7 +390,7 @@ results:
       - 14
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Bracelet
@@ -419,7 +419,7 @@ results:
       - 15
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Stone Heart
@@ -447,7 +447,7 @@ results:
       - 16
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Whistle
@@ -476,7 +476,7 @@ results:
       - 17
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Blood-Red Flower
@@ -505,7 +505,7 @@ results:
       - 18
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Miniature Lute
@@ -534,7 +534,7 @@ results:
       - 19
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items:
           - name: Twig
@@ -563,7 +563,7 @@ results:
       - 20
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         gold: 0
         items: []
     _stats:
@@ -587,7 +587,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

@@ -1,5 +1,5 @@
 /**
- * Shared gear resolution for Air Bladder.
+ * Shared gear resolution for Mondolme.
  *
  * Gear is the single editable source of truth: it lives in Item compendia that a
  * Warden can unlock and edit. Character generation (2e AND Barebones), hireling
@@ -30,21 +30,21 @@ import { glogEnabled, GLOG_SPELL_PACKS, GLOG_NAME_ALIASES } from "./glog.js";
 // reach them, so the grant resolved to nothing. Any pack an importer counts as
 // "already in the pool" MUST be listed here.
 export const CANONICAL_GEAR_PACKS = [
-  "air-bladder.expeditionary-gear",
-  "air-bladder.tools",
+  "mondolme.expeditionary-gear",
+  "mondolme.tools",
   // Holds Lodestone, moved here 2026-07-29 when the one-item `extra` pack was
   // retired -- so the three backgrounds that grant it by name still resolve.
-  "air-bladder.trinkets",
-  "air-bladder.weapons",
-  "air-bladder.armor",
-  "air-bladder.market-goods",
+  "mondolme.trinkets",
+  "mondolme.weapons",
+  "mondolme.armor",
+  "mondolme.market-goods",
   // The distinctive one-off items each background grants (Alchemical Sigils,
   // Catring, …), consolidated out of the type packs by tools/import/background-items.mjs.
   // Last in precedence: every name here is unique, so ordering is belt-and-braces.
-  "air-bladder.background-items",
+  "mondolme.background-items",
 ];
 
-export const SPELL_PACKS = ["air-bladder.spellbooks", "air-bladder.more-spellbooks"];
+export const SPELL_PACKS = ["mondolme.spellbooks", "mondolme.more-spellbooks"];
 
 // Genuine spelling variants — NOT mere casing (the resolver is already
 // case-insensitive). Key: lowercased grant spelling → canonical pack item name.

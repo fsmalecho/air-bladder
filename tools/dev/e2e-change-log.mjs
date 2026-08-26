@@ -100,7 +100,7 @@ const run = async () => {
 
     await withSettings(gm, async () => {
       // The feature must be ON regardless of what the dev world was left at.
-      await gm.evaluate(() => game.settings.set("air-bladder", "change-log", true));
+      await gm.evaluate(() => game.settings.set("mondolme", "change-log", true));
 
       created = await gm.evaluate(async () => {
         const Cls = getDocumentClass("Actor");
@@ -514,7 +514,7 @@ const run = async () => {
       since = await messageIds(gm);
       await leg("regenerateNpc (real machinery path) posts nothing", async () => {
         await gm.evaluate(async (id) => {
-          const mod = await import("/systems/air-bladder/module/character-generator.js");
+          const mod = await import("/systems/mondolme/module/character-generator.js");
           await mod.regenerateNpc(game.actors.get(id));
         }, created.npc);
         const logs = await logsSince(gm, since, { expectNone: true });
@@ -538,11 +538,11 @@ const run = async () => {
       // ---- setting off (last: it flips world state; withSettings restores) -
       since = await messageIds(gm);
       await leg("setting off silences the log, live", async () => {
-        await gm.evaluate(() => game.settings.set("air-bladder", "change-log", false));
+        await gm.evaluate(() => game.settings.set("mondolme", "change-log", false));
         await gm.evaluate((id) => game.actors.get(id).update({ "system.gold": 70 }), created.witness);
         const logs = await logsSince(gm, since, { expectNone: true });
         assert(logs.length === 0, `posted ${logs.length} card(s) with the setting off`);
-        await gm.evaluate(() => game.settings.set("air-bladder", "change-log", true));
+        await gm.evaluate(() => game.settings.set("mondolme", "change-log", true));
       });
     });
 

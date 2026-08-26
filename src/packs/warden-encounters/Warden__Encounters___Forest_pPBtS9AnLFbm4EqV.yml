@@ -8,9 +8,9 @@ results:
   - _id: uRXo3nPUrNrkck5I
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.IR9jwGxZ2SKSb26J]{Couatl}
+      1 @UUID[Compendium.mondolme.monsters.Actor.IR9jwGxZ2SKSb26J]{Couatl}
       or
-      @UUID[Compendium.air-bladder.monsters.Actor.RBOcFBLqVrKckJRD]{Unicorn}
+      @UUID[Compendium.mondolme.monsters.Actor.RBOcFBLqVrKckJRD]{Unicorn}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -33,7 +33,7 @@ results:
   - _id: Kw644wlQxSX1DnqH
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.V9HUcKBhe34AgX0v]{Basilisk}
+      1 @UUID[Compendium.mondolme.monsters.Actor.V9HUcKBhe34AgX0v]{Basilisk}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -57,7 +57,7 @@ results:
     type: text
     description: >-
       1
-      @UUID[Compendium.air-bladder.monsters.Actor.caOUQQxQjCKvE26T]{Pseudodragon}
+      @UUID[Compendium.mondolme.monsters.Actor.caOUQQxQjCKvE26T]{Pseudodragon}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -80,7 +80,7 @@ results:
   - _id: q1979o0fHdfxnlfE
     type: text
     description: >-
-      1d6 @UUID[Compendium.air-bladder.monsters.Actor.QDWpC77DB1L8JHm4]{Elves}
+      1d6 @UUID[Compendium.mondolme.monsters.Actor.QDWpC77DB1L8JHm4]{Elves}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -103,7 +103,7 @@ results:
   - _id: BOq6X6yFf7yog8Pa
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.z20nqrzkEb4g8mDa]{Wood
+      1 @UUID[Compendium.mondolme.monsters.Actor.z20nqrzkEb4g8mDa]{Wood
       Troll}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -127,7 +127,7 @@ results:
   - _id: Dpiw8in0IVZd29yL
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.77sRygzleCJ6fxlj]{Panther}
+      1 @UUID[Compendium.mondolme.monsters.Actor.77sRygzleCJ6fxlj]{Panther}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -172,7 +172,7 @@ results:
   - _id: uAbzQmLH9rG1m748
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.gFHbSGdhNLgaNTOm]{Pixies}
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.gFHbSGdhNLgaNTOm]{Pixies}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -195,9 +195,9 @@ results:
   - _id: ezMbwUfVmKvSHzDq
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.Ef8rxaWBXlNUp9d2]{Boars}
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.Ef8rxaWBXlNUp9d2]{Boars}
       or a
-      @UUID[Compendium.air-bladder.monsters.Actor.my1ZCHkI8h14cSSr]{Black Bear}
+      @UUID[Compendium.mondolme.monsters.Actor.my1ZCHkI8h14cSSr]{Black Bear}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -220,7 +220,7 @@ results:
   - _id: LTWBWxr2NIeI7qfH
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.QwB27rUHXONNsTUZ]{Owl Bear}
+      1 @UUID[Compendium.mondolme.monsters.Actor.QwB27rUHXONNsTUZ]{Owl Bear}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -243,7 +243,7 @@ results:
   - _id: 6F3IwlCuUs0Ent5A
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.IYGXEpIK4zp5JmT8]{Boggart}
+      1 @UUID[Compendium.mondolme.monsters.Actor.IYGXEpIK4zp5JmT8]{Boggart}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -266,9 +266,9 @@ results:
   - _id: I7oJYoF44R0Dgiih
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.Agd70uiJbjDrsVyg]{Dryad}
+      1 @UUID[Compendium.mondolme.monsters.Actor.Agd70uiJbjDrsVyg]{Dryad}
       or
-      @UUID[Compendium.air-bladder.monsters.Actor.BSZTV8DEkqwSynS0]{Satyr}
+      @UUID[Compendium.mondolme.monsters.Actor.BSZTV8DEkqwSynS0]{Satyr}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -291,7 +291,7 @@ results:
   - _id: M4WC2A6ABOnBiwhr
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.Ph0c8ROXMZJNPRSG]{Werewolf}
+      1 @UUID[Compendium.mondolme.monsters.Actor.Ph0c8ROXMZJNPRSG]{Werewolf}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -314,7 +314,7 @@ results:
   - _id: Q7Aj3gqUAvNDMbU5
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.lboFXu1Bkv7c40im]{Treant}
+      1 @UUID[Compendium.mondolme.monsters.Actor.lboFXu1Bkv7c40im]{Treant}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -337,7 +337,7 @@ results:
   - _id: 68pLIhWSqA2HOBrk
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.iFUWnJQHFxXqsCrx]{Green
+      1 @UUID[Compendium.mondolme.monsters.Actor.iFUWnJQHFxXqsCrx]{Green
       Dragon}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -367,7 +367,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

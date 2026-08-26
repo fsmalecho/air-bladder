@@ -3,7 +3,7 @@ name: Simple Instruments (Pipes, Lute, etc.)
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/celtic/harp.svg
+img: systems/mondolme/art/game-icons/celtic/harp.svg
 effects: []
 _stats:
   coreVersion: '14.365'

@@ -2,7 +2,7 @@ name: Crowbar
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/crowbar.svg
+img: systems/mondolme/art/game-icons/tools/crowbar.svg
 effects: []
 _id: xYlc0dgmws4J6U4d
 _stats:

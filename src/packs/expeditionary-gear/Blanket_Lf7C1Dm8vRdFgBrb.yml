@@ -1,12 +1,12 @@
 _id: Lf7C1Dm8vRdFgBrb
 name: Blanket
 type: item
-img: systems/air-bladder/art/game-icons/clothing/blanket.svg
+img: systems/mondolme/art/game-icons/clothing/blanket.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: barebones
 system:
   description: ''
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!Lf7C1Dm8vRdFgBrb'

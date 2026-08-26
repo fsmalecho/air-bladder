@@ -1,12 +1,12 @@
 _id: XGxHc7C2FIIhbNuE
 name: Helmet
 type: armor
-img: systems/air-bladder/art/game-icons/armor/black-knight-helm.svg
+img: systems/mondolme/art/game-icons/armor/black-knight-helm.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A plain steel helm. Cheap insurance for the most important target.
@@ -22,7 +22,7 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.10
   createdTime: 1786052028829

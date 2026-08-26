@@ -1,12 +1,12 @@
 _id: ShNdTRHC4Mu3Dn0B
 name: Scissors
 type: item
-img: systems/air-bladder/art/game-icons/tools/scissors.svg
+img: systems/mondolme/art/game-icons/tools/scissors.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: barebones
 system:
   description: ''
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!ShNdTRHC4Mu3Dn0B'

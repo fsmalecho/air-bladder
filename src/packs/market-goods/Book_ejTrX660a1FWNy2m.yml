@@ -1,12 +1,12 @@
 _id: ejTrX660a1FWNy2m
 name: Book
 type: item
-img: systems/air-bladder/art/game-icons/book/black-book.svg
+img: systems/mondolme/art/game-icons/book/black-book.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     marketSource: 2e
 system:
   description: A bound volume of someone's knowledge, faith, or folly.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!ejTrX660a1FWNy2m'

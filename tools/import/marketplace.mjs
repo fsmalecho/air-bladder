@@ -387,7 +387,7 @@ const authorMarketItem = (entry) => {
     : entry.description ?? "";
   const item = buildGearItem({ ...entry, description });
   const pack = item.type === "weapon" ? "weapons" : item.type === "armor" ? "armor" : "market-goods";
-  const id = idFor(`air-bladder-market:${item.name}`);
+  const id = idFor(`mondolme-market:${item.name}`);
   authored.push({ ...item, id, pack });
   return { id, pack };
 };
@@ -403,7 +403,7 @@ const authoredYaml = ({ name, type, system, id }) => {
     "folder: null",
     "sort: 0",
     "flags:",
-    "  air-bladder:",
+    "  mondolme:",
     "    marketSource: 2e",
     "system:",
     `  description: ${y(s.description)}`,
@@ -418,15 +418,15 @@ const authoredYaml = ({ name, type, system, id }) => {
   ];
   if (type === "weapon") lines.push(`  damageFormula: ${y(s.damageFormula)}`, "  criticalDamage: ''", `  blast: ${s.blast}`);
   if (type === "armor") lines.push(`  armor: ${s.armor}`);
-  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: air-bladder", "  coreVersion: '14.365'", `_key: '!items!${id}'`, "");
+  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: mondolme", "  coreVersion: '14.365'", `_key: '!items!${id}'`, "");
   return lines.join("\n");
 };
 
 // ---- serialize a marketplace RollTable of pack results ----
 const tableYaml = (category, refs) => {
-  const tid = idFor(`air-bladder-market-table:${category}`);
+  const tid = idFor(`mondolme-market-table:${category}`);
   const results = refs.map((ref, i) => {
-    const rid = idFor(`air-bladder-market-result:${category}:${i}:${ref.text}`);
+    const rid = idFor(`mondolme-market-result:${category}:${i}:${ref.text}`);
     return [
       `  - _id: ${rid}`,
       // v13 merged `type: pack` into `type: document`, and a document row's label
@@ -460,7 +460,7 @@ const tableYaml = (category, refs) => {
     "ownership:",
     "  default: 0",
     "_stats:",
-    "  systemId: air-bladder",
+    "  systemId: mondolme",
     "  coreVersion: '14.365'",
     `_key: '!tables!${tid}'`,
     "",
@@ -494,10 +494,10 @@ for (const category of CATEGORY_ORDER) {
     const pool = resolvePool(entry.name, category);
     if (pool) {
       patchPoolItem(pool.file, entry.cost ?? 0, entry.description);
-      refs.push({ text: pool.name, documentCollection: `air-bladder.${pool.pack}`, documentId: pool.id });
+      refs.push({ text: pool.name, documentCollection: `mondolme.${pool.pack}`, documentId: pool.id });
     } else {
       const { id, pack } = authorMarketItem(entry);
-      refs.push({ text: entry.name, documentCollection: `air-bladder.${pack}`, documentId: id });
+      refs.push({ text: entry.name, documentCollection: `mondolme.${pack}`, documentId: id });
     }
   }
   perCategory[category] = { total: items.length, refs: refs.length };

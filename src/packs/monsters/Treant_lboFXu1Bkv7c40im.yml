@@ -3,7 +3,7 @@ name: Treant
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/evil-tree.svg
+img: systems/mondolme/art/game-icons/creatures/evil-tree.svg
 items:
   - _id: INZpYBThZMzrvAxO
     name: Fists
@@ -116,7 +116,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/evil-tree.svg
+    src: systems/mondolme/art/game-icons/creatures/evil-tree.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

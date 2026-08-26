@@ -2,7 +2,7 @@ name: Sword
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/blade/pointy-sword.svg
+img: systems/mondolme/art/game-icons/blade/pointy-sword.svg
 effects: []
 _id: 1k4xfzZwGS583eRa
 _stats:

@@ -10,13 +10,13 @@ results:
   - _id: G5ZVWOYnthvQX5bH
     type: document
     name: Acid
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 1
       - 1
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.PvQAOAcZBzQNoFTq
+    documentUuid: Compendium.mondolme.background-items.Item.PvQAOAcZBzQNoFTq
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -33,13 +33,13 @@ results:
   - _id: pQiHroKWQHIPNTAb
     type: document
     name: Air Bladder
-    img: systems/air-bladder/art/game-icons/bottles/bubbling-flask.svg
+    img: systems/mondolme/art/game-icons/bottles/bubbling-flask.svg
     weight: 1
     range:
       - 2
       - 2
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.jQmTzjFJbXoJXvFY
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.jQmTzjFJbXoJXvFY
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -56,13 +56,13 @@ results:
   - _id: nsscMugrNq4SDm26
     type: document
     name: Alcohol
-    img: systems/air-bladder/art/game-icons/bottles/beer-bottle.svg
+    img: systems/mondolme/art/game-icons/bottles/beer-bottle.svg
     weight: 1
     range:
       - 3
       - 3
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.qF1TkPbVoXEoECOk
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.qF1TkPbVoXEoECOk
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -79,13 +79,13 @@ results:
   - _id: XPYkUcRF7lNDB84E
     type: document
     name: Antitoxin
-    img: systems/air-bladder/art/game-icons/bottles/round-potion.svg
+    img: systems/mondolme/art/game-icons/bottles/round-potion.svg
     weight: 1
     range:
       - 4
       - 4
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.auXZKLxH1vo7hus6
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.auXZKLxH1vo7hus6
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -102,13 +102,13 @@ results:
   - _id: K70bP2OAK9X5t2wK
     type: document
     name: Bandages
-    img: systems/air-bladder/art/game-icons/body/knee-bandage.svg
+    img: systems/mondolme/art/game-icons/body/knee-bandage.svg
     weight: 1
     range:
       - 5
       - 5
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.z8LgxWkUqjz8qsk4
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.z8LgxWkUqjz8qsk4
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -125,13 +125,13 @@ results:
   - _id: 9jJLkUi7ATladnPS
     type: document
     name: Bell
-    img: systems/air-bladder/art/game-icons/metal/ringing-bell.svg
+    img: systems/mondolme/art/game-icons/metal/ringing-bell.svg
     weight: 1
     range:
       - 6
       - 6
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.MYXV8s7VGqE6VV0c
+    documentUuid: Compendium.mondolme.trinkets.Item.MYXV8s7VGqE6VV0c
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -148,13 +148,13 @@ results:
   - _id: mXOrjlGE6uzGE8RA
     type: document
     name: Bellows
-    img: systems/air-bladder/art/game-icons/tools/bellows.svg
+    img: systems/mondolme/art/game-icons/tools/bellows.svg
     weight: 1
     range:
       - 7
       - 7
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.s2aIIMOPJCsl0DHN
+    documentUuid: Compendium.mondolme.tools.Item.s2aIIMOPJCsl0DHN
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -171,13 +171,13 @@ results:
   - _id: yHqhV1fh37QYMqCE
     type: document
     name: Blanket
-    img: systems/air-bladder/art/game-icons/clothing/blanket.svg
+    img: systems/mondolme/art/game-icons/clothing/blanket.svg
     weight: 1
     range:
       - 8
       - 8
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.Lf7C1Dm8vRdFgBrb
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.Lf7C1Dm8vRdFgBrb
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -194,13 +194,13 @@ results:
   - _id: yCKjqCOtHozuR2W5
     type: document
     name: Bolt Cutters
-    img: systems/air-bladder/art/game-icons/tools/bolt-cutter.svg
+    img: systems/mondolme/art/game-icons/tools/bolt-cutter.svg
     weight: 1
     range:
       - 9
       - 9
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.jKsBmVA3ZgPqwQmU
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.jKsBmVA3ZgPqwQmU
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -217,13 +217,13 @@ results:
   - _id: WoxUhCnCpUnPmUwe
     type: document
     name: Bowl
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 10
       - 10
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.4WCfcsnCKV0iARAi
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.4WCfcsnCKV0iARAi
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -240,13 +240,13 @@ results:
   - _id: CNBGhpnBZ0NaeYQ1
     type: document
     name: Cage
-    img: systems/air-bladder/art/game-icons/birds/bird-cage.svg
+    img: systems/mondolme/art/game-icons/birds/bird-cage.svg
     weight: 1
     range:
       - 11
       - 11
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.oFQKF0BdArrGEC3t
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.oFQKF0BdArrGEC3t
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -263,13 +263,13 @@ results:
   - _id: e6dwFOKSpO2X8BrA
     type: document
     name: Caltrops
-    img: systems/air-bladder/icons/tools.svg
+    img: systems/mondolme/icons/tools.svg
     weight: 1
     range:
       - 12
       - 12
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.ouLrTeqR4wcSUCwe
+    documentUuid: Compendium.mondolme.tools.Item.ouLrTeqR4wcSUCwe
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -286,13 +286,13 @@ results:
   - _id: VSPldheSOXzxIk0E
     type: document
     name: Candle
-    img: systems/air-bladder/art/game-icons/fire/candle-holder.svg
+    img: systems/mondolme/art/game-icons/fire/candle-holder.svg
     weight: 1
     range:
       - 13
       - 13
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.UE56odS9IIyoSqhP
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.UE56odS9IIyoSqhP
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -309,13 +309,13 @@ results:
   - _id: b2YV4yl2HFDAvhG3
     type: document
     name: Cards
-    img: systems/air-bladder/art/game-icons/shields/dice-shield.svg
+    img: systems/mondolme/art/game-icons/shields/dice-shield.svg
     weight: 1
     range:
       - 14
       - 14
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.hQPonv4WpwXt3GDS
+    documentUuid: Compendium.mondolme.trinkets.Item.hQPonv4WpwXt3GDS
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -332,13 +332,13 @@ results:
   - _id: k6Cg6F9hEyGnvx6T
     type: document
     name: Cart
-    img: systems/air-bladder/icons/cart.svg
+    img: systems/mondolme/icons/cart.svg
     weight: 1
     range:
       - 15
       - 15
     drawn: false
-    documentUuid: Compendium.air-bladder.mounts-transports.Actor.5bFY3lIsE38qoSs5
+    documentUuid: Compendium.mondolme.mounts-transports.Actor.5bFY3lIsE38qoSs5
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -355,13 +355,13 @@ results:
   - _id: gkryASpwV6Hsh9Jk
     type: document
     name: Chain, 10ft
-    img: systems/air-bladder/art/game-icons/metal/crossed-chains.svg
+    img: systems/mondolme/art/game-icons/metal/crossed-chains.svg
     weight: 1
     range:
       - 16
       - 16
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.mZnM5OCzVXtKgqrE
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.mZnM5OCzVXtKgqrE
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -378,13 +378,13 @@ results:
   - _id: L1FliSCNyq10UrVB
     type: document
     name: Chalk
-    img: systems/air-bladder/icons/tools.svg
+    img: systems/mondolme/icons/tools.svg
     weight: 1
     range:
       - 17
       - 17
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.9YQBkSUcuOImEiMT
+    documentUuid: Compendium.mondolme.tools.Item.9YQBkSUcuOImEiMT
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -401,13 +401,13 @@ results:
   - _id: 8F5pgGPrFa0gbpGH
     type: document
     name: Chisel
-    img: systems/air-bladder/art/game-icons/tools/chisel.svg
+    img: systems/mondolme/art/game-icons/tools/chisel.svg
     weight: 1
     range:
       - 18
       - 18
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.CrGmBrpPrZeTRXLw
+    documentUuid: Compendium.mondolme.tools.Item.CrGmBrpPrZeTRXLw
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -424,13 +424,13 @@ results:
   - _id: kP6QrhBeYdc6VDCk
     type: document
     name: Climbing Spikes
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 19
       - 19
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.AL12OaM6JRqWtoxp
+    documentUuid: Compendium.mondolme.background-items.Item.AL12OaM6JRqWtoxp
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -447,13 +447,13 @@ results:
   - _id: yJJhH8FLWQHMpnj8
     type: document
     name: Cloak
-    img: systems/air-bladder/art/game-icons/clothing/cloak.svg
+    img: systems/mondolme/art/game-icons/clothing/cloak.svg
     weight: 1
     range:
       - 20
       - 20
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.LSFjuJMV2b98fFg5
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.LSFjuJMV2b98fFg5
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -470,13 +470,13 @@ results:
   - _id: v9eFoKOufpa5NUME
     type: document
     name: Compass
-    img: systems/air-bladder/art/game-icons/tools/sextant.svg
+    img: systems/mondolme/art/game-icons/tools/sextant.svg
     weight: 1
     range:
       - 21
       - 21
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.uXWBVQek83Ial0ho
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.uXWBVQek83Ial0ho
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -493,13 +493,13 @@ results:
   - _id: WMbGnCKBToaWA8IE
     type: document
     name: Crowbar
-    img: systems/air-bladder/art/game-icons/tools/crowbar.svg
+    img: systems/mondolme/art/game-icons/tools/crowbar.svg
     weight: 1
     range:
       - 22
       - 22
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.xYlc0dgmws4J6U4d
+    documentUuid: Compendium.mondolme.tools.Item.xYlc0dgmws4J6U4d
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -516,13 +516,13 @@ results:
   - _id: vO8RJbfWlN2jBWye
     type: document
     name: Dice
-    img: systems/air-bladder/art/game-icons/shields/dice-shield.svg
+    img: systems/mondolme/art/game-icons/shields/dice-shield.svg
     weight: 1
     range:
       - 23
       - 23
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.QSOZ6bSzwntocgd4
+    documentUuid: Compendium.mondolme.trinkets.Item.QSOZ6bSzwntocgd4
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -539,13 +539,13 @@ results:
   - _id: IQWNrPfHkdfgHPJZ
     type: document
     name: Dowsing Rod
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 24
       - 24
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.1T0YvLxGizkMAyMl
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.1T0YvLxGizkMAyMl
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -562,13 +562,13 @@ results:
   - _id: a3pr3gmAZzCAjQO6
     type: document
     name: Explosive
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 25
       - 25
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.ORUGHwFvCa3qZmUA
+    documentUuid: Compendium.mondolme.background-items.Item.ORUGHwFvCa3qZmUA
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -585,13 +585,13 @@ results:
   - _id: SvkQ6hCuWzsqAhD9
     type: document
     name: Fan
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 26
       - 26
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.dKWCXazD3yqwVv5r
+    documentUuid: Compendium.mondolme.background-items.Item.dKWCXazD3yqwVv5r
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -608,13 +608,13 @@ results:
   - _id: wmCvAMHpopD953iG
     type: document
     name: Fiddle
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 27
       - 27
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.dZHoTfgyORHvQKxJ
+    documentUuid: Compendium.mondolme.background-items.Item.dZHoTfgyORHvQKxJ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -631,13 +631,13 @@ results:
   - _id: VZGLnGAsnALUgTbR
     type: document
     name: Fire Oil
-    img: systems/air-bladder/art/game-icons/fire/molotov.svg
+    img: systems/mondolme/art/game-icons/fire/molotov.svg
     weight: 1
     range:
       - 28
       - 28
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.zE6jUE5pJ3D6aya6
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.zE6jUE5pJ3D6aya6
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -654,13 +654,13 @@ results:
   - _id: W7eFR7tLjA5HY1tS
     type: document
     name: Fishing Rod
-    img: systems/air-bladder/art/game-icons/tools/fishhook-fork.svg
+    img: systems/mondolme/art/game-icons/tools/fishhook-fork.svg
     weight: 1
     range:
       - 29
       - 29
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.tznXaUsDBoSNNW9f
+    documentUuid: Compendium.mondolme.tools.Item.tznXaUsDBoSNNW9f
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -677,13 +677,13 @@ results:
   - _id: 00PXzVnFdPxdbA02
     type: document
     name: Flash Powder
-    img: systems/air-bladder/art/game-icons/fire/blast.svg
+    img: systems/mondolme/art/game-icons/fire/blast.svg
     weight: 1
     range:
       - 30
       - 30
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.OeknJE8gY9KP5f6J
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.OeknJE8gY9KP5f6J
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -700,13 +700,13 @@ results:
   - _id: rFCj0DHBqcD50If0
     type: document
     name: Flour
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 31
       - 31
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.FYQefZ2wbJC94mSU
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.FYQefZ2wbJC94mSU
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -723,13 +723,13 @@ results:
   - _id: 5vZh2RKGI5Za1PDF
     type: document
     name: Garrotte
-    img: systems/air-bladder/art/game-icons/tools/knot.svg
+    img: systems/mondolme/art/game-icons/tools/knot.svg
     weight: 1
     range:
       - 32
       - 32
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.ZCODhrF0PHnu95ma
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.ZCODhrF0PHnu95ma
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -746,13 +746,13 @@ results:
   - _id: dDoDoLN5G8uXwsKm
     type: document
     name: Gloves
-    img: systems/air-bladder/art/game-icons/clothing/gloves.svg
+    img: systems/mondolme/art/game-icons/clothing/gloves.svg
     weight: 1
     range:
       - 33
       - 33
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.4BeE7LPICF3TRtFo
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.4BeE7LPICF3TRtFo
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -769,13 +769,13 @@ results:
   - _id: HYAYQaQ3ZM67lk1e
     type: document
     name: Glue
-    img: systems/air-bladder/art/game-icons/bottles/oil-can.svg
+    img: systems/mondolme/art/game-icons/bottles/oil-can.svg
     weight: 1
     range:
       - 34
       - 34
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.0TANRClFeY4uhtoy
+    documentUuid: Compendium.mondolme.tools.Item.0TANRClFeY4uhtoy
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -792,13 +792,13 @@ results:
   - _id: R35mQqp9ymddOi76
     type: document
     name: Goggles
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 35
       - 35
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.esZhv46lbbN0EUqT
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.esZhv46lbbN0EUqT
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -815,13 +815,13 @@ results:
   - _id: gtoXcdpf8AUAESAA
     type: document
     name: Grappling Hook
-    img: systems/air-bladder/art/game-icons/tools/grapple.svg
+    img: systems/mondolme/art/game-icons/tools/grapple.svg
     weight: 1
     range:
       - 36
       - 36
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.ntkk3WiAeKeScxH9
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.ntkk3WiAeKeScxH9
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -838,13 +838,13 @@ results:
   - _id: AfpsVEnA0MEDlWXx
     type: document
     name: Grease
-    img: systems/air-bladder/art/game-icons/bottles/oil-can.svg
+    img: systems/mondolme/art/game-icons/bottles/oil-can.svg
     weight: 1
     range:
       - 37
       - 37
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.euPVt94bQjFcSCg3
+    documentUuid: Compendium.mondolme.tools.Item.euPVt94bQjFcSCg3
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -861,13 +861,13 @@ results:
   - _id: fm3EyrHVh3HNEOzE
     type: document
     name: Hammer
-    img: systems/air-bladder/art/game-icons/tools/claw-hammer.svg
+    img: systems/mondolme/art/game-icons/tools/claw-hammer.svg
     weight: 1
     range:
       - 38
       - 38
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.XYI7SR2HV0OqfBBm
+    documentUuid: Compendium.mondolme.tools.Item.XYI7SR2HV0OqfBBm
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -884,13 +884,13 @@ results:
   - _id: wSxyNVqsH0JdNGhn
     type: document
     name: Hammock
-    img: systems/air-bladder/art/game-icons/body/sleeping-bag.svg
+    img: systems/mondolme/art/game-icons/body/sleeping-bag.svg
     weight: 1
     range:
       - 39
       - 39
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.kMATJRa1CFpzOO3a
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.kMATJRa1CFpzOO3a
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -907,13 +907,13 @@ results:
   - _id: UEzuDIhQFdGOq6zI
     type: document
     name: Hand-Drill
-    img: systems/air-bladder/art/game-icons/tools/drill.svg
+    img: systems/mondolme/art/game-icons/tools/drill.svg
     weight: 1
     range:
       - 40
       - 40
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.DgYIRpSITa82lnri
+    documentUuid: Compendium.mondolme.tools.Item.DgYIRpSITa82lnri
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -930,13 +930,13 @@ results:
   - _id: nJC9rGGBq9yMGB1G
     type: document
     name: Honey
-    img: systems/air-bladder/art/game-icons/bottles/honey-jar.svg
+    img: systems/mondolme/art/game-icons/bottles/honey-jar.svg
     weight: 1
     range:
       - 41
       - 41
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.eusWGR89K1NmiZhv
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.eusWGR89K1NmiZhv
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -953,13 +953,13 @@ results:
   - _id: Gaim4vxI47CyWb2Y
     type: document
     name: Hourglass
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 42
       - 42
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.Ck5TmC7KSJ1Ep4Av
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.Ck5TmC7KSJ1Ep4Av
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -976,13 +976,13 @@ results:
   - _id: wkDp3OD3jjGIWSvD
     type: document
     name: Incense
-    img: systems/air-bladder/art/game-icons/fire/candle-light.svg
+    img: systems/mondolme/art/game-icons/fire/candle-light.svg
     weight: 1
     range:
       - 43
       - 43
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.4yMGi2nHhoYi8kVO
+    documentUuid: Compendium.mondolme.trinkets.Item.4yMGi2nHhoYi8kVO
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -999,13 +999,13 @@ results:
   - _id: WWRL8Bcl7AFJLimO
     type: document
     name: Ladder
-    img: systems/air-bladder/art/game-icons/tools/ladder.svg
+    img: systems/mondolme/art/game-icons/tools/ladder.svg
     weight: 1
     range:
       - 44
       - 44
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.oDFfmqFsS7gqeyyW
+    documentUuid: Compendium.mondolme.tools.Item.oDFfmqFsS7gqeyyW
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1022,13 +1022,13 @@ results:
   - _id: NPeEZ1apMZXXrMYA
     type: document
     name: Lantern
-    img: systems/air-bladder/art/game-icons/fire/lantern-flame.svg
+    img: systems/mondolme/art/game-icons/fire/lantern-flame.svg
     weight: 1
     range:
       - 45
       - 45
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.pMVVPnTrgpggZHYN
+    documentUuid: Compendium.mondolme.tools.Item.pMVVPnTrgpggZHYN
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1045,13 +1045,13 @@ results:
   - _id: ElnM4WkENmbFHfxQ
     type: document
     name: Leech
-    img: systems/air-bladder/art/game-icons/animals/worms.svg
+    img: systems/mondolme/art/game-icons/animals/worms.svg
     weight: 1
     range:
       - 46
       - 46
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.AOk1fJOzwUyg0vUw
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.AOk1fJOzwUyg0vUw
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1068,13 +1068,13 @@ results:
   - _id: XAoZbMvKhBbcYL0C
     type: document
     name: Lens
-    img: systems/air-bladder/art/game-icons/eye/magnifying-glass.svg
+    img: systems/mondolme/art/game-icons/eye/magnifying-glass.svg
     weight: 1
     range:
       - 47
       - 47
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.NE25ulUN4sbsxdIu
+    documentUuid: Compendium.mondolme.trinkets.Item.NE25ulUN4sbsxdIu
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1091,13 +1091,13 @@ results:
   - _id: xbictxi0VW2yD7jr
     type: document
     name: Lock & Key
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 48
       - 48
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.NpWRaT5raNsqfCs3
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.NpWRaT5raNsqfCs3
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1114,13 +1114,13 @@ results:
   - _id: 0E0f98vngLYafwYl
     type: document
     name: Lockpicks
-    img: systems/air-bladder/art/game-icons/tools/lockpicks.svg
+    img: systems/mondolme/art/game-icons/tools/lockpicks.svg
     weight: 1
     range:
       - 49
       - 49
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.jf2TjD9L9DrbfAjv
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.jf2TjD9L9DrbfAjv
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1137,13 +1137,13 @@ results:
   - _id: 3z1dQfwiAE4ZQaxa
     type: document
     name: Lodestone
-    img: systems/air-bladder/art/game-icons/stone/rock.svg
+    img: systems/mondolme/art/game-icons/stone/rock.svg
     weight: 1
     range:
       - 50
       - 50
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.K3IhuyFB587oIP5I
+    documentUuid: Compendium.mondolme.trinkets.Item.K3IhuyFB587oIP5I
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1160,13 +1160,13 @@ results:
   - _id: FPGq6dw2PNJrVQMH
     type: document
     name: Lute
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 51
       - 51
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.tZ3CYLDNGqZgE6E8
+    documentUuid: Compendium.mondolme.background-items.Item.tZ3CYLDNGqZgE6E8
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1183,13 +1183,13 @@ results:
   - _id: 150A9WB18855yBt8
     type: document
     name: Magnifying Glass
-    img: systems/air-bladder/art/game-icons/eye/magnifying-glass.svg
+    img: systems/mondolme/art/game-icons/eye/magnifying-glass.svg
     weight: 1
     range:
       - 52
       - 52
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.PkGlJlF15RAhhRLA
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.PkGlJlF15RAhhRLA
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1206,13 +1206,13 @@ results:
   - _id: EW07yQATe5xar2yo
     type: document
     name: Manacles
-    img: systems/air-bladder/art/game-icons/metal/manacles.svg
+    img: systems/mondolme/art/game-icons/metal/manacles.svg
     weight: 1
     range:
       - 53
       - 53
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.svKvQb02QkTdbuTS
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.svKvQb02QkTdbuTS
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1229,13 +1229,13 @@ results:
   - _id: 5D9xvO2nY1XnFj39
     type: document
     name: Marbles
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 54
       - 54
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.nOmok6uN3M25MP6O
+    documentUuid: Compendium.mondolme.background-items.Item.nOmok6uN3M25MP6O
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1252,13 +1252,13 @@ results:
   - _id: TZ6vCRc7dh0OpkCN
     type: document
     name: Mask
-    img: systems/air-bladder/art/game-icons/heads/bird-mask.svg
+    img: systems/mondolme/art/game-icons/heads/bird-mask.svg
     weight: 1
     range:
       - 55
       - 55
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.OocgNQQsSlGtOabV
+    documentUuid: Compendium.mondolme.trinkets.Item.OocgNQQsSlGtOabV
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1275,13 +1275,13 @@ results:
   - _id: PFZNS2hCCNAYaF0h
     type: document
     name: Metal File
-    img: systems/air-bladder/art/game-icons/tools/hand-saw.svg
+    img: systems/mondolme/art/game-icons/tools/hand-saw.svg
     weight: 1
     range:
       - 56
       - 56
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.0mcwIELTpyllo20y
+    documentUuid: Compendium.mondolme.tools.Item.0mcwIELTpyllo20y
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1298,13 +1298,13 @@ results:
   - _id: xqb9PVTtGqTgnRoN
     type: document
     name: Mirror
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 57
       - 57
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.QYU4ynLhXcNYtuXb
+    documentUuid: Compendium.mondolme.trinkets.Item.QYU4ynLhXcNYtuXb
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1321,13 +1321,13 @@ results:
   - _id: kf3GdAgZLy3ABNmW
     type: document
     name: Mugwort
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 58
       - 58
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.UReZxhF4Nd7kglqt
+    documentUuid: Compendium.mondolme.background-items.Item.UReZxhF4Nd7kglqt
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1344,13 +1344,13 @@ results:
   - _id: xKSeEs45GsmB3mlk
     type: document
     name: Net
-    img: systems/air-bladder/art/game-icons/insects/bug-net.svg
+    img: systems/mondolme/art/game-icons/insects/bug-net.svg
     weight: 1
     range:
       - 59
       - 59
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.MnTO11a4CyCTaPPN
+    documentUuid: Compendium.mondolme.tools.Item.MnTO11a4CyCTaPPN
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1367,13 +1367,13 @@ results:
   - _id: 6ud9oai1dvwi4LTp
     type: document
     name: Oil Can
-    img: systems/air-bladder/art/game-icons/bottles/oil-can.svg
+    img: systems/mondolme/art/game-icons/bottles/oil-can.svg
     weight: 1
     range:
       - 60
       - 60
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.TyO7H7HaiCsJtqMp
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.TyO7H7HaiCsJtqMp
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1390,13 +1390,13 @@ results:
   - _id: s7Y4ZsqcIku2wzTm
     type: document
     name: Oilskin Bag
-    img: systems/air-bladder/art/game-icons/clothing/shoulder-bag.svg
+    img: systems/mondolme/art/game-icons/clothing/shoulder-bag.svg
     weight: 1
     range:
       - 61
       - 61
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.d2dtlJVS2Io5hjuv
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.d2dtlJVS2Io5hjuv
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1413,13 +1413,13 @@ results:
   - _id: 3E1pH28ufGTw53p8
     type: document
     name: Pail
-    img: systems/air-bladder/art/game-icons/metal/empty-metal-bucket.svg
+    img: systems/mondolme/art/game-icons/metal/empty-metal-bucket.svg
     weight: 1
     range:
       - 62
       - 62
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.SWLK5YQgBkLBhe5B
+    documentUuid: Compendium.mondolme.tools.Item.SWLK5YQgBkLBhe5B
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1436,13 +1436,13 @@ results:
   - _id: iC0YFP4MVcu8cQYf
     type: document
     name: Paint
-    img: systems/air-bladder/art/game-icons/tools/paint-brush.svg
+    img: systems/mondolme/art/game-icons/tools/paint-brush.svg
     weight: 1
     range:
       - 63
       - 63
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.Xd7ItC7s7VdhsYFB
+    documentUuid: Compendium.mondolme.trinkets.Item.Xd7ItC7s7VdhsYFB
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1459,13 +1459,13 @@ results:
   - _id: EwHmRw8MFmCltvOO
     type: document
     name: Parchment & Ink
-    img: systems/air-bladder/art/game-icons/book/scroll-quill.svg
+    img: systems/mondolme/art/game-icons/book/scroll-quill.svg
     weight: 1
     range:
       - 64
       - 64
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.DnKRQs1FmVBfxX38
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.DnKRQs1FmVBfxX38
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1482,13 +1482,13 @@ results:
   - _id: RxXaM9GB1rq5dVsz
     type: document
     name: Perfume
-    img: systems/air-bladder/art/game-icons/bottles/perfume-bottle.svg
+    img: systems/mondolme/art/game-icons/bottles/perfume-bottle.svg
     weight: 1
     range:
       - 65
       - 65
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.jPVRctxxFhisuTJZ
+    documentUuid: Compendium.mondolme.trinkets.Item.jPVRctxxFhisuTJZ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1505,13 +1505,13 @@ results:
   - _id: TfslCbW61cDtw7ne
     type: document
     name: Pickaxe
-    img: systems/air-bladder/art/game-icons/tools/mining.svg
+    img: systems/mondolme/art/game-icons/tools/mining.svg
     weight: 1
     range:
       - 66
       - 66
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.9ZnuwehiWJEWcXEU
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.9ZnuwehiWJEWcXEU
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1528,13 +1528,13 @@ results:
   - _id: qtLOBGnC96xDNsqP
     type: document
     name: Pipe
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 67
       - 67
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.azWC6SUisXkhPYXF
+    documentUuid: Compendium.mondolme.background-items.Item.azWC6SUisXkhPYXF
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1551,13 +1551,13 @@ results:
   - _id: CctTjUZ5IdsgJSTm
     type: document
     name: Pliers
-    img: systems/air-bladder/art/game-icons/tools/pincers.svg
+    img: systems/mondolme/art/game-icons/tools/pincers.svg
     weight: 1
     range:
       - 68
       - 68
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.VavfFlX9fV6Gm6Zt
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.VavfFlX9fV6Gm6Zt
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1574,13 +1574,13 @@ results:
   - _id: 8MVVpgB8qUnVs3J6
     type: document
     name: Poison
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 69
       - 69
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.ImPdersUEpcSygUW
+    documentUuid: Compendium.mondolme.background-items.Item.ImPdersUEpcSygUW
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1597,13 +1597,13 @@ results:
   - _id: dF9TSAUsGOLSOyRE
     type: document
     name: Pole, 10ft
-    img: systems/air-bladder/art/game-icons/weapons/bo.svg
+    img: systems/mondolme/art/game-icons/weapons/bo.svg
     weight: 1
     range:
       - 70
       - 70
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.Q0oIN5rNTz9LOVAG
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.Q0oIN5rNTz9LOVAG
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1620,13 +1620,13 @@ results:
   - _id: J2Z0DOQGoBQnsZis
     type: document
     name: Poncho
-    img: systems/air-bladder/art/game-icons/clothing/poncho.svg
+    img: systems/mondolme/art/game-icons/clothing/poncho.svg
     weight: 1
     range:
       - 71
       - 71
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.JdAoFjAOlS6fjQBP
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.JdAoFjAOlS6fjQBP
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1643,13 +1643,13 @@ results:
   - _id: s5KlN2wcTTpT4YBx
     type: document
     name: Pulley
-    img: systems/air-bladder/art/game-icons/tools/hook.svg
+    img: systems/mondolme/art/game-icons/tools/hook.svg
     weight: 1
     range:
       - 72
       - 72
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.jc8xZQDRg1Lctro9
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.jc8xZQDRg1Lctro9
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1688,13 +1688,13 @@ results:
   - _id: AdCQDNS5KR4FrCBN
     type: document
     name: Rope
-    img: systems/air-bladder/art/game-icons/tools/rope-coil.svg
+    img: systems/mondolme/art/game-icons/tools/rope-coil.svg
     weight: 1
     range:
       - 74
       - 74
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.HWwFxMbKrE6yQjRp
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.HWwFxMbKrE6yQjRp
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1711,13 +1711,13 @@ results:
   - _id: p6te9qWAE1kwwcbZ
     type: document
     name: Sack
-    img: systems/air-bladder/icons/sack.svg
+    img: systems/mondolme/icons/sack.svg
     weight: 1
     range:
       - 75
       - 75
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.fElAGNYed7PDBrZ3
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.fElAGNYed7PDBrZ3
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1734,13 +1734,13 @@ results:
   - _id: gc06InjFIRh2vmws
     type: document
     name: Saw
-    img: systems/air-bladder/art/game-icons/tools/crosscut-saw.svg
+    img: systems/mondolme/art/game-icons/tools/crosscut-saw.svg
     weight: 1
     range:
       - 76
       - 76
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.Yh8g69kbzvxrerXz
+    documentUuid: Compendium.mondolme.tools.Item.Yh8g69kbzvxrerXz
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1757,13 +1757,13 @@ results:
   - _id: PptODOjYL7RjrYtF
     type: document
     name: Scissors
-    img: systems/air-bladder/art/game-icons/tools/scissors.svg
+    img: systems/mondolme/art/game-icons/tools/scissors.svg
     weight: 1
     range:
       - 77
       - 77
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.ShNdTRHC4Mu3Dn0B
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.ShNdTRHC4Mu3Dn0B
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1802,13 +1802,13 @@ results:
   - _id: YPqwAc0bR5OZi7IM
     type: document
     name: Sealable Bottle
-    img: systems/air-bladder/art/game-icons/bottles/round-bottom-flask.svg
+    img: systems/mondolme/art/game-icons/bottles/round-bottom-flask.svg
     weight: 1
     range:
       - 79
       - 79
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.7VXQSaOOLBtwz9US
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.7VXQSaOOLBtwz9US
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1825,13 +1825,13 @@ results:
   - _id: AWLPOAUx5tMdvLuH
     type: document
     name: Sedative
-    img: systems/air-bladder/art/game-icons/bottles/standing-potion.svg
+    img: systems/mondolme/art/game-icons/bottles/standing-potion.svg
     weight: 1
     range:
       - 80
       - 80
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.CKtCKavhhEiwxVfM
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.CKtCKavhhEiwxVfM
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1848,13 +1848,13 @@ results:
   - _id: NeCE6EI41HFO0HHy
     type: document
     name: Sewing Kit
-    img: systems/air-bladder/art/game-icons/clothing/sewing-needle.svg
+    img: systems/mondolme/art/game-icons/clothing/sewing-needle.svg
     weight: 1
     range:
       - 81
       - 81
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.VOgGpeBdCgMwCAoM
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.VOgGpeBdCgMwCAoM
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1871,13 +1871,13 @@ results:
   - _id: GHvSAx3jQlvd4IzG
     type: document
     name: Sextant
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 82
       - 82
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.gNmGMjrhnspDxgFe
+    documentUuid: Compendium.mondolme.background-items.Item.gNmGMjrhnspDxgFe
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1894,13 +1894,13 @@ results:
   - _id: WAdD4cpnSDJCN2mG
     type: document
     name: Shovel
-    img: systems/air-bladder/art/game-icons/tools/spade.svg
+    img: systems/mondolme/art/game-icons/tools/spade.svg
     weight: 1
     range:
       - 83
       - 83
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.1abF5sAonAEA5TEJ
+    documentUuid: Compendium.mondolme.tools.Item.1abF5sAonAEA5TEJ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1917,13 +1917,13 @@ results:
   - _id: fCOZUUpRBK5TwL3H
     type: document
     name: Signal Flag
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 84
       - 84
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.ffp5QxpSuhKlcMt8
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.ffp5QxpSuhKlcMt8
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1940,13 +1940,13 @@ results:
   - _id: Q95TIFijhxQw1mjA
     type: document
     name: Smokebomb
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 85
       - 85
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.4sHxCHmRFIBb0NiJ
+    documentUuid: Compendium.mondolme.background-items.Item.4sHxCHmRFIBb0NiJ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1963,13 +1963,13 @@ results:
   - _id: KAAQC06QCslIT8G2
     type: document
     name: Smoking Herbs
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 86
       - 86
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.IZOJA0z9RyAtaAsL
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.IZOJA0z9RyAtaAsL
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -1986,13 +1986,13 @@ results:
   - _id: y1Syqoiz5tLKNghp
     type: document
     name: Songbook
-    img: systems/air-bladder/art/game-icons/book/book-cover-delapouite.svg
+    img: systems/mondolme/art/game-icons/book/book-cover-delapouite.svg
     weight: 1
     range:
       - 87
       - 87
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.JDVePRF4fbIr8m1v
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.JDVePRF4fbIr8m1v
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2009,13 +2009,13 @@ results:
   - _id: IwkFlWUdX1a8WBjE
     type: document
     name: Spiked Boots
-    img: systems/air-bladder/art/game-icons/armor/steeltoe-boots.svg
+    img: systems/mondolme/art/game-icons/armor/steeltoe-boots.svg
     weight: 1
     range:
       - 88
       - 88
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.dMrrAJA2Mkr7NN8o
+    documentUuid: Compendium.mondolme.weapons.Item.dMrrAJA2Mkr7NN8o
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2032,13 +2032,13 @@ results:
   - _id: p3gKrfq4GLnNZGi6
     type: document
     name: Spyglass
-    img: systems/air-bladder/art/game-icons/tools/spyglass.svg
+    img: systems/mondolme/art/game-icons/tools/spyglass.svg
     weight: 1
     range:
       - 89
       - 89
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.HKrgDdHqXKkok3nZ
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.HKrgDdHqXKkok3nZ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2055,13 +2055,13 @@ results:
   - _id: DevFxPSBUrKYDrzu
     type: document
     name: Stylus
-    img: systems/air-bladder/art/game-icons/book/quill-ink.svg
+    img: systems/mondolme/art/game-icons/book/quill-ink.svg
     weight: 1
     range:
       - 90
       - 90
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.8JSSeRA5soaaI3DK
+    documentUuid: Compendium.mondolme.tools.Item.8JSSeRA5soaaI3DK
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2078,13 +2078,13 @@ results:
   - _id: lkpgmDlMW3qNAvO7
     type: document
     name: Tar
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 91
       - 91
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.5QfDzIBV3BqPi7zD
+    documentUuid: Compendium.mondolme.background-items.Item.5QfDzIBV3BqPi7zD
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2101,13 +2101,13 @@ results:
   - _id: GbCtOfq92FwX20i6
     type: document
     name: Tent
-    img: systems/air-bladder/art/game-icons/body/sleeping-bag.svg
+    img: systems/mondolme/art/game-icons/body/sleeping-bag.svg
     weight: 1
     range:
       - 92
       - 92
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.iZ91HSUzXUSbSoI9
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.iZ91HSUzXUSbSoI9
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2124,13 +2124,13 @@ results:
   - _id: bSVikbX95WPyDJcr
     type: document
     name: Tongs
-    img: systems/air-bladder/art/game-icons/tools/pincers.svg
+    img: systems/mondolme/art/game-icons/tools/pincers.svg
     weight: 1
     range:
       - 93
       - 93
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.KrhVF7rG7QeXMTUd
+    documentUuid: Compendium.mondolme.tools.Item.KrhVF7rG7QeXMTUd
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2147,13 +2147,13 @@ results:
   - _id: 3v9N7WS31S5CP8vA
     type: document
     name: Trap
-    img: systems/air-bladder/art/game-icons/spike/wolf-trap.svg
+    img: systems/mondolme/art/game-icons/spike/wolf-trap.svg
     weight: 1
     range:
       - 94
       - 94
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.v8nstC8qzIWc2Lgh
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.v8nstC8qzIWc2Lgh
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2170,13 +2170,13 @@ results:
   - _id: bOBOsUzRSWXd8B7u
     type: document
     name: Wagon
-    img: systems/air-bladder/icons/wagon.svg
+    img: systems/mondolme/icons/wagon.svg
     weight: 1
     range:
       - 95
       - 95
     drawn: false
-    documentUuid: Compendium.air-bladder.mounts-transports.Actor.qhjAgLtInNgK8Ase
+    documentUuid: Compendium.mondolme.mounts-transports.Actor.qhjAgLtInNgK8Ase
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2193,13 +2193,13 @@ results:
   - _id: 9RLaFjfzegVSErPV
     type: document
     name: Waterproof Bag
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 96
       - 96
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.bXEz3nKz7v1Undhh
+    documentUuid: Compendium.mondolme.background-items.Item.bXEz3nKz7v1Undhh
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2216,13 +2216,13 @@ results:
   - _id: LxiKnhICR5QNHHy5
     type: document
     name: Whetstone
-    img: systems/air-bladder/art/game-icons/stone/stone-block.svg
+    img: systems/mondolme/art/game-icons/stone/stone-block.svg
     weight: 1
     range:
       - 97
       - 97
     drawn: false
-    documentUuid: Compendium.air-bladder.tools.Item.R08mBinUjWrv56V6
+    documentUuid: Compendium.mondolme.tools.Item.R08mBinUjWrv56V6
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2239,13 +2239,13 @@ results:
   - _id: hEpdqzwwSqtfFPxx
     type: document
     name: Whistle
-    img: systems/air-bladder/art/game-icons/mouth/shouting.svg
+    img: systems/mondolme/art/game-icons/mouth/shouting.svg
     weight: 1
     range:
       - 98
       - 98
     drawn: false
-    documentUuid: Compendium.air-bladder.trinkets.Item.Jn0XBxMGWhGwEcBL
+    documentUuid: Compendium.mondolme.trinkets.Item.Jn0XBxMGWhGwEcBL
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2262,13 +2262,13 @@ results:
   - _id: 7acSPRSD2ClH19DK
     type: document
     name: Wig
-    img: systems/air-bladder/icons/generic-item.svg
+    img: systems/mondolme/icons/generic-item.svg
     weight: 1
     range:
       - 99
       - 99
     drawn: false
-    documentUuid: Compendium.air-bladder.background-items.Item.6SicIDkLoeKuCzxC
+    documentUuid: Compendium.mondolme.background-items.Item.6SicIDkLoeKuCzxC
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2285,13 +2285,13 @@ results:
   - _id: Gas9R2HoEXKBeGZG
     type: document
     name: Wolfsbane
-    img: systems/air-bladder/art/game-icons/celtic/fluffy-trefoil.svg
+    img: systems/mondolme/art/game-icons/celtic/fluffy-trefoil.svg
     weight: 1
     range:
       - 100
       - 100
     drawn: false
-    documentUuid: Compendium.air-bladder.expeditionary-gear.Item.OqxO6G3VnaADTlc0
+    documentUuid: Compendium.mondolme.expeditionary-gear.Item.OqxO6G3VnaADTlc0
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -2309,14 +2309,14 @@ formula: 1d100
 replacement: true
 displayRoll: true
 flags:
-  air-bladder:
+  mondolme:
     tableSource: barebones
 folder: null
 sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

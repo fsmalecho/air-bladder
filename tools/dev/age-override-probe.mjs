@@ -47,9 +47,9 @@ try {
   await joinAsGM(page);
 
   const r = await withSettings(page, () => page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const out = {};
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     // What every real call site passes: the config formula, as the fallback.
     const FALLBACK = CONFIG.Cairn?.characterGenerator2e?.biography?.age ?? "2d20 + 10";
 
@@ -61,7 +61,7 @@ try {
     // --- 1/2. the settings window, then the Character Generation submenu ----
     // Since 2026-08-22 every Warden-facing setting lives behind one of three
     // registerMenu submenus (settings-menus.js): the main window shows three
-    // buttons and no air-bladder rows, and the age formula is a row of the
+    // buttons and no mondolme rows, and the age formula is a row of the
     // Character Generation app. Hints render beneath every row there — core's
     // own formGroup layout — so the compact-row/tooltip split this probe used
     // to hold went with the flat list.
@@ -75,7 +75,7 @@ try {
     }
     await sleep(400);
     const cfgRoot = cfgApp.element;
-    const mod = await import("/systems/air-bladder/module/settings.js");
+    const mod = await import("/systems/mondolme/module/settings.js");
     out.declaredMenus = mod.SETTING_GROUPS.map((g) => g.id);
     out.menuOrder = [...cfgRoot.querySelectorAll(`button[data-action="openSubmenu"][data-key^="${NS}."]`)]
       .map((b) => b.dataset.key.slice(NS.length + 1));
@@ -97,7 +97,7 @@ try {
 
     // Hint surfacing: computed display is read off the hint element itself,
     // so a hidden ancestor cannot fake the state (the lesson of 2026-08-21,
-    // when it turned out no air-bladder hint had EVER rendered).
+    // when it turned out no mondolme hint had EVER rendered).
     const hintOf = (key) => root?.querySelector(`[name="${NS}.${key}"]`)?.closest(".form-group")?.querySelector(".hint");
     const display = (el) => (el ? getComputedStyle(el).display : "missing");
     out.ageHintDisplay = display(hintOf("age-formula"));

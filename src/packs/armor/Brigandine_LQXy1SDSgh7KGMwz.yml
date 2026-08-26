@@ -1,7 +1,7 @@
 _id: LQXy1SDSgh7KGMwz
 name: Brigandine
 type: armor
-img: systems/air-bladder/art/game-icons/armor/lamellar.svg
+img: systems/mondolme/art/game-icons/armor/lamellar.svg
 effects: []
 folder: null
 sort: 0
@@ -10,7 +10,7 @@ flags:
     sheetClass: ''
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.11
   createdTime: 1785873326138
   modifiedTime: 1786151845364

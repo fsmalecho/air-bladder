@@ -482,7 +482,7 @@ try {
       return test();
     };
     const Cls = CONFIG.Actor.documentClass;
-    const beastDir = "systems/air-bladder/art/tlomdev/beast";
+    const beastDir = "systems/mondolme/art/tlomdev/beast";
     // generationEnabled seeded TRUE: the default flipped to Off (2026-08-02)
     // and the portrait die this section clicks is exactly what the flag gates.
     const a = await Cls.create({ name: "ZZ Art Roller", type: "npc", system: { role: "npc", generationEnabled: true }, img: `${beastDir}/${beastFirst}` });
@@ -501,7 +501,7 @@ try {
     out.tokenAfterBeast = a.prototypeToken?.texture?.src;
 
     // An Aspeheim face: stays Aspeheim, and the PAIRED token file swaps with it.
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const m = await gen.getPortraitManifest();
     const firstShipped = `${m.portraitDir}/${m.names[0]}`;
     await a.update({ img: firstShipped, "prototypeToken.texture.src": `${m.tokenDir}/${m.names[0]}` });
@@ -544,7 +544,7 @@ try {
     return out;
   }, { beastFirst: TL_BEAST_FIRST });
 
-  roll.afterBeast?.startsWith("systems/air-bladder/art/tlomdev/beast/") && roll.afterBeast !== roll.start
+  roll.afterBeast?.startsWith("systems/mondolme/art/tlomdev/beast/") && roll.afterBeast !== roll.start
     ? ok("the die re-rolls within tlomdev/beast", roll.afterBeast.split("/").pop())
     : fail("the die re-rolls within tlomdev/beast", JSON.stringify([roll.start, roll.afterBeast]));
   roll.tokenAfterBeast === roll.afterBeast
@@ -586,17 +586,17 @@ try {
   // Restoring the folder re-fires its onChange, which rescans and puts the
   // cached list back by itself — checked rather than assumed.
   const priorArt = await page.evaluate(() => ({
-    folder: game.settings.get("air-bladder", "custom-portrait-folder"),
-    list: game.settings.get("air-bladder", "custom-portrait-list"),
+    folder: game.settings.get("mondolme", "custom-portrait-folder"),
+    list: game.settings.get("mondolme", "custom-portrait-list"),
   }));
 
   // `drillKey` names WHICH tile to open — the first tile is no longer the
   // interesting one, since top-level folders lead and the nested case sits
   // under a heading further down.
   const scanTo = (root, drillKey = null) => page.evaluate(async ([dir, wanted]) => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     await game.settings.set(NS, "custom-portrait-folder", dir);
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const files = await gen.refreshCustomPortraits();
     const Cls = CONFIG.Actor.documentClass;
     const a = await Cls.create({ name: "ZZ Art Categories", type: "npc", system: { role: "monster" } });
@@ -665,7 +665,7 @@ try {
     return out;
   }, [root, drillKey]);
 
-  const lydiaRoot = "systems/air-bladder/art/lydia-comer";
+  const lydiaRoot = "systems/mondolme/art/lydia-comer";
   const cats = await scanTo(lydiaRoot);
 
   cats.inSubfolders > 0
@@ -702,7 +702,7 @@ try {
   // this root found only `lydia-comer`'s three loose images and grew exactly
   // one tile. It carries the label rule too, and doubles as the control for
   // "a folder holding only other folders grows no tile of its own".
-  const tidy = await scanTo("systems/air-bladder/art", "lydia-comer/portraits");
+  const tidy = await scanTo("systems/mondolme/art", "lydia-comer/portraits");
   tidy.maxDepth >= 2
     ? ok("the scan reaches images two folders down", `deepest is ${tidy.maxDepth} level(s), ${tidy.scanned} images`)
     : fail("the scan reaches images two folders down", `deepest is ${tidy.maxDepth} level(s), ${tidy.scanned} images`);
@@ -740,7 +740,7 @@ try {
         `key ${tidy.firstKey}, face decodes ${tidy.faceDecodes}, ${tidy.drilled?.length} cell(s)`);
 
   const restored = await page.evaluate(async (prior) => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     await game.settings.set(NS, "custom-portrait-folder", prior.folder);
     // The folder's onChange rescans; wait for the cache to settle back rather
     // than writing it by hand, so the restore exercises the same path a Warden

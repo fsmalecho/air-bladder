@@ -78,7 +78,7 @@ const result = await page.evaluate(async () => {
     reportMatched: report.matched,
     reportFallback: report.fallback,
     reportFatigue: report.fatigue,
-    allImportedTagged: data.items.every((i) => i.flags?.["air-bladder"]?.grantSource === "imported"),
+    allImportedTagged: data.items.every((i) => i.flags?.["mondolme"]?.grantSource === "imported"),
     // text best-fit
     scars: s.scars,
     scarEnabled: s.scarEnabled,

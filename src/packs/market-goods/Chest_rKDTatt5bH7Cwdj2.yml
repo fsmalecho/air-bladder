@@ -1,12 +1,12 @@
 _id: rKDTatt5bH7Cwdj2
 name: Chest
 type: item
-img: systems/air-bladder/icons/chest.svg
+img: systems/mondolme/icons/chest.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     marketSource: 2e
 system:
   description: A sturdy wooden chest with a lock, for keeping valuables from idle hands.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!rKDTatt5bH7Cwdj2'

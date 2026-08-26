@@ -3,7 +3,7 @@ name: Mirror
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/glass/mirror-mirror.svg
+img: systems/mondolme/art/game-icons/glass/mirror-mirror.svg
 effects: []
 _stats:
   coreVersion: '14.365'

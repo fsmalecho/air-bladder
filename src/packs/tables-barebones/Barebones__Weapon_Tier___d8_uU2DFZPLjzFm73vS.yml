@@ -9,13 +9,13 @@ results:
   - _id: mZPbve6CGiCSCoMm
     type: document
     name: Spear
-    img: systems/air-bladder/art/game-icons/weapons/barbed-spear.svg
+    img: systems/mondolme/art/game-icons/weapons/barbed-spear.svg
     weight: 1
     range:
       - 1
       - 1
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.2Z807kXPnYap0hUU
+    documentUuid: Compendium.mondolme.weapons.Item.2Z807kXPnYap0hUU
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -32,13 +32,13 @@ results:
   - _id: B0r2Ux4acN6VPg0W
     type: document
     name: Sword
-    img: systems/air-bladder/art/game-icons/blade/ancient-sword.svg
+    img: systems/mondolme/art/game-icons/blade/ancient-sword.svg
     weight: 1
     range:
       - 2
       - 2
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.1k4xfzZwGS583eRa
+    documentUuid: Compendium.mondolme.weapons.Item.1k4xfzZwGS583eRa
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -55,13 +55,13 @@ results:
   - _id: fXsprs2gZi0XORZ4
     type: document
     name: Mace
-    img: systems/air-bladder/art/game-icons/weapons/flanged-mace.svg
+    img: systems/mondolme/art/game-icons/weapons/flanged-mace.svg
     weight: 1
     range:
       - 3
       - 3
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.GAdVOvcq4KsPnCho
+    documentUuid: Compendium.mondolme.weapons.Item.GAdVOvcq4KsPnCho
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -78,13 +78,13 @@ results:
   - _id: YtMcjaBGLN4Y0CIs
     type: document
     name: Axe
-    img: systems/air-bladder/art/game-icons/tools/wood-axe.svg
+    img: systems/mondolme/art/game-icons/tools/wood-axe.svg
     weight: 1
     range:
       - 4
       - 4
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.SXlTyf9AwMrZPkIi
+    documentUuid: Compendium.mondolme.weapons.Item.SXlTyf9AwMrZPkIi
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -101,13 +101,13 @@ results:
   - _id: 0xPLl6Duoe3hKrhE
     type: document
     name: Flail
-    img: systems/air-bladder/art/game-icons/weapons/flail.svg
+    img: systems/mondolme/art/game-icons/weapons/flail.svg
     weight: 1
     range:
       - 5
       - 5
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.aaJtV09Zt0hKS2bt
+    documentUuid: Compendium.mondolme.weapons.Item.aaJtV09Zt0hKS2bt
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -125,14 +125,14 @@ formula: 1d5
 replacement: true
 displayRoll: true
 flags:
-  air-bladder:
+  mondolme:
     tableSource: barebones
 folder: null
 sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

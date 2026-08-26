@@ -3,7 +3,7 @@ name: Giant Electric Eel
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/fish/eel.svg
+img: systems/mondolme/art/game-icons/fish/eel.svg
 items:
   - _id: 521njrVTvxdUR3IX
     name: Bite
@@ -156,7 +156,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/fish/eel.svg
+    src: systems/mondolme/art/game-icons/fish/eel.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

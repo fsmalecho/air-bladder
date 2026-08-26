@@ -47,8 +47,8 @@
 import { chromium } from "playwright";
 import { FOUNDRY_URL, VIEWPORT, dismissChrome, joinAsGM, joinAs, watchErrors, watchdog } from "./lib.mjs";
 
-const GOBLIN_UUID = "Compendium.air-bladder.monsters.Actor.S6lcn0jsoTeJgqst";
-const OGRE_UUID = "Compendium.air-bladder.monsters.Actor.jgtycd2HoWTQEU5T";
+const GOBLIN_UUID = "Compendium.mondolme.monsters.Actor.S6lcn0jsoTeJgqst";
+const OGRE_UUID = "Compendium.mondolme.monsters.Actor.jgtycd2HoWTQEU5T";
 
 let failures = 0;
 const ok = (l, d = "") => console.log(`  ok    ${l.padEnd(52)} ${d}`);
@@ -242,7 +242,7 @@ try {
   /* --------------------------------------------------------- 3. the stamp -- */
   const second = await gm.evaluate(async ({ msgId }) => {
     const el = document.querySelector(`[data-message-id="${msgId}"] .encounter-spawn`);
-    const enc = await import("/systems/air-bladder/module/encounters.js");
+    const enc = await import("/systems/mondolme/module/encounters.js");
     const before = canvas.scene.tokens.size;
     const msgsBefore = game.messages.size;
     const r = await enc.spawnEncounterFromMessage(game.messages.get(msgId));
@@ -338,7 +338,7 @@ try {
   await gm.waitForTimeout(800);
   const tokensBeforeAlice = await gm.evaluate((sceneId) => game.scenes.get(sceneId).tokens.size, fx.sceneId);
   const aliceTry = await alice.evaluate(async (msgId) => {
-    const enc = await import("/systems/air-bladder/module/encounters.js");
+    const enc = await import("/systems/mondolme/module/encounters.js");
     const msg = game.messages.get(msgId);
     if (!msg) return { missing: true };
     const r = await enc.spawnEncounterFromMessage(msg);
@@ -354,7 +354,7 @@ try {
 
   /* -------------------------------------------- 8. the no-scene guard ------ */
   const noScene = await gm.evaluate(async (msgId) => {
-    const enc = await import("/systems/air-bladder/module/encounters.js");
+    const enc = await import("/systems/mondolme/module/encounters.js");
     const msg = game.messages.get(msgId);
     const msgsBefore = game.messages.size;
     // Shadow IN-PAGE, restore in finally — never a world write. The own

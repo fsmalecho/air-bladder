@@ -7,7 +7,7 @@ import { Cairn } from "./config.js";
 
 /**
  * One-way importer: a Kettlewright (kettlewright.com) character export JSON ->
- * a new Air Bladder `character` Actor. GM-only. Best-effort and lossy by design:
+ * a new Mondolme `character` Actor. GM-only. Best-effort and lossy by design:
  * items and the background are matched by name where possible and otherwise built
  * from their raw text/tags, so nothing is lost — it just arrives less structured.
  *
@@ -31,7 +31,7 @@ const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 /** Kettlewright hosts portraits at an absolute URL; only those can travel across apps. */
 const isAbsoluteUrl = (s) => /^https?:\/\//i.test(String(s ?? ""));
 
-/** A single free-text scars blob -> multiple entries (Air Bladder scars is an array). */
+/** A single free-text scars blob -> multiple entries (Mondolme scars is an array). */
 const splitScars = (s) => String(s ?? "").split(/[\n;]+/).map((x) => x.trim()).filter(Boolean);
 
 /* -------------------------------------------------------------------------- */
@@ -147,7 +147,7 @@ const retagGranted = (items, granted, source) => {
  */
 const findBondEntry = async (text) => {
   if (!norm(text)) return null;
-  const pack = game.packs.get("air-bladder.tables-2e");
+  const pack = game.packs.get("mondolme.tables-2e");
   const table = pack ? (await pack.getDocuments()).find((t) => t.name === "Bonds") : null;
   const hit = bestTextMatch(text, table?.results ?? [], resultText);
   if (!hit) return null;
@@ -216,7 +216,7 @@ export const parseQuestionAnswers = (notes, questions) => {
 
 /**
  * Kettlewright stores the eight 2e traits and the character's age as a single
- * English sentence, built from the same 2e tables Air Bladder ships — and, as it
+ * English sentence, built from the same 2e tables Mondolme ships — and, as it
  * happens, in almost exactly the phrasing our own sheet emits (`CAIRN.Bio.*`):
  *
  *   "You have a Stout Physique, Birthmarked Skin, and Long Hair. Your Face is
@@ -269,7 +269,7 @@ export const parseTraitSentence = (text) => {
  * up in the shipped tables.
  *
  * Position is NOT reliable: Kettlewright writes virtue-then-vice ("Honorable and
- * Craven") while Air Bladder's own sentence writes vice-then-virtue, so trusting
+ * Craven") while Mondolme's own sentence writes vice-then-virtue, so trusting
  * the order would silently swap the two on every single import. The table lookup
  * is also self-correcting if either app changes its phrasing later.
  *
@@ -370,7 +370,7 @@ export const kettlewrightToActorData = async (json) => {
       continue;
     }
     if (!kw?.name) continue;
-    // Fatigue is a real 1-slot inventory item in Air Bladder too; recreate it
+    // Fatigue is a real 1-slot inventory item in Mondolme too; recreate it
     // under the localized name so the sheet's fatigue handling recognizes it.
     if (kw.name === "Fatigue") {
       items.push(withGrantSource(buildGearItem({ name: FATIGUE, tags: [] }), "imported"));
@@ -456,7 +456,7 @@ export const kettlewrightToActorData = async (json) => {
     }
   }
 
-  // Armor is a string column in Kettlewright; a numeric value forces Air Bladder's
+  // Armor is a string column in Kettlewright; a numeric value forces Mondolme's
   // armorOverride so the sheet shows it without re-equipping imported armor.
   const armorN = parseInt(json.armor, 10);
   const armorOverride = Number.isFinite(armorN) && armorN > 0 ? armorN : null;

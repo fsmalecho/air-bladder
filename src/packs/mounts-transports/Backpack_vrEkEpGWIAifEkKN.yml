@@ -1,17 +1,17 @@
 _id: vrEkEpGWIAifEkKN
 name: Backpack
 type: npc
-img: systems/air-bladder/icons/backpack.svg
+img: systems/mondolme/icons/backpack.svg
 prototypeToken:
   name: Backpack
   texture:
-    src: systems/air-bladder/icons/backpack.svg
+    src: systems/mondolme/icons/backpack.svg
 items: []
 effects: []
 folder: GrfAVGCTK0OAzEaH
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: A sturdy pack worn on the back. Holds four slots of gear or Fatigue. Every adventurer starts with one — this is a spare.
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!vrEkEpGWIAifEkKN'

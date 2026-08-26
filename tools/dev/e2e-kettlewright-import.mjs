@@ -75,9 +75,9 @@ const out = await page.evaluate(() => {
 // fallback (asserted as "NOT the Kettlewright folder" — whether the random
 // pool is Aspeheim or the world's custom folder is not this probe's business),
 // and a custom absolute URL is used verbatim.
-const KW_DIR = "systems/air-bladder/art/tlomdev/kettlewright-portraits";
+const KW_DIR = "systems/mondolme/art/tlomdev/kettlewright-portraits";
 const mapping = await page.evaluate(async () => {
-  const { kettlewrightToActorData } = await import("/systems/air-bladder/module/kettlewright-import.js");
+  const { kettlewrightToActorData } = await import("/systems/mondolme/module/kettlewright-import.js");
   const base = {
     name: "ZZ KW Map", background: "Kettlewright",
     strength: 10, strength_max: 10, dexterity: 10, dexterity_max: 10, willpower: 10, willpower_max: 10,

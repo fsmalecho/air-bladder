@@ -70,7 +70,7 @@ const journalShell = (id, name, pages) => [
   "  default: 0",
   "flags: {}",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!journal!${id}'`,
   "",
@@ -100,7 +100,7 @@ const ROSTER = [
   // that pointer, which no gate checks.
   ["dice-formulas.md", "Dice Formulas"],
 ];
-const idOf = new Map(ROSTER.map(([f, name]) => [f, idFor(`air-bladder-system-docs:${f}`)]));
+const idOf = new Map(ROSTER.map(([f, name]) => [f, idFor(`mondolme-system-docs:${f}`)]));
 
 /* ---------------------------------------------------------------- convert */
 const convert = (file) => {
@@ -114,7 +114,7 @@ const convert = (file) => {
     if (/^https?:\/\//.test(href)) return m;
     const target = href.replace(/#.*$/, "");
     const tid = idOf.get(target);
-    if (tid) return `@UUID[Compendium.air-bladder.journals-docs.JournalEntry.${tid}]{${text}}`;
+    if (tid) return `@UUID[Compendium.mondolme.journals-docs.JournalEntry.${tid}]{${text}}`;
     return text;
   });
   return html.replace(/\r?\n/g, " ").replace(/ {2,}/g, " ").trim();
@@ -128,7 +128,7 @@ if (!dry) {
 }
 for (const [file, name] of ROSTER) {
   const jid = idOf.get(file);
-  const pid = idFor(`air-bladder-system-docs-page:${file}`);
+  const pid = idFor(`mondolme-system-docs-page:${file}`);
   const html = convert(file);
   if (!html || html.length < 200) throw new Error(`FATAL: ${file} converted to ${html.length} chars`);
   const yml = journalShell(jid, name, [page(jid, pid, name, html, 0)]);

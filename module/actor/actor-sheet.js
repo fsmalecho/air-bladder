@@ -425,11 +425,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const t = this.actor.type === "hireling" ? "npc" : this.actor.type;
     return {
       form: {
-        template: `systems/air-bladder/templates/actor/${t}-sheet.html`,
+        template: `systems/mondolme/templates/actor/${t}-sheet.html`,
         templates: [
-          "systems/air-bladder/templates/parts/items-list.html",
-          "systems/air-bladder/templates/parts/container-list.html",
-          "systems/air-bladder/templates/parts/bio-block.html",
+          "systems/mondolme/templates/parts/items-list.html",
+          "systems/mondolme/templates/parts/container-list.html",
+          "systems/mondolme/templates/parts/bio-block.html",
         ],
       },
     };
@@ -1370,7 +1370,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Scars pick-list from the same tables-2e pack. Neither Omen nor Scar is
     // generated: a player ticks the field's checkbox to enable it, then rolls
     // (Omen) or checks scars. Both are descriptive only.
-    const tables2e = byPack["air-bladder.tables-2e"] ?? (await cachedPackDocuments("air-bladder.tables-2e"));
+    const tables2e = byPack["mondolme.tables-2e"] ?? (await cachedPackDocuments("mondolme.tables-2e"));
     const scarTable = tables2e.find((tbl) => tbl.name === "Scars");
     const selectedScars = this.actor.system.scars ?? [];
     // Same display/value split as the trait options above, and for the same reason:
@@ -1386,7 +1386,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             display: t("table.result", name),
             // Our own per-row annotation, not the row's text — hence its own
             // namespace (see tools/i18n/extract-content.mjs).
-            description: t("table.resultDesc", r.flags?.["air-bladder"]?.description ?? ""),
+            description: t("table.resultDesc", r.flags?.["mondolme"]?.description ?? ""),
             selected: selectedScars.includes(name),
           };
         })
@@ -1495,7 +1495,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // dice. It also appears in the inventory tagged "Failed Career" + "Petty".
     context.failedCareerItem = t(
       "item.name",
-      this.actor.items.find((i) => i.getFlag("air-bladder", "grantSource") === "failed-career")?.name ?? "",
+      this.actor.items.find((i) => i.getFlag("mondolme", "grantSource") === "failed-career")?.name ?? "",
     );
 
     // Random-generation mode (default on): gates the per-field dice rollers
@@ -2171,7 +2171,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    */
   async _replaceGrantedItems(source, newItems) {
     const oldIds = this.actor.items
-      .filter((i) => i.getFlag("air-bladder", "grantSource") === source)
+      .filter((i) => i.getFlag("mondolme", "grantSource") === source)
       .map((i) => i.id);
     if (oldIds.length) {
       // abNoStatusCard: grant machinery is not a player packing or shedding
@@ -2312,7 +2312,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return;
     }
     this.#fillPrintPage(win).catch((err) => {
-      console.error("Air Bladder | the print page failed:", err);
+      console.error("Mondolme | the print page failed:", err);
       win.close();
     });
   }
@@ -2490,7 +2490,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // the canon pack — the shipped custom pack, the world compendium, a
     // module, a bare world item — prints the custom label (user ruling
     // 2026-08-08).
-    const isCustomBg = !!bg && sys.contentSource === "2e" && bg.pack !== "air-bladder.backgrounds-2e";
+    const isCustomBg = !!bg && sys.contentSource === "2e" && bg.pack !== "mondolme.backgrounds-2e";
 
     // The footer credits the art actually ON the page (user ruling
     // 2026-08-08): the portrait's PATH picks its attribution line, so an
@@ -2503,7 +2503,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       ["art/tlomdev/", "CAIRN.PrintCreditTlomdev"],
       ["art/lydia-comer/", "CAIRN.PrintCreditLydiaComer"],
       ["art/game-icons/", "CAIRN.PrintCreditGameIcons"],
-      ["air-bladder/icons/", "CAIRN.PrintCreditGameIcons"],
+      ["mondolme/icons/", "CAIRN.PrintCreditGameIcons"],
     ];
     const artCredit = ART_CREDITS.find(([prefix]) => (actor.img ?? "").includes(prefix))?.[1];
     // …and the background credits whoever WROTE it, straight off the document's
@@ -2652,7 +2652,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     };
 
     const html = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/print/character-print.html", context);
+      "systems/mondolme/templates/print/character-print.html", context);
     win.document.open();
     win.document.write(html);
     win.document.close();
@@ -2957,7 +2957,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    */
   static async #onItemCreate(event) {
     event.preventDefault();
-    const template = "systems/air-bladder/templates/dialog/add-item-dialog.html";
+    const template = "systems/mondolme/templates/dialog/add-item-dialog.html";
     const content = await foundry.applications.handlebars.renderTemplate(template);
 
     await foundry.applications.api.DialogV2.prompt({
@@ -3002,7 +3002,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // the shop's own header comment records having shipped once (review #9).
     const opts = this.actor.canKeepConnected ? undefined : { exclude: TRANSPORTS_CATEGORY };
     openMarketplace(this.actor, opts).catch((err) => {
-      console.error("Air Bladder | marketplace failed to open:", err);
+      console.error("Mondolme | marketplace failed to open:", err);
       ui.notifications.error(game.i18n.localize("CAIRN.Notify.DropFailed"));
     });
   }
@@ -3288,7 +3288,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const targetIds = targetedTokens.length ? targetedTokens.join(";") : null;
 
     const flavor = await foundry.applications.handlebars.renderTemplate(
-      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      "systems/mondolme/templates/chat/dmg-roll-card.html",
       {
         label, targets: targetIds,
         // The weapon travels as a datum too — the attack line rebuilds the
@@ -3521,7 +3521,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (game.user.isGM) {
         changes.ownership = foundry.data.operators.ForcedReplacement.create(brokenOwnershipShape(child));
       } else {
-        changes[`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`] = true;
+        changes[`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`] = true;
       }
     }
     await child.update(changes);
@@ -3683,7 +3683,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static async #onRollOmen(event) {
     event.preventDefault();
     if (!this.actor.system.omenEnabled) return;
-    const tables = await cachedPackDocuments("air-bladder.tables-2e");
+    const tables = await cachedPackDocuments("mondolme.tables-2e");
     const omenTable = tables.find((tbl) => tbl.name === "Omens");
     if (!omenTable) {
       ui.notifications.warn(game.i18n.localize("CAIRN.OmenTableMissing"));
@@ -4011,7 +4011,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       gameIcons: this.actor.type !== "character",
       tlomdev: true,
       lydia: this.actor.type !== "character",
-      browseStart: (await getPortraitManifest())?.portraitDir ?? "systems/air-bladder/art/jon-aspeheim/portraits",
+      browseStart: (await getPortraitManifest())?.portraitDir ?? "systems/mondolme/art/jon-aspeheim/portraits",
       onPick: (src) => this._setPortrait(src),
     });
   }

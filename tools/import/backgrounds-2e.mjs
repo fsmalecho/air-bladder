@@ -235,7 +235,7 @@ const docYaml = (d) => {
     "folder: null",
     `sort: ${d.sort ?? 0}`,
     "flags:",
-    "  air-bladder:",
+    "  mondolme:",
     "    backgroundSource: srd-2e",
     "system:",
     "  source: 2e",
@@ -279,7 +279,7 @@ const docYaml = (d) => {
       }
     }
   }
-  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: air-bladder",
+  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: mondolme",
     "  coreVersion: '14.365'", `_key: '!items!${d._id}'`, "");
   return lines.join("\n");
 };

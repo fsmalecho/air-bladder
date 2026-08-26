@@ -1,12 +1,12 @@
 _id: gkq99A9ZRrQNO5Gq
 name: Striped Bamboo Bow
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Collapsible, it only requires one slot (but still requires both hands).
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!gkq99A9ZRrQNO5Gq'

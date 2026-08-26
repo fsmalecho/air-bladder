@@ -2,7 +2,7 @@ name: Hand-Drill
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/drill.svg
+img: systems/mondolme/art/game-icons/tools/drill.svg
 effects: []
 _id: DgYIRpSITa82lnri
 _stats:

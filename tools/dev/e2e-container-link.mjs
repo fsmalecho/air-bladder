@@ -189,7 +189,7 @@ await dismissChrome(alicePage);
 const buy = await alicePage.evaluate(async (pcId) => {
   const pc = game.actors.get(pcId);
   await pc.update({ "system.gold": 500 });
-  const mkt = await import("/systems/air-bladder/module/marketplace.js");
+  const mkt = await import("/systems/mondolme/module/marketplace.js");
   // The dev world keeps allow-player-marketplace OFF (the Warden's table
   // choice), and acquireTransport reads it live on the calling client — so
   // without this shadow the buy refuses at the shop door and every leg
@@ -224,7 +224,7 @@ const buy = await alicePage.evaluate(async (pcId) => {
     await new Promise((r) => setTimeout(r, 250));
     shapeSettled = container.ownership.default === L.OBSERVER
       && container.ownership[game.user.id] === L.OWNER
-      && container.getFlag("air-bladder", "ownershipSyncPending") === undefined;
+      && container.getFlag("mondolme", "ownershipSyncPending") === undefined;
   }
   return {
     okBuy,

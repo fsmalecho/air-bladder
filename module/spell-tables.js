@@ -99,7 +99,7 @@ export const reseedSpellTable = async () => {
     <div class="form-group">
       <label>${L("CAIRN.ReseedSourcePack")}</label>
       <select name="pack">
-        ${packs.map((p) => `<option value="${esc(p.collection)}"${p.collection === "air-bladder.spellbooks" ? " selected" : ""}>${esc(p.title)}</option>`).join("")}
+        ${packs.map((p) => `<option value="${esc(p.collection)}"${p.collection === "mondolme.spellbooks" ? " selected" : ""}>${esc(p.title)}</option>`).join("")}
       </select>
     </div>`;
   const picked = await foundry.applications.api.DialogV2.wait({

@@ -23,14 +23,14 @@
 import { SETTINGS_NS } from "./settings.js";
 import { formatCount } from "./utils.js";
 
-export const GLOG_PACK = "air-bladder.spellbooks-glog";
+export const GLOG_PACK = "mondolme.spellbooks-glog";
 
 /**
  * The spell packs in force under GLOG: the GLOG wordings plus the custom set,
  * canon deliberately absent. "Custom" is the pack as it exists today — its
  * disposition is the user's open decision and nothing here presumes it.
  */
-export const GLOG_SPELL_PACKS = [GLOG_PACK, "air-bladder.more-spellbooks"];
+export const GLOG_SPELL_PACKS = [GLOG_PACK, "mondolme.more-spellbooks"];
 
 export const glogEnabled = () => {
   try {
@@ -140,7 +140,7 @@ export const runGlogConversion = async () => {
   if (game.users.activeGM !== game.user) return;
   const glogText = await glogTextByName();
   if (!glogText.size) {
-    console.warn("air-bladder | GLOG conversion: spellbooks-glog pack missing or empty — nothing swapped");
+    console.warn("mondolme | GLOG conversion: spellbooks-glog pack missing or empty — nothing swapped");
   }
   let converted = 0;
 

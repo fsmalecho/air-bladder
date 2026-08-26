@@ -71,7 +71,7 @@ const journalShell = (id, name, pages) => [
   "  default: 0",
   "flags: {}",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!journal!${id}'`,
   "",
@@ -89,10 +89,10 @@ const CORE = '<p><em>These rules are the same for every character \u2014 canon 2
   + '<p><em>Cairn 2e Player\u2019s Guide, cairnrpg.com/second-edition/players-guide/core-rules/ \u2014 CC BY-SA 4.0.</em></p>';
 
 /* ------------------------------------------------------------------ write */
-const oid = idFor("air-bladder-2e-rules-overview");
-const opid = idFor("air-bladder-2e-rules-overview-page");
-const cid = idFor("air-bladder-2e-rules-core");
-const cpid = idFor("air-bladder-2e-rules-core-page");
+const oid = idFor("mondolme-2e-rules-overview");
+const opid = idFor("mondolme-2e-rules-overview-page");
+const cid = idFor("mondolme-2e-rules-core");
+const cpid = idFor("mondolme-2e-rules-core-page");
 const overviewYaml = journalShell(oid, OVERVIEW_NAME, [page(oid, opid, OVERVIEW_NAME, OVERVIEW, 0)]);
 const coreYaml = journalShell(cid, CORE_NAME, [page(cid, cpid, CORE_NAME, CORE, 0)]);
 

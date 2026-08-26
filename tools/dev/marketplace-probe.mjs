@@ -51,7 +51,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const mkt = await import("/systems/mondolme/module/marketplace.js");
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     const poll = async (fn, tries = 60, ms = 50) => {
       for (let i = 0; i < tries; i++) { if (fn()) return true; await wait(ms); }
@@ -78,7 +78,7 @@ try {
     };
 
     // 2. Edit the pool Dagger; re-read; assert the shop reflects it.
-    const pack = game.packs.get("air-bladder.weapons");
+    const pack = game.packs.get("mondolme.weapons");
     const poolDagger = (await pack.getDocuments()).find((d) => d.name === "Dagger");
     const wasLocked = pack.locked;
     if (wasLocked) await pack.configure({ locked: false });

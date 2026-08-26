@@ -7,7 +7,7 @@
  * Two rulings this gates (2026-08-05):
  *
  *   1. Random spells and spellscrolls in generation draw from the CANON pack —
- *      `air-bladder.spellbooks` — and never from More Spellbooks. Stated by the
+ *      `mondolme.spellbooks` — and never from More Spellbooks. Stated by the
  *      user with "100% certainty"; the draw pool and the by-name grant list
  *      (SPELL_PACKS) are deliberately separate constants so widening one cannot
  *      silently widen the other.
@@ -44,7 +44,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const CANON = "air-bladder.spellbooks";
+    const CANON = "mondolme.spellbooks";
     const out = {};
 
     // The generator's draw helpers are module-internal; drive them through the
@@ -60,7 +60,7 @@ try {
     // against a freshly restarted server. The claims are about the DRAW's work
     // — zero full loads, canon-only picks — not about the cache state, and the
     // negative control still proves the counter can fire.
-    for (const key of [CANON, "air-bladder.more-spellbooks"]) {
+    for (const key of [CANON, "mondolme.more-spellbooks"]) {
       await game.packs.get(key)?.getDocuments();
     }
 
@@ -107,7 +107,7 @@ try {
       // Canon-only: 200 index-level draws, every winner's id must be canon's.
       const canonIds = new Set(game.packs.get(CANON).index.map((e) => e._id));
       const moreIds = new Set(
-        (game.packs.get("air-bladder.more-spellbooks")?.index ?? []).map((e) => e._id)
+        (game.packs.get("mondolme.more-spellbooks")?.index ?? []).map((e) => e._id)
       );
       out.morePackSize = moreIds.size;   // the non-vacuousness precondition
       fullLoads = 0;
@@ -128,7 +128,7 @@ try {
       fullLoads = 0;
       const oldShape = async () => {
         const books = [];
-        for (const key of [CANON, "air-bladder.more-spellbooks"]) {
+        for (const key of [CANON, "mondolme.more-spellbooks"]) {
           const pack = game.packs.get(key);
           if (pack) books.push(...(await pack.getDocuments()));
         }

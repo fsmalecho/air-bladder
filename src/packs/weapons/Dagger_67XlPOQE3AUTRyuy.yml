@@ -2,12 +2,12 @@ name: Dagger
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/blade/plain-dagger.svg
+img: systems/mondolme/art/game-icons/blade/plain-dagger.svg
 effects: []
 _id: 67XlPOQE3AUTRyuy
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.11
   createdTime: 1785873363955
   modifiedTime: 1786151463543

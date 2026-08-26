@@ -22,7 +22,7 @@ import { SETTINGS_NS } from "./settings.js";
  * surface — the scene-controls palette — that nothing else here touches.
  */
 
-const CARD_TEMPLATE = "systems/air-bladder/templates/chat/dmg-roll-card.html";
+const CARD_TEMPLATE = "systems/mondolme/templates/chat/dmg-roll-card.html";
 
 /** What the formula field starts at. A d6 trap is the commonest thing there is. */
 const DEFAULT_FORMULA = "1d6";
@@ -63,7 +63,7 @@ export const registerWardenDamageControl = () => {
         // Not awaited — `onChange` is fire-and-forget, and an unhandled
         // rejection out of a click handler is silent.
         openWardenDamage().catch((err) => {
-          console.error("Air Bladder | the Warden's damage dialog failed:", err);
+          console.error("Mondolme | the Warden's damage dialog failed:", err);
         });
       },
     };

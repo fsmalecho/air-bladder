@@ -284,11 +284,11 @@ const quality = await page.evaluate(async ({ id }) => {
   const { settle, btn, race, gone } = window.__ab;
   const out = {};
   const actor = game.actors.get(id);
-  const panicWas = game.settings.get("air-bladder", "use-panic");
-  if (panicWas) await game.settings.set("air-bladder", "use-panic", false);
-  out.panicOff = game.settings.get("air-bladder", "use-panic") === false;
+  const panicWas = game.settings.get("mondolme", "use-panic");
+  if (panicWas) await game.settings.set("mondolme", "use-panic", false);
+  out.panicOff = game.settings.get("mondolme", "use-panic") === false;
 
-  const { askDamageQuality, damageFormulaFor } = await import("/systems/air-bladder/module/utils.js");
+  const { askDamageQuality, damageFormulaFor } = await import("/systems/mondolme/module/utils.js");
 
   // 1. The three buttons render, and the FIRST one shows the WEAPON's die.
   //    Standard leads as of 2026-08-07 (user ruling) — the default is where the
@@ -374,7 +374,7 @@ const quality = await page.evaluate(async ({ id }) => {
   // 3. Each choice maps to the right formula. Pure function, no dialog.
   out.formulas = ["impaired", "standard", "enhanced"].map((q) => damageFormulaFor(q, "1d6"));
 
-  if (panicWas) await game.settings.set("air-bladder", "use-panic", true);
+  if (panicWas) await game.settings.set("mondolme", "use-panic", true);
   return out;
 }, { id: actorId });
 
@@ -384,8 +384,8 @@ const quality = await page.evaluate(async ({ id }) => {
 const rollWith = async (choice) => page.evaluate(async ({ id, choice }) => {
   const { settle, btn, race, gone } = window.__ab;
   const actor = game.actors.get(id);
-  const panicWas = game.settings.get("air-bladder", "use-panic");
-  if (panicWas) await game.settings.set("air-bladder", "use-panic", false);
+  const panicWas = game.settings.get("mondolme", "use-panic");
+  if (panicWas) await game.settings.set("mondolme", "use-panic", false);
   // The previous roll's dialog must be off the DOM first, or every click below
   // lands on it instead.
   const priorGone = await gone();
@@ -416,7 +416,7 @@ const rollWith = async (choice) => page.evaluate(async ({ id, choice }) => {
     flavor: String(card?.flavor ?? ""),
   };
   await card?.delete();
-  if (panicWas) await game.settings.set("air-bladder", "use-panic", true);
+  if (panicWas) await game.settings.set("mondolme", "use-panic", true);
   return out;
 }, { id: actorId, choice });
 
@@ -431,8 +431,8 @@ const dismissedRoll = await rollWith("dismiss");
 const panicRoll = await page.evaluate(async ({ id }) => {
   const { settle, btn, race, gone } = window.__ab;
   const actor = game.actors.get(id);
-  const panicWas = game.settings.get("air-bladder", "use-panic");
-  if (!panicWas) await game.settings.set("air-bladder", "use-panic", true);
+  const panicWas = game.settings.get("mondolme", "use-panic");
+  if (!panicWas) await game.settings.set("mondolme", "use-panic", true);
   await actor.update({ "system.panicked": true });
   const priorGone = await gone();
 
@@ -467,7 +467,7 @@ const panicRoll = await page.evaluate(async ({ id }) => {
   };
   await card?.delete();
   await actor.update({ "system.panicked": false });
-  if (!panicWas) await game.settings.set("air-bladder", "use-panic", false);
+  if (!panicWas) await game.settings.set("mondolme", "use-panic", false);
   return out;
 }, { id: actorId });
 

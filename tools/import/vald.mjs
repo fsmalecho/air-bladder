@@ -92,7 +92,7 @@ const journalShell = (id, name, pages) => [
   "  default: 0",
   "flags: {}",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!journal!${id}'`,
   "",
@@ -145,12 +145,12 @@ const convert = (name, body) => {
 };
 
 /* ------------------------------------------------------------------ write */
-const jid = idFor("air-bladder-vald");
+const jid = idFor("mondolme-vald");
 const pageBlocks = sections.map((s, i) => {
   let html = convert(s.name, s.body);
   if (i === sections.length - 1) html += ` ${ATTRIBUTION}`;
   console.log(`  ${s.name.padEnd(24)} ${html.length} chars`);
-  return page(jid, idFor(`air-bladder-vald:${s.name}`), s.name, html, i * 100);
+  return page(jid, idFor(`mondolme-vald:${s.name}`), s.name, html, i * 100);
 });
 const yml = journalShell(jid, ENTRY_NAME, pageBlocks);
 

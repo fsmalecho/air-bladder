@@ -14,11 +14,11 @@ import { PERSON_ROLES } from "./data-models.js";
 import { t } from "./i18n-content.js";
 
 // Foundry validates a document flag's scope against real package ids, so flags
-// use the system id "air-bladder" (NOT the internal "cairn" JS/settings namespace,
+// use the system id "mondolme" (NOT the internal "cairn" JS/settings namespace,
 // which is fine for game.settings but is rejected by Document#getFlag/setFlag).
 /** Flag scope for grant provenance. Exported so other modules (the Kettlewright
  *  importer) tag and read the same namespace rather than hardcoding a copy. */
-export const FLAG_SCOPE = "air-bladder";
+export const FLAG_SCOPE = "mondolme";
 
 /*
  * Cairn 2e character generation.
@@ -46,7 +46,7 @@ let _portraitManifest = null;
 export const getPortraitManifest = async () => {
   if (_portraitManifest === null) {
     try {
-      const resp = await fetch("systems/air-bladder/module/portrait-manifest.json");
+      const resp = await fetch("systems/mondolme/module/portrait-manifest.json");
       _portraitManifest = resp.ok ? await resp.json() : { names: [] };
     } catch {
       _portraitManifest = { names: [] };
@@ -67,7 +67,7 @@ let _gameIconManifest = null;
 export const getGameIconManifest = async () => {
   if (_gameIconManifest === null) {
     try {
-      const resp = await fetch("systems/air-bladder/module/game-icons-manifest.json");
+      const resp = await fetch("systems/mondolme/module/game-icons-manifest.json");
       _gameIconManifest = resp.ok ? await resp.json() : { categories: [] };
     } catch {
       _gameIconManifest = { categories: [] };
@@ -86,7 +86,7 @@ let _tlomdevManifest = null;
 export const getTlomdevManifest = async () => {
   if (_tlomdevManifest === null) {
     try {
-      const resp = await fetch("systems/air-bladder/module/tlomdev-manifest.json");
+      const resp = await fetch("systems/mondolme/module/tlomdev-manifest.json");
       _tlomdevManifest = resp.ok ? await resp.json() : { categories: [] };
     } catch {
       _tlomdevManifest = { categories: [] };
@@ -113,7 +113,7 @@ let _lydiaManifest = null;
 export const getLydiaManifest = async () => {
   if (_lydiaManifest === null) {
     try {
-      const resp = await fetch("systems/air-bladder/module/lydia-manifest.json");
+      const resp = await fetch("systems/mondolme/module/lydia-manifest.json");
       _lydiaManifest = resp.ok ? await resp.json() : { pairs: [] };
     } catch {
       _lydiaManifest = { pairs: [] };
@@ -380,7 +380,7 @@ export const refreshCustomPortraits = async () => {
       try {
         res = await FP.browse("data", path);
       } catch (e) {
-        console.warn(`Air Bladder | could not scan custom portrait subfolder ${path}:`, e);
+        console.warn(`Mondolme | could not scan custom portrait subfolder ${path}:`, e);
         continue;
       }
       files.push(...(res?.files ?? []).filter((f) => IMAGE_RE.test(f)));
@@ -389,14 +389,14 @@ export const refreshCustomPortraits = async () => {
       else if (subs.length) truncated = true;
     }
     if (truncated) {
-      console.warn(`Air Bladder | custom portrait scan stopped early in "${dir}" — `
+      console.warn(`Mondolme | custom portrait scan stopped early in "${dir}" — `
         + `more than ${MAX_SCAN_DIRS} folders or deeper than ${MAX_SCAN_DEPTH} levels. `
         + "Some portraits will be missing from the Custom tab.");
     }
     await game.settings.set(SETTINGS_NS, "custom-portrait-list", files);
     return files;
   } catch (e) {
-    console.warn("Air Bladder | could not scan custom portrait folder:", e);
+    console.warn("Mondolme | could not scan custom portrait folder:", e);
     return getCustomPortraitPaths();
   }
 };
@@ -416,7 +416,7 @@ const DEFAULT_PORTRAIT_CATEGORY = "humanoid";
  */
 const defaultPortraitPool = async () => {
   const tl = await getTlomdevManifest();
-  const dir = tl?.artDir ?? "systems/air-bladder/art/tlomdev";
+  const dir = tl?.artDir ?? "systems/mondolme/art/tlomdev";
   const cat = (tl?.categories ?? []).find((c) => c.key === DEFAULT_PORTRAIT_CATEGORY);
   return (cat?.names ?? []).map((n) => `${dir}/${DEFAULT_PORTRAIT_CATEGORY}/${n}`);
 };
@@ -529,7 +529,7 @@ const categoryPoolFor = (img, dir, categories) => {
 export const randomPortraitInSameFolder = async (current, category = null) => {
   const img = String(current ?? "");
   const m = await getPortraitManifest();
-  const portraitDir = m?.portraitDir ?? "systems/air-bladder/art/jon-aspeheim/portraits";
+  const portraitDir = m?.portraitDir ?? "systems/mondolme/art/jon-aspeheim/portraits";
   const aspeheim = (m?.names ?? []).map((n) => `${portraitDir}/${n}`);
   const custom = customPoolFor(category);
   // The WHOLE cached list, only to answer "is this image custom art at all".
@@ -555,11 +555,11 @@ export const randomPortraitInSameFolder = async (current, category = null) => {
   }
   if (!pool) {
     const gi = await getGameIconManifest();
-    pool = categoryPoolFor(img, gi?.iconDir ?? "systems/air-bladder/art/game-icons", gi?.categories ?? []);
+    pool = categoryPoolFor(img, gi?.iconDir ?? "systems/mondolme/art/game-icons", gi?.categories ?? []);
   }
   if (!pool) {
     const tl = await getTlomdevManifest();
-    pool = categoryPoolFor(img, tl?.artDir ?? "systems/air-bladder/art/tlomdev", tl?.categories ?? []);
+    pool = categoryPoolFor(img, tl?.artDir ?? "systems/mondolme/art/tlomdev", tl?.categories ?? []);
   }
   // Unknown art falls back to whatever GENERATION would have assigned, so the
   // die and the generator cannot disagree about what the house pool is. That is
@@ -798,7 +798,7 @@ const tagBackgroundGear = (items) =>
 
 /** The shipped 2e Bonds table. */
 const shippedBondsTable = async () => {
-  const pack = game.packs.get("air-bladder.tables-2e");
+  const pack = game.packs.get("mondolme.tables-2e");
   return pack ? (await pack.getDocuments()).find((t) => t.name === "Bonds") ?? null : null;
 };
 
@@ -828,7 +828,7 @@ const BOND_DRAW_ATTEMPTS = 10;
 
 /**
  * Draw a Cairn 2e bond. With no argument this is the shipped `tables-2e` "Bonds"
- * table, whose each result carries its mechanical payload in flags.air-bladder
+ * table, whose each result carries its mechanical payload in flags.mondolme
  * (starting gold and a gear reference, resolved here); the result text is the
  * narrative. Uses roll(), never draw(), so the table's drawn state is never mutated.
  *
@@ -858,7 +858,7 @@ export const drawBond = async (tableName, { avoid = [] } = {}) => {
   // World-first, by name — the rationale lives on findTableByName.
   let table = wanted ? await findTableByName(wanted) : null;
   if (wanted && !table) {
-    console.warn(`Air Bladder | no RollTable named "${wanted}" — falling back to the 2e Bonds table`);
+    console.warn(`Mondolme | no RollTable named "${wanted}" — falling back to the 2e Bonds table`);
   }
   table ??= await shippedBondsTable();
   if (!table) return null;
@@ -1169,7 +1169,7 @@ export const grantContainers = async (actor, specs) => {
   // against the Item pack made every one of those reads a miss, so a granted
   // Rivertooth arrived with the schema's default 6 HP instead of its stated 8
   // (review #5, critical: the pack was stocked by nothing).
-  const pack = game.packs.get("air-bladder.mounts-transports");
+  const pack = game.packs.get("mondolme.mounts-transports");
   const docs = pack ? await pack.getDocuments() : [];
   // Resolve a spec against that editable pack (art/stats/description), with
   // sensible fallbacks for one-off beasts the pack doesn't carry. `kind` only
@@ -1297,7 +1297,7 @@ export const grantContainers = async (actor, specs) => {
     })));
   } else {
     await CairnActor.updateDocuments(made.map((c) => ({
-      _id: c.id, [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: true,
+      _id: c.id, [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: true,
     })));
     for (const c of made) {
       game.socket.emit(`system.${game.system.id}`, { action: "ownershipSync", childUuid: c.uuid });
@@ -1489,7 +1489,7 @@ export const replaceGrantedContainers = async (actor, source, specs) => {
  */
 export const generate2eCharacter = async (chosenBg = null) => {
   // Draw from getBackgroundsFor("2e"), NOT from the shipped pack directly. This
-  // read `game.packs.get("air-bladder.backgrounds-2e")` inline, so random
+  // read `game.packs.get("mondolme.backgrounds-2e")` inline, so random
   // generation ignored both content toggles: a Warden running a homebrew-only
   // game (shipped off, custom on) still got shipped backgrounds, and their own
   // were never rolled at all. Only the picker and changeBackground went through
@@ -1601,8 +1601,8 @@ export const generate2eCharacter = async (chosenBg = null) => {
  * used and would silently exhaust a table over a campaign.
  * ======================================================================== */
 
-const BAREBONES_BG_PACK = "air-bladder.backgrounds-barebones";
-const BAREBONES_TABLE_PACK = "air-bladder.tables-barebones";
+const BAREBONES_BG_PACK = "mondolme.backgrounds-barebones";
+const BAREBONES_TABLE_PACK = "mondolme.tables-barebones";
 
 /** The 100 Barebones background documents. @returns {Promise<CairnItem[]>} */
 export const getBarebonesBackgrounds = async () => {
@@ -1632,7 +1632,7 @@ const barebonesTable = async (name) => {
  * resolves against — and a shared constant would let widening one silently
  * widen the other.
  */
-const SPELL_POOL_PACK = "air-bladder.spellbooks";
+const SPELL_POOL_PACK = "mondolme.spellbooks";
 
 /**
  * One random spellbook DOCUMENT out of `packIds`, index-first.
@@ -2065,7 +2065,7 @@ export const generateCharacter = async (background = null, source = null) => {
  * ======================================================================== */
 
 /** The pack a content source's backgrounds live in. */
-const BG_PACK_FOR = { "2e": "air-bladder.backgrounds-2e", barebones: BAREBONES_BG_PACK };
+const BG_PACK_FOR = { "2e": "mondolme.backgrounds-2e", barebones: BAREBONES_BG_PACK };
 
 /**
  * The SHIPPED custom pack (2026-08-04 ruling): "custom" means not published in
@@ -2073,7 +2073,7 @@ const BG_PACK_FOR = { "2e": "air-bladder.backgrounds-2e", barebones: BAREBONES_B
  * CC BY-SA sets (currently "Backgrounds for Cairn", Gordon McCormick) and is
  * admitted by the same CUSTOM toggle as the Warden's own authored backgrounds.
  */
-const SHIPPED_CUSTOM_BG_PACK = "air-bladder.backgrounds-custom";
+const SHIPPED_CUSTOM_BG_PACK = "mondolme.backgrounds-custom";
 
 /**
  * Everything the CUSTOM toggle admits: the shipped custom pack plus the
@@ -2392,7 +2392,7 @@ export const promptBackground = async (source, currentUuid = null) => {
   // The authoring pointer (user ruling 2026-08-05, "option 1"): the picker is
   // the moment someone is looking at what backgrounds exist, so the how-to
   // link lives here — 2e only, because custom backgrounds are a 2e concept.
-  const GUIDE_URL = "https://github.com/domfortunato/air-bladder/blob/master/docs/creating-custom-backgrounds.md";
+  const GUIDE_URL = "https://github.com/fsmalecho/air-bladder/blob/mondolme/docs/creating-custom-backgrounds.md";
   const foot = source === "2e"
     ? `<div class="bg-pick-foot">${game.i18n.localize("CAIRN.BgPickFootQuestion")}
         <a href="${GUIDE_URL}" target="_blank" rel="noopener">${game.i18n.localize("CAIRN.BgPickFootLink")}</a></div>`
@@ -2977,7 +2977,7 @@ const postGenerationRolls = async (actor, characterData, roller = null, { waitFo
     if (waitForDice) await awaitDiceAnimation(message?.id);
     return message ?? null;
   } catch (err) {
-    console.error("Air Bladder | could not post the generation rolls to chat:", err);
+    console.error("Mondolme | could not post the generation rolls to chat:", err);
     return null;
   }
 };
@@ -3020,7 +3020,7 @@ export const awaitDiceAnimation = async (messageId, { timeoutMs = 20000 } = {}) 
   } catch (err) {
     // Never let a dice module's failure cost somebody their character: by the
     // time we are here the actor exists and is saved.
-    console.warn("Air Bladder | waiting on the dice animation failed:", err);
+    console.warn("Mondolme | waiting on the dice animation failed:", err);
     return false;
   } finally {
     if (timer) clearTimeout(timer);
@@ -3096,7 +3096,7 @@ let _npcCareers2e = null;
 export const getNpcCareers2e = async () => {
   if (_npcCareers2e === null) {
     try {
-      const resp = await fetch("systems/air-bladder/module/npc-careers-2e.json");
+      const resp = await fetch("systems/mondolme/module/npc-careers-2e.json");
       _npcCareers2e = resp.ok ? await resp.json() : [];
     } catch {
       _npcCareers2e = [];

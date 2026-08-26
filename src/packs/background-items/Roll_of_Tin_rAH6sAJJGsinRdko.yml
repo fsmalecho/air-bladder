@@ -1,12 +1,12 @@
 _id: rAH6sAJJGsinRdko
 name: Roll of Tin
 type: item
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A rolled sheet of workable tin, raw material for a smith or a scavenger.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!rAH6sAJJGsinRdko'

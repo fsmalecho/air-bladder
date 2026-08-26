@@ -3,7 +3,7 @@ name: Card Deck
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/boards/ace.svg
+img: systems/mondolme/art/game-icons/boards/ace.svg
 effects: []
 system:
   cost: 5

@@ -3,7 +3,7 @@ name: Giant, Stone
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/giant.svg
+img: systems/mondolme/art/game-icons/creatures/giant.svg
 items:
   - _id: FLCr2lE5UWnVwX1b
     name: Stone Club
@@ -194,7 +194,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/giant.svg
+    src: systems/mondolme/art/game-icons/creatures/giant.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

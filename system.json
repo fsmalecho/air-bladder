@@ -1,19 +1,19 @@
 {
-  "id": "air-bladder",
-  "title": "Air Bladder — Cairn 2e",
-  "description": "Air Bladder — a game system for Cairn 2nd Edition and Barebones, the OSR RPG by Yochai Gal, on Foundry VTT. Cairn character generation, backgrounds, marketplace, and Warden tables; descended from Into the Odd. A companion system compatible with Cairn — not the official Cairn system.",
+  "id": "mondolme",
+  "title": "Mondolme",
+  "description": "Mondolme — a game system for Cairn 2nd Edition and Barebones, the OSR RPG by Yochai Gal, on Foundry VTT. Cairn character generation, backgrounds, marketplace, and Warden tables; descended from Into the Odd. A companion system compatible with Cairn — not the official Cairn system.",
   "version": "0.1.18",
   "compatibility": {
     "minimum": "14.365",
     "verified": "14.365"
   },
   "license": "LICENSE.txt",
-  "url": "https://domfortunato.github.io/air-bladder/",
-  "readme": "https://github.com/domfortunato/air-bladder#readme",
-  "bugs": "https://github.com/domfortunato/air-bladder/issues",
-  "changelog": "https://github.com/domfortunato/air-bladder/releases",
-  "manifest": "https://github.com/domfortunato/air-bladder/releases/latest/download/system.json",
-  "download": "https://github.com/domfortunato/air-bladder/releases/latest/download/system.zip",
+  "url": "https://github.com/fsmalecho/air-bladder",
+  "readme": "https://github.com/fsmalecho/air-bladder#readme",
+  "bugs": "https://github.com/fsmalecho/air-bladder/issues",
+  "changelog": "https://github.com/fsmalecho/air-bladder/releases",
+  "manifest": "https://github.com/fsmalecho/air-bladder/releases/latest/download/system.json",
+  "download": "https://github.com/fsmalecho/air-bladder/releases/latest/download/system.zip",
   "authors": [
     {
       "name": "yochaigal",
@@ -118,191 +118,191 @@
       "name": "armor",
       "label": "CAIRN.Pack.armor",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "backgrounds-2e",
       "label": "CAIRN.Pack.backgrounds-2e",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "backgrounds-barebones",
       "label": "CAIRN.Pack.backgrounds-barebones",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "backgrounds-custom",
       "label": "CAIRN.Pack.backgrounds-custom",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "tables-2e",
       "label": "CAIRN.Pack.tables-2e",
       "type": "RollTable",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "tables-barebones",
       "label": "CAIRN.Pack.tables-barebones",
       "type": "RollTable",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "expeditionary-gear",
       "label": "CAIRN.Pack.expeditionary-gear",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "background-items",
       "label": "CAIRN.Pack.background-items",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "market-goods",
       "label": "CAIRN.Pack.market-goods",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "marketplace",
       "label": "CAIRN.Pack.marketplace",
       "type": "RollTable",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "utils",
       "label": "CAIRN.Pack.utils",
       "type": "RollTable",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "monsters",
       "label": "CAIRN.Pack.monsters",
       "type": "Actor",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "mounts-transports",
       "label": "CAIRN.Pack.mounts-transports",
       "type": "Actor",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "spellbooks",
       "label": "CAIRN.Pack.spellbooks",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "more-spellbooks",
       "label": "CAIRN.Pack.more-spellbooks",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "spellbooks-glog",
       "label": "CAIRN.Pack.spellbooks-glog",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "tools",
       "label": "CAIRN.Pack.tools",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "trinkets",
       "label": "CAIRN.Pack.trinkets",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "reliquary",
       "label": "CAIRN.Pack.reliquary",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "weapons",
       "label": "CAIRN.Pack.weapons",
       "type": "Item",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "warden-encounters",
       "label": "CAIRN.Pack.warden-encounters",
       "type": "RollTable",
-      "system": "air-bladder",
+      "system": "mondolme",
       "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
     },
     {
       "name": "warden-travel",
       "label": "CAIRN.Pack.warden-travel",
       "type": "RollTable",
-      "system": "air-bladder",
+      "system": "mondolme",
       "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
     },
     {
       "name": "warden-npcs",
       "label": "CAIRN.Pack.warden-npcs",
       "type": "RollTable",
-      "system": "air-bladder",
+      "system": "mondolme",
       "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
     },
     {
       "name": "warden-monsters",
       "label": "CAIRN.Pack.warden-monsters",
       "type": "RollTable",
-      "system": "air-bladder",
+      "system": "mondolme",
       "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
     },
     {
       "name": "tables-glog",
       "label": "CAIRN.Pack.tables-glog",
       "type": "RollTable",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "journals-2e",
       "label": "CAIRN.Pack.journals-2e",
       "type": "JournalEntry",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "journals-docs",
       "label": "CAIRN.Pack.journals-docs",
       "type": "JournalEntry",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "journals-glog",
       "label": "CAIRN.Pack.journals-glog",
       "type": "JournalEntry",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "journals-vald",
       "label": "CAIRN.Pack.journals-vald",
       "type": "JournalEntry",
-      "system": "air-bladder"
+      "system": "mondolme"
     },
     {
       "name": "macros",
       "label": "CAIRN.Pack.macros",
       "type": "Macro",
-      "system": "air-bladder",
+      "system": "mondolme",
       "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
     }
   ],
   "packFolders": [
     {
-      "name": "Air Bladder - Items",
+      "name": "Mondolme - Items",
       "sorting": "a",
       "packs": [
         "weapons",
@@ -318,7 +318,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Backgrounds",
+      "name": "Mondolme - Backgrounds",
       "sorting": "a",
       "packs": [
         "backgrounds-2e",
@@ -328,7 +328,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Actors",
+      "name": "Mondolme - Actors",
       "sorting": "a",
       "packs": [
         "monsters",
@@ -336,7 +336,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Tables",
+      "name": "Mondolme - Tables",
       "sorting": "a",
       "packs": [
         "marketplace",
@@ -347,7 +347,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Journals",
+      "name": "Mondolme - Journals",
       "sorting": "a",
       "packs": [
         "journals-2e",
@@ -357,7 +357,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Warden Tables",
+      "name": "Mondolme - Warden Tables",
       "sorting": "a",
       "packs": [
         "warden-encounters",
@@ -367,7 +367,7 @@
       ]
     },
     {
-      "name": "Air Bladder - Macros",
+      "name": "Mondolme - Macros",
       "sorting": "a",
       "packs": [
         "macros"

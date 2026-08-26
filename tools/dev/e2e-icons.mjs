@@ -42,7 +42,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const SHIPPED = fs
   .readdirSync(path.join(ROOT, "icons"))
   .filter((f) => f.endsWith(".svg"))
-  .map((f) => `systems/air-bladder/icons/${f}`);
+  .map((f) => `systems/mondolme/icons/${f}`);
 
 /** Every glyph in the picker gallery, as absolute paths. */
 const galleryDir = path.join(ROOT, "art", "game-icons");
@@ -63,8 +63,8 @@ await joinAsGM(page);
 await dismissChrome(page);
 
 const r = await page.evaluate(async (SHIPPED) => {
-  const PNG = /^systems\/air-bladder\/icons\/[a-z-]+\.png$/;
-  const ICON = /^systems\/air-bladder\/icons\/[a-z-]+\.(png|svg)$/;
+  const PNG = /^systems\/mondolme\/icons\/[a-z-]+\.png$/;
+  const ICON = /^systems\/mondolme\/icons\/[a-z-]+\.(png|svg)$/;
   const stale = [];
   const used = new Set(SHIPPED);
   const referenced = new Set();
@@ -85,7 +85,7 @@ const r = await page.evaluate(async (SHIPPED) => {
 
   // Pack contents too — those are shipped data, not migrated at runtime.
   for (const pack of game.packs) {
-    if (!pack.metadata.id.startsWith("air-bladder.")) continue;
+    if (!pack.metadata.id.startsWith("mondolme.")) continue;
     for (const d of await pack.getDocuments()) {
       note(d.img, `${pack.metadata.name} > ${d.name}`);
       for (const i of d.items ?? []) note(i.img, `${pack.metadata.name} > ${d.name} > ${i.name}`);
@@ -171,7 +171,7 @@ const sampled = await page.evaluate(async (rels) => Promise.all(rels.map((rel) =
     const img = new Image();
     img.onload = () => done({ rel, natural: img.naturalWidth });
     img.onerror = () => done({ rel, natural: 0 });
-    img.src = `/systems/air-bladder/art/game-icons/${rel}`;
+    img.src = `/systems/mondolme/art/game-icons/${rel}`;
   }))), sample);
 const softSample = sampled.filter((s) => s.natural < 512);
 softSample.length === 0
@@ -180,7 +180,7 @@ softSample.length === 0
 
 /* --- 4. the migration itself, on a document planted with the OLD path ------- */
 
-const OLD = "systems/air-bladder/icons/generic-item.png";
+const OLD = "systems/mondolme/icons/generic-item.png";
 const planted = await page.evaluate(async (OLD) => {
   const it = await Item.create({ name: "zz-icon-migration-probe", type: "item", img: OLD });
   return { id: it.id, img: it.img };
@@ -213,7 +213,7 @@ const after = await page.evaluate(async (id) => {
   return img;
 }, planted.id);
 
-after === "systems/air-bladder/icons/generic-item.svg"
+after === "systems/mondolme/icons/generic-item.svg"
   ? ok(`the ready migration rewrote it after ${waited}ms (${after})`)
   : fail(`migration did not rewrite the planted item after ${waited}ms: "${after}"`);
 

@@ -30,12 +30,12 @@ try {
   await joinAsGM(page);
 
   const result = await page.evaluate(async () => {
-    const gear = await import("/systems/air-bladder/module/gear.js");
+    const gear = await import("/systems/mondolme/module/gear.js");
 
     // ---- harvest every name any grant path can hand a character ----
     const names = new Set();
     const add = (list) => { for (const g of list ?? []) if (g?.name) names.add(g.name); };
-    for (const key of ["air-bladder.backgrounds-2e", "air-bladder.backgrounds-barebones"]) {
+    for (const key of ["mondolme.backgrounds-2e", "mondolme.backgrounds-barebones"]) {
       const pack = game.packs.get(key);
       if (!pack) continue;
       for (const bg of await pack.getDocuments()) {
@@ -43,14 +43,14 @@ try {
         for (const t of bg.system?.tables ?? []) for (const o of t.options ?? []) add(o.items);
       }
     }
-    for (const key of ["air-bladder.tables-2e"]) {
+    for (const key of ["mondolme.tables-2e"]) {
       const pack = game.packs.get(key);
       if (!pack) continue;
       for (const table of await pack.getDocuments()) {
-        for (const r of table.results ?? []) add(r.getFlag?.("air-bladder", "items"));
+        for (const r of table.results ?? []) add(r.getFlag?.("mondolme", "items"));
       }
     }
-    const hire = await fetch("/systems/air-bladder/module/npc-careers-2e.json").then((r) => r.json());
+    const hire = await fetch("/systems/mondolme/module/npc-careers-2e.json").then((r) => r.json());
     for (const h of hire.hirelings ?? hire) add(h.gear);
 
     // Preload each pack's names ONCE (calling resolveGearItem per-name would
@@ -99,8 +99,8 @@ try {
 
     // Each instruction row must still yield an item, or that background is one
     // short with no error at all — the exact failure mode this guards.
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
-    const bbPack = game.packs.get("air-bladder.backgrounds-barebones");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
+    const bbPack = game.packs.get("mondolme.backgrounds-barebones");
     const bbDocs = bbPack ? await bbPack.getDocuments() : [];
     out.instructionBgs = [];
     for (const name of ["Acolyte", "Fence", "Cultist"]) {

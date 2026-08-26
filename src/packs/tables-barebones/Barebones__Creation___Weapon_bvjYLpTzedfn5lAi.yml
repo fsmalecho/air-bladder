@@ -15,7 +15,7 @@ results:
       - 1
       - 1
     drawn: false
-    documentUuid: Compendium.air-bladder.tables-barebones.RollTable.o6AX6fus0QiEuDkK
+    documentUuid: Compendium.mondolme.tables-barebones.RollTable.o6AX6fus0QiEuDkK
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -38,7 +38,7 @@ results:
       - 2
       - 2
     drawn: false
-    documentUuid: Compendium.air-bladder.tables-barebones.RollTable.uU2DFZPLjzFm73vS
+    documentUuid: Compendium.mondolme.tables-barebones.RollTable.uU2DFZPLjzFm73vS
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -61,7 +61,7 @@ results:
       - 3
       - 3
     drawn: false
-    documentUuid: Compendium.air-bladder.tables-barebones.RollTable.D0u7HEFuAtrDqfHN
+    documentUuid: Compendium.mondolme.tables-barebones.RollTable.D0u7HEFuAtrDqfHN
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -78,13 +78,13 @@ results:
   - _id: 1Y5bLuNrNSsQeFKO
     type: document
     name: Sling
-    img: systems/air-bladder/art/game-icons/weapons/sling.svg
+    img: systems/mondolme/art/game-icons/weapons/sling.svg
     weight: 1
     range:
       - 4
       - 4
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.OCOPpIkkvUL5fZKQ
+    documentUuid: Compendium.mondolme.weapons.Item.OCOPpIkkvUL5fZKQ
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -101,13 +101,13 @@ results:
   - _id: EZdwajN6L20aViZk
     type: document
     name: Bow
-    img: systems/air-bladder/art/game-icons/weapons/high-shot.svg
+    img: systems/mondolme/art/game-icons/weapons/high-shot.svg
     weight: 1
     range:
       - 5
       - 5
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.iQFZEdDJKyjvGtY8
+    documentUuid: Compendium.mondolme.weapons.Item.iQFZEdDJKyjvGtY8
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -124,13 +124,13 @@ results:
   - _id: IucU3AHCeGP0kWBJ
     type: document
     name: Crossbow
-    img: systems/air-bladder/art/game-icons/weapons/crossbow.svg
+    img: systems/mondolme/art/game-icons/weapons/crossbow.svg
     weight: 1
     range:
       - 6
       - 6
     drawn: false
-    documentUuid: Compendium.air-bladder.weapons.Item.mjddKpJ42HUs5GA7
+    documentUuid: Compendium.mondolme.weapons.Item.mjddKpJ42HUs5GA7
     flags: {}
     _stats:
       coreVersion: '14.365'
@@ -148,14 +148,14 @@ formula: 1d6
 replacement: true
 displayRoll: true
 flags:
-  air-bladder:
+  mondolme:
     tableSource: barebones
 folder: null
 sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

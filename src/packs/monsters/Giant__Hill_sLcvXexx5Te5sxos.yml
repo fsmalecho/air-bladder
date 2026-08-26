@@ -3,7 +3,7 @@ name: Giant, Hill
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/giant.svg
+img: systems/mondolme/art/game-icons/creatures/giant.svg
 items:
   - _id: 6OFGV62tVR113IRe
     name: Great Club
@@ -121,7 +121,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/giant.svg
+    src: systems/mondolme/art/game-icons/creatures/giant.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

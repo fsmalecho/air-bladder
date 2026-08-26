@@ -1,12 +1,12 @@
 _id: BnXd5WgvZjq1DJoI
 name: Leech Collector
 type: background
-img: systems/air-bladder/icons/background.svg
+img: systems/mondolme/icons/background.svg
 effects: []
 folder: null
 sort: 5900
 flags:
-  air-bladder:
+  mondolme:
     backgroundSource: barebones
     roll: 59
 system:
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!BnXd5WgvZjq1DJoI'

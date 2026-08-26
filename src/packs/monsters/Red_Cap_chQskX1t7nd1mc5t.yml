@@ -3,7 +3,7 @@ name: Red Cap
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/heads/dwarf-face.svg
+img: systems/mondolme/art/game-icons/heads/dwarf-face.svg
 items:
   - _id: 8UEfsbFSo6q31JOJ
     name: Two Sickles
@@ -123,7 +123,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/heads/dwarf-face.svg
+    src: systems/mondolme/art/game-icons/heads/dwarf-face.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

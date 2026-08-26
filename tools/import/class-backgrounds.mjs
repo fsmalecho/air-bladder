@@ -375,7 +375,7 @@ for (const p of POOL_DIRS) {
   for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".yml"))) {
     const doc = YAML.load(fs.readFileSync(path.join(dir, f), "utf8"));
     if (!doc?.name) continue;
-    if (doc.flags?.["air-bladder"]?.gearSource === "class-backgrounds") continue;
+    if (doc.flags?.["mondolme"]?.gearSource === "class-backgrounds") continue;
     foreignNames.add(doc.name.toLowerCase());
   }
 }
@@ -393,12 +393,12 @@ for (const it of NEW_ITEMS) {
   const iconFor = { weapon: "weapons", armor: "armor" }[it.type] ?? "generic-item";
   writeDoc(itemsDir, {
     _id, name: it.name, type: it.type,
-    img: `systems/air-bladder/icons/${iconFor}.svg`,
+    img: `systems/mondolme/icons/${iconFor}.svg`,
     effects: [], folder: null, sort: 0,
-    flags: { "air-bladder": { gearSource: "class-backgrounds" } },
+    flags: { "mondolme": { gearSource: "class-backgrounds" } },
     system: it.system,
     ownership: { default: 0 },
-    _stats: { systemId: "air-bladder", coreVersion: "14.365" },
+    _stats: { systemId: "mondolme", coreVersion: "14.365" },
     _key: `!items!${_id}`,
   });
   authored++;
@@ -411,18 +411,18 @@ const spellDir = path.join(ROOT, "src", "packs", "more-spellbooks");
 const shieldExists = fs.readdirSync(spellDir).some((f) => {
   if (!/^Shield_/.test(f)) return false;
   const doc = YAML.load(fs.readFileSync(path.join(spellDir, f), "utf8"));
-  return doc?.flags?.["air-bladder"]?.gearSource !== "class-backgrounds";
+  return doc?.flags?.["mondolme"]?.gearSource !== "class-backgrounds";
 });
 if (!shieldExists) {
   const _id = stableId("spell:Shield");
   writeDoc(spellDir, {
     _id, name: SHIELD_SPELLBOOK.name, type: "spellbook",
-    img: "systems/air-bladder/icons/spellbook.svg",
+    img: "systems/mondolme/icons/spellbook.svg",
     effects: [], folder: null, sort: 0,
-    flags: { "air-bladder": { gearSource: "class-backgrounds" } },
+    flags: { "mondolme": { gearSource: "class-backgrounds" } },
     system: SHIELD_SPELLBOOK.system,
     ownership: { default: 0 },
-    _stats: { systemId: "air-bladder", coreVersion: "14.365" },
+    _stats: { systemId: "mondolme", coreVersion: "14.365" },
     _key: `!items!${_id}`,
   });
 } else {
@@ -436,9 +436,9 @@ for (const bg of BACKGROUNDS) {
   const _id = stableId(`background:${bg.name}`);
   writeDoc(bgDir, {
     _id, name: bg.name, type: "background",
-    img: "systems/air-bladder/icons/background.svg",
+    img: "systems/mondolme/icons/background.svg",
     effects: [], folder: null, sort: 0,
-    flags: { "air-bladder": { backgroundSource: "class-backgrounds" } },
+    flags: { "mondolme": { backgroundSource: "class-backgrounds" } },
     system: {
       source: "2e",
       archetype: bg.archetype,
@@ -465,7 +465,7 @@ for (const bg of BACKGROUNDS) {
       })),
     },
     ownership: { default: 0 },
-    _stats: { systemId: "air-bladder", coreVersion: "14.365" },
+    _stats: { systemId: "mondolme", coreVersion: "14.365" },
     _key: `!items!${_id}`,
   });
 }

@@ -1,12 +1,12 @@
 _id: UE56odS9IIyoSqhP
 name: Candle
 type: item
-img: systems/air-bladder/art/game-icons/fire/candle-holder.svg
+img: systems/mondolme/art/game-icons/fire/candle-holder.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: dim
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!UE56odS9IIyoSqhP'

@@ -1,17 +1,17 @@
 _id: PFhMII41E0yOG0FH
 name: Burial Wagon
 type: npc
-img: systems/air-bladder/icons/funeralwagon.svg
+img: systems/mondolme/icons/funeralwagon.svg
 prototypeToken:
   name: Burial Wagon
   texture:
-    src: systems/air-bladder/icons/wagon.svg
+    src: systems/mondolme/icons/wagon.svg
 items: []
 effects: []
 folder: Y7FAeuwxTR9cyRtC
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: background-2e
 system:
   description: 'From the Bonekeeper background. A burial wagon (+6 slots, slow) from your last job. It came with a stubborn old donkey (+4 slots, only +2 slots if pulling wagon).'
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!PFhMII41E0yOG0FH'

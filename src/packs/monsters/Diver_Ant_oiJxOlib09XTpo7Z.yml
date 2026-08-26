@@ -3,7 +3,7 @@ name: Diver Ant
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/mouth/insect-jaws.svg
+img: systems/mondolme/art/game-icons/mouth/insect-jaws.svg
 items:
   - _id: 61ixoXMxmLzyOqB9
     name: Bite
@@ -122,7 +122,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/mouth/insect-jaws.svg
+    src: systems/mondolme/art/game-icons/mouth/insect-jaws.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

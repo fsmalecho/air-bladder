@@ -197,12 +197,12 @@ const statsFromProse = (text) => ({
 /* ---- emit -------------------------------------------------------------- */
 
 const FOLDERS = [
-  { key: "containers", name: "Containers", seed: "air-bladder-folder:containers" },
+  { key: "containers", name: "Containers", seed: "mondolme-folder:containers" },
   // "Companions" since 2026-08-08 (the mount role evolved). The SEED — and so
   // the folder id — deliberately keeps the old word: every actor in the pack
   // stores this folder's id, and a re-seed would orphan the lot.
-  { key: "mounts", name: "Companions", seed: "air-bladder-folder:mounts" },
-  { key: "transports", name: "Transports", seed: "air-bladder-folder:transports" },
+  { key: "mounts", name: "Companions", seed: "mondolme-folder:mounts" },
+  { key: "transports", name: "Transports", seed: "mondolme-folder:transports" },
 ];
 
 const folderYaml = (f, id) => [
@@ -216,7 +216,7 @@ const folderYaml = (f, id) => [
   "color: null",
   "flags: {}",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!folders!${id}'`,
   "",
@@ -248,7 +248,7 @@ const actorYaml = (t, id, folderId) => {
     `folder: ${folderId}`,
     "sort: 0",
     "flags:",
-    "  air-bladder:",
+    "  mondolme:",
     `    transportSource: ${t.from ? "background-2e" : "2e"}`,
     "system:",
     `  description: ${y(t.description)}`,
@@ -277,7 +277,7 @@ const actorYaml = (t, id, folderId) => {
     "ownership:",
     "  default: 0",
     "_stats:",
-    "  systemId: air-bladder",
+    "  systemId: mondolme",
     "  coreVersion: '14.365'",
     `_key: '!actors!${id}'`,
     "",
@@ -286,9 +286,9 @@ const actorYaml = (t, id, folderId) => {
 };
 
 const tableYaml = (refs) => {
-  const tid = idFor(`air-bladder-market-table:${CATEGORY}`);
+  const tid = idFor(`mondolme-market-table:${CATEGORY}`);
   const results = refs.map((ref, i) => {
-    const rid = idFor(`air-bladder-market-result:${CATEGORY}:${i}:${ref.text}`);
+    const rid = idFor(`mondolme-market-result:${CATEGORY}:${i}:${ref.text}`);
     return [
       `  - _id: ${rid}`,
       // See marketplace.mjs: `pack` and `text` are both v15 removals.
@@ -300,7 +300,7 @@ const tableYaml = (refs) => {
       `      - ${i + 1}`,
       `      - ${i + 1}`,
       "    drawn: false",
-      `    documentUuid: ${packUuid("air-bladder.mounts-transports", ref.documentId)}`,
+      `    documentUuid: ${packUuid("mondolme.mounts-transports", ref.documentId)}`,
       "    flags: {}",
       `    _key: '!tables.results!${tid}.${rid}'`,
     ].join("\n");
@@ -321,7 +321,7 @@ const tableYaml = (refs) => {
     "ownership:",
     "  default: 0",
     "_stats:",
-    "  systemId: air-bladder",
+    "  systemId: mondolme",
     "  coreVersion: '14.365'",
     `_key: '!tables!${tid}'`,
     "",
@@ -350,11 +350,11 @@ const folderFor = (t) =>
   t.kind === "worn" ? "containers" : t.kind === "vehicle" ? "transports" : "mounts";
 
 // The id seed is unchanged from when this file DERIVED its documents from the
-// old Item pack ("air-bladder-mount:" + name), deliberately: the market table
+// old Item pack ("mondolme-mount:" + name), deliberately: the market table
 // and the Barebones Cart/Wagon rows reference these ids, and a re-seed would
 // orphan every one of them.
 const write = (t) => {
-  const id = idFor(`air-bladder-mount:${t.name}`);
+  const id = idFor(`mondolme-mount:${t.name}`);
   const file = `${t.name.replace(/\W+/g, "_")}_${id}.yml`;
   const { hp, armor } = statsFromProse(t.description);
   console.log(`  +    ${file.padEnd(46)} ${folderFor(t).padEnd(10)} slots=${String(t.slots).padEnd(2)}`
@@ -385,7 +385,7 @@ for (const b of newBeasts) write(b);
 // extract deletes both spellings. That emptied the live marketplace pack on
 // 2026-08-08 (caught before anything shipped: four tables, restored from git).
 const marketDir = path.join(root, "src", "packs", "marketplace");
-const tableId = idFor(`air-bladder-market-table:${CATEGORY}`);
+const tableId = idFor(`mondolme-market-table:${CATEGORY}`);
 const tableFile = path.join(marketDir,
   `${`Market: ${CATEGORY}`.replace(/[^A-Za-z0-9]/g, "_")}_${tableId}.yml`);
 if (!dry) {

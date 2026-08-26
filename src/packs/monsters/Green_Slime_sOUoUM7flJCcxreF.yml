@@ -3,7 +3,7 @@ name: Green Slime
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/slime.svg
+img: systems/mondolme/art/game-icons/creatures/slime.svg
 items:
   - _id: 48Vmo1PUHdbbgqdH
     name: Acidic Touch
@@ -123,7 +123,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/slime.svg
+    src: systems/mondolme/art/game-icons/creatures/slime.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

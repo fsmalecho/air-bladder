@@ -42,7 +42,7 @@ console.log("\ntable draw under a content overlay");
 const res = await page.evaluate(async () => {
   // The ESM graph is cached, so this is the SAME module instance the system runs —
   // _setOverlay writes the live OVERLAY the render hook reads.
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
 
   const EN = "Probe result — canonical English";
   const ES = "Probe result — OVERLAY APPLIED";
@@ -200,7 +200,7 @@ console.log("\nchat card header names the speaker in the display language");
 // table — the control that catches an ungated lookup. Read by message id, not
 // `contents.at(-1)`: a ledger card could land between the two creates.
 const hdr = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const NAME = "ZZ Probe Beast";
   const NAME_ES = "ZZ BESTIA-PROBE";
   const created = [];
@@ -255,7 +255,7 @@ if (hdr.error) {
 console.log("\nno overlay installed (English world)");
 
 const off = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const EN = "Probe result — no overlay";
   const created = [];
   try {
@@ -289,8 +289,8 @@ else fail("English world untouched", JSON.stringify(off));
 console.log("\nmarketplace category headings");
 
 const mkt = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
-  const m = await import("/systems/air-bladder/module/marketplace.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
+  const m = await import("/systems/mondolme/module/marketplace.js");
   try {
     i18n._setOverlay({ "table.name": { "Market: Weapons": "Mercado: Armas" } });
     const cat = (await m.getMarketplaceCatalog()).categories.find((c) => c.name === "Weapons");
@@ -319,9 +319,9 @@ else {
 console.log("\nbackground picker");
 
 const pick = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const gen = game.cairn.characterGenerator;
-  const bg = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())[0];
+  const bg = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())[0];
   const EN_DESC = bg.system.description ?? "";
   try {
     i18n._setOverlay({
@@ -403,8 +403,8 @@ console.log("\nbackground drop confirm");
 let dropActorId = null;
 try {
   const drop = await page.evaluate(async () => {
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
-    const bg = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())[0];
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
+    const bg = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())[0];
     const actor = await CONFIG.Actor.documentClass.create({
       name: "ZZ Drop Confirm Probe", type: "character", system: { contentSource: "2e" },
     });
@@ -479,7 +479,7 @@ console.log("\nsheet surfaces: inventory panel, scars, item sheet");
 let invActorId = null;
 try {
   const inv = await page.evaluate(async () => {
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
     // Same normalization the overlay FILE is written with (i18n-content.js keys by
     // the collapsed form), spelled out here rather than imported: a probe that
     // borrows the implementation's key function agrees with it by construction.
@@ -511,11 +511,11 @@ try {
       // actually fills — with sentinel values. If the Scars table ever loses its
       // per-row flag, scarDescEn goes empty and the assertions below say so rather
       // than passing on a lookup of "".
-      const scarTable = (await game.packs.get("air-bladder.tables-2e").getDocuments())
+      const scarTable = (await game.packs.get("mondolme.tables-2e").getDocuments())
         .find((tbl) => tbl.name === "Scars");
       const r0 = scarTable?.results.contents?.[0] ?? scarTable?.results?.[0];
       const scarEn = (r0?.type === "text" ? r0?.description : r0?.name) ?? "";
-      const scarDescEn = r0?.flags?.["air-bladder"]?.description ?? "";
+      const scarDescEn = r0?.flags?.["mondolme"]?.description ?? "";
       out.scarEn = scarEn;
       out.scarDescEn = scarDescEn;
 
@@ -668,15 +668,15 @@ console.log("\nreview batch: bg details, npc sheet, shop rows+toasts, monster-ge
 const cleanupIds = [];
 try {
   const r2 = await page.evaluate(async () => {
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
-    const { sourceLabel } = await import("/systems/air-bladder/module/utils.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
+    const { sourceLabel } = await import("/systems/mondolme/module/utils.js");
     const norm = (s) => String(s).replace(/\s+/g, " ").trim();
     const settle = (ms) => new Promise((res) => setTimeout(res, ms));
     const out = { ids: [] };
 
     try {
       // ---- the locked background sheet's Details tab -----------------------
-      const bg = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())[0];
+      const bg = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())[0];
       const q0 = bg.system.tables?.[0]?.question ?? "";
       const o0 = bg.system.tables?.[0]?.options?.[0]?.description ?? "";
       out.bgHasStrings = !!(q0 && o0);
@@ -844,7 +844,7 @@ try {
       });
       out.ids.push(pc.id);
       await pc.createEmbeddedDocuments("Item", [
-        { name: "ZZ Muddy Shovel", type: "item", flags: { "air-bladder": { grantSource: "failed-career" } } },
+        { name: "ZZ Muddy Shovel", type: "item", flags: { "mondolme": { grantSource: "failed-career" } } },
       ]);
       await crate.update({ "system.connectedTo": pc.uuid });
 
@@ -910,7 +910,7 @@ try {
       game.settings.get = origSettingsGet;
 
       // ---- marketplace: gear row, TRANSPORT row, and the purchase toast ------
-      const market = await import("/systems/air-bladder/module/marketplace.js");
+      const market = await import("/systems/mondolme/module/marketplace.js");
       const catalog = await market.getMarketplaceCatalog();
       const carrierCat = catalog.categories.find((c) => c.items.some((d) => d.documentName === "Actor"));
       const carrierEn = carrierCat?.items.find((d) => d.documentName === "Actor")?.name ?? null;
@@ -949,8 +949,8 @@ try {
       // ---- monster generation bakes the DISPLAY language --------------------
       // Overlay every row of the two appearance tables, so whatever the dice do,
       // a translated fragment must reach the name and the description.
-      const gen = await import("/systems/air-bladder/module/monster-generator.js");
-      const wm = await game.packs.get("air-bladder.warden-monsters").getDocuments();
+      const gen = await import("/systems/mondolme/module/monster-generator.js");
+      const wm = await game.packs.get("mondolme.warden-monsters").getDocuments();
       const rows = {};
       for (const tbl of wm) {
         if (!/Physique|Feature/.test(tbl.name)) continue;
@@ -1107,7 +1107,7 @@ const mountLeg = await page.evaluate(async () => {
     while (Date.now() - t0 < ms) { if (test()) return true; await sleep(150); }
     return test();
   };
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const ES = "ZZ Destrero Traducido";
   i18n._setOverlay({ "monster.name": { "Heavy Destrier": ES } });
 
@@ -1182,7 +1182,7 @@ console.log("\nround 5: the NAME INPUT, and the PC exclusion");
 // alone" cannot pass merely because no overlay was installed.
 const nameLeg = await page.evaluate(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const out = { ids: { items: [], actors: [] } };
 
   const EN_ITEM = "ZZ Overlay Dagger";
@@ -1345,9 +1345,9 @@ try {
 console.log("\ncompendium search under a translated index");
 
 const searchLeg = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const pack = game.packs.get("air-bladder.weapons");
+  const pack = game.packs.get("mondolme.weapons");
   await pack.getIndex();
   const dagger = pack.index.find((e) => e.name === "Dagger");
   const other = pack.index.find((e) => e.name !== "Dagger");
@@ -1416,7 +1416,7 @@ else {
 console.log("\nconnect picker: translated, display-sorted");
 
 const pickerLeg = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Impl = CONFIG.Actor.documentClass;
   const out = { ids: [] };
@@ -1488,7 +1488,7 @@ else {
 console.log("\ndelete confirm names the translation");
 
 const confirmLeg = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Impl = CONFIG.Actor.documentClass;
   const out = {};
@@ -1555,7 +1555,7 @@ else {
 console.log("\ndetach confirm names the translation (dangling keeper)");
 
 const detachLeg = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Actor = CONFIG.Actor.documentClass;
   const DialogV2 = foundry.applications.api.DialogV2;
@@ -1628,7 +1628,7 @@ else {
 console.log("\nrefusals name the translation");
 
 const refusalLeg = await page.evaluate(async () => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const Actor = CONFIG.Actor.documentClass;
   const Item = CONFIG.Item.documentClass;

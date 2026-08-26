@@ -184,7 +184,7 @@ if (fs.existsSync(packDir)) {
   for (const f of fs.readdirSync(packDir).filter((n) => n.endsWith(".yml"))) {
     const doc = YAML.load(fs.readFileSync(path.join(packDir, f), "utf8"));
     if (!doc?.name) continue;
-    if (doc.flags?.["air-bladder"]?.gearSource === "glog-spells") continue;
+    if (doc.flags?.["mondolme"]?.gearSource === "glog-spells") continue;
     foreign.add(doc.name.toLowerCase());
   }
 }
@@ -215,9 +215,9 @@ for (const [name, text] of SPELLS) {
     // is the form. Unspent (1/1), petty, scroll art — the SCROLL_PINNED shape,
     // so a drag lands exactly what CairnItem._preCreate would pin anyway.
     _id, name, type: "spellbook",
-    img: "systems/air-bladder/icons/spellscroll.svg",
+    img: "systems/mondolme/icons/spellscroll.svg",
     effects: [], folder: null, sort: 0,
-    flags: { "air-bladder": { gearSource: "glog-spells" } },
+    flags: { "mondolme": { gearSource: "glog-spells" } },
     system: {
       cost: 0,
       description: `<p>${text}</p>`,
@@ -230,7 +230,7 @@ for (const [name, text] of SPELLS) {
       uses: { value: 1, max: 1 },
     },
     ownership: { default: 0 },
-    _stats: { systemId: "air-bladder", coreVersion: "14.365" },
+    _stats: { systemId: "mondolme", coreVersion: "14.365" },
     _key: `!items!${_id}`,
   });
   authored++;

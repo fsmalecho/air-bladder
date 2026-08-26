@@ -1,17 +1,17 @@
 _id: 5RLEi4HD8jZrHlIl
 name: Sack
 type: npc
-img: systems/air-bladder/icons/sack.svg
+img: systems/mondolme/icons/sack.svg
 prototypeToken:
   name: Sack
   texture:
-    src: systems/air-bladder/icons/sack.svg
+    src: systems/mondolme/icons/sack.svg
 items: []
 effects: []
 folder: GrfAVGCTK0OAzEaH
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: 'A plain cloth sack for hauling loose goods. Easy to carry, and easy to drop and run.'
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!5RLEi4HD8jZrHlIl'

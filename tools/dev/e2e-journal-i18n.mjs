@@ -82,7 +82,7 @@ const domKeys = await page.evaluate(async (packs) => {
   const BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, figcaption";
   const out = { blocks: [], entries: [], rendered: 0 };
   for (const short of packs) {
-    const pack = game.packs.get(`air-bladder.${short}`);
+    const pack = game.packs.get(`mondolme.${short}`);
     if (!pack) continue;
     for (const id of pack.index.keys()) {
       const doc = await pack.getDocument(id);
@@ -169,10 +169,10 @@ subjectBlock
   : fail("found a real block to stand the display legs on", "the Core Rules opening paragraph is gone — fixture is stale");
 
 const shown = await page.evaluate(async (fx) => {
-  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const i18n = await import("/systems/mondolme/module/i18n-content.js");
   const BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, figcaption";
   const out = {};
-  const pack = game.packs.get("air-bladder.journals-2e");
+  const pack = game.packs.get("mondolme.journals-2e");
   const id = [...pack.index.keys()].find((k) => pack.index.get(k).name === "Core Rules for Players");
   const doc = await pack.getDocument(id);
   const open = async () => {
@@ -203,7 +203,7 @@ const shown = await page.evaluate(async (fx) => {
     // The Vald fixture, resolved BEFORE the overlay installs so its first
     // page's real name keys the map — a literal here would be silently
     // orphaned by an upstream SRD rename.
-    const vpack = game.packs.get("air-bladder.journals-vald");
+    const vpack = game.packs.get("mondolme.journals-vald");
     const vdoc = vpack ? await vpack.getDocument([...vpack.index.keys()][0]) : null;
     out.valdPageName = vdoc
       ? [...vdoc.pages.contents].sort((a, b) => a.sort - b.sort)[0]?.name ?? null
@@ -395,7 +395,7 @@ else {
 // un-hide rode the translation, not some accident of core's matcher. Restores
 // its own state: the query is cleared and the sheet closed.
 const searchControl = await page.evaluate(async (fx) => {
-  const vpack = game.packs.get("air-bladder.journals-vald");
+  const vpack = game.packs.get("mondolme.journals-vald");
   if (!vpack) return { skipped: "pack missing" };
   const vdoc = await vpack.getDocument([...vpack.index.keys()][0]);
   const first = [...vdoc.pages.contents].sort((a, b) => a.sort - b.sort)[0];

@@ -3,7 +3,7 @@ name: Lens
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/eye/magnifying-glass.svg
+img: systems/mondolme/art/game-icons/eye/magnifying-glass.svg
 effects: []
 _stats:
   coreVersion: '14.365'

@@ -1,12 +1,12 @@
 _id: YCixoPW1AJGaH8bs
 name: Veilsilk Grip
 type: item
-img: systems/air-bladder/art/game-icons/clothing/gloves.svg
+img: systems/mondolme/art/game-icons/clothing/gloves.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: A hand wearing this glove can phase through solid objects.
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!YCixoPW1AJGaH8bs'

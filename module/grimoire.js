@@ -287,7 +287,7 @@ const reportCast = async (actor, spell, dice) => {
     flavor: glogCastFlavor("CAIRN.GrimoireCastFlavor", alias),
     rolls: [roll],
     content: glogCastBody(spell.name, spell.system.description ?? "", dice, sum),
-    flags: { "air-bladder": { [GLOG_CAST_FLAG]: {
+    flags: { "mondolme": { [GLOG_CAST_FLAG]: {
       name: spell.name,
       desc: spell.system.description ?? "",
       alias,
@@ -521,7 +521,7 @@ export const castScroll = async (actor, scroll) => {
  * visible to its author, but the OWNERSHIP test is still the gate (not
  * authorship): the enforcement must hold even if the message reaches another
  * client by some future route. Spent is recorded on the MESSAGE
- * (`flags.air-bladder.fatigueApplied`) — the damage-card precedent: the
+ * (`flags.mondolme.fatigueApplied`) — the damage-card precedent: the
  * disabled button is the affordance, the flag check here is the enforcement,
  * and a card scrolled back to hours later is still spent.
  * @param {ChatMessage} message
@@ -530,12 +530,12 @@ export const castScroll = async (actor, scroll) => {
 export const bindGrimoireFatigueButton = (message, html) => {
   const btn = html.querySelector(".grimoire-add-fatigue");
   if (!btn) return;
-  if (message.getFlag("air-bladder", "fatigueApplied")) {
+  if (message.getFlag("mondolme", "fatigueApplied")) {
     btn.setAttribute("disabled", "disabled");
     return;
   }
   btn.onclick = async () => {
-    if (message.getFlag("air-bladder", "fatigueApplied")) return;
+    if (message.getFlag("mondolme", "fatigueApplied")) return;
     const actor = fromUuidSync(btn.dataset.actorUuid);
     if (!actor?.isOwner) return;
     const count = Math.max(1, Number(btn.dataset.count) || 1);
@@ -543,7 +543,7 @@ export const bindGrimoireFatigueButton = (message, html) => {
     // ONE batched create for all N (createOwnedItem's count), not N awaits that
     // each wrote a document and re-rendered the sheet.
     await actor.createOwnedItem({ name: FATIGUE_NAME, type: "item" }, { ignoreCapacity: true, count });
-    await message.setFlag("air-bladder", "fatigueApplied", true);
+    await message.setFlag("mondolme", "fatigueApplied", true);
   };
 };
 
@@ -563,7 +563,7 @@ export const bindGrimoireFatigueButton = (message, html) => {
  * @param {HTMLElement} html
  */
 export const localizeGlogCastCard = (message, html) => {
-  const f = message.getFlag("air-bladder", GLOG_CAST_FLAG);
+  const f = message.getFlag("mondolme", GLOG_CAST_FLAG);
   if (!f) return;
   const card = html.querySelector(".grimoire-cast-card");
   if (card) {

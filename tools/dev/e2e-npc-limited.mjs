@@ -60,7 +60,7 @@ const restore = async () => {
   try {
     const left = await gm.evaluate(async (s) => {
       for (const id of s?.ids ?? []) await game.actors.get(id)?.delete();
-      if (s) await game.settings.set("air-bladder", "allow-player-randomization", s.randomization);
+      if (s) await game.settings.set("mondolme", "allow-player-randomization", s.randomization);
       return (s?.ids ?? []).filter((id) => game.actors.get(id)).length;
     }, saved);
     if (left) fail(`restore left ${left} probe actor(s) in the world`);
@@ -74,7 +74,7 @@ try {
   /* --- setup, as GM ---------------------------------------------------------- */
 
   const setup = await gm.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const cg = game.cairn.characterGenerator;
     const alice = game.users.getName("Alice");
     if (!alice) return { error: 'no user named "Alice" — run `npm run dev:players` first' };
@@ -211,7 +211,7 @@ try {
     const orig = proto._mayRandomize;
     if (control) {
       proto._mayRandomize = function () {
-        return game.user.isGM || game.settings.get("air-bladder", "allow-player-randomization");
+        return game.user.isGM || game.settings.get("mondolme", "allow-player-randomization");
       };
     }
     try {
@@ -311,7 +311,7 @@ try {
       picked: target.name, landed: hire.system.profession,
       rate: hire.system.dayRate === (target.rate ?? 0),
       hp: hire.system.hp?.max === target.hp,
-      gear: hire.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "profession").length,
+      gear: hire.items.filter((i) => i.getFlag("mondolme", "grantSource") === "profession").length,
       gearWant: (target.gear ?? []).length,
       // The arrangement holds after a pick: rations last, weapons (if any) first.
       lastIsRations: /rations?/i.test([...hire.items.contents]
@@ -327,18 +327,18 @@ try {
     await cg.pickNpcBackground(npc, "Blacksmith");
     out.bg = {
       landed: npc.system.background,
-      granted: npc.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "background").length,
+      granted: npc.items.filter((i) => i.getFlag("mondolme", "grantSource") === "background").length,
       // After a geared pick a kit is GUARANTEED — kept if it survived birth,
       // repacked if the npc was born Lord/Politician — which frees this pass
       // from the 2-in-20 birth race the old before-the-pick capture carried.
-      kitCount: npc.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "npc-kit").length,
+      kitCount: npc.items.filter((i) => i.getFlag("mondolme", "grantSource") === "npc-kit").length,
     };
     await cg.pickNpcBackground(npc, "Politician");
     out.bg.politician = npc.system.background;
     out.bg.politicianGranted = npc.items
-      .filter((i) => i.getFlag("air-bladder", "grantSource") === "background").length;
+      .filter((i) => i.getFlag("mondolme", "grantSource") === "background").length;
     out.bg.kitAfter = npc.items
-      .filter((i) => i.getFlag("air-bladder", "grantSource") === "npc-kit").length;
+      .filter((i) => i.getFlag("mondolme", "grantSource") === "npc-kit").length;
     return out;
   }, { npcId: setup.npcId, hireId: setup.hireId });
 

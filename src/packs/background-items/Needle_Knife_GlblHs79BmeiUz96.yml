@@ -1,12 +1,12 @@
 _id: GlblHs79BmeiUz96
 name: Needle-Knife
 type: weapon
-img: systems/air-bladder/icons/weapons.svg
+img: systems/mondolme/icons/weapons.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A thin, needle-pointed blade made for slipping between ribs and armor gaps.
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!GlblHs79BmeiUz96'

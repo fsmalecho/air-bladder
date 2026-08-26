@@ -532,7 +532,7 @@ export const askDamageTargets = async (scene) => {
  * background sheet said "Barebones", so the same edition was named differently on
  * two sheets a Warden has open side by side. The background sheet's map also carried
  * an `srd-2e` entry, which cannot occur — `srd-2e` is a value of the
- * `flags.air-bladder.backgroundSource` PROVENANCE flag, never of `system.source`,
+ * `flags.mondolme.backgroundSource` PROVENANCE flag, never of `system.source`,
  * whose schema defaults to "2e" (data-models.js `BackgroundData`).
  *
  * Localized rather than literal, which reverses the old comment's reasoning. The

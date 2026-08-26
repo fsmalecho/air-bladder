@@ -58,7 +58,7 @@ let priorRand = null;
 
 /** Shadow the three content-source reads on one page. mode: "one" | "two". */
 const shadowSources = (page, mode) => page.evaluate((mode) => {
-  const NS = "air-bladder";
+  const NS = "mondolme";
   const FORCED = mode === "one"
     ? { "content-source-2e": true, "content-source-custom": false, "content-source-barebones": false }
     : { "content-source-2e": true, "content-source-custom": false, "content-source-barebones": true };
@@ -145,9 +145,9 @@ try {
   // dev:directory-buttons 2026-08-14), and the tell is the same every time: a
   // setting a GM cannot feel, because every Warden-side surface reads
   // `isGM || setting`. Captured ONCE, here; the finally restores THIS value.
-  priorSwitch = await gm.evaluate((k) => game.settings.get("air-bladder", k), "allow-player-generate");
+  priorSwitch = await gm.evaluate((k) => game.settings.get("mondolme", k), "allow-player-generate");
   if (priorSwitch !== true) {
-    await gm.evaluate((k) => game.settings.set("air-bladder", k, true), "allow-player-generate");
+    await gm.evaluate((k) => game.settings.set("mondolme", k, true), "allow-player-generate");
     console.log(`  note  allow-player-generate was ${priorSwitch} - set on for the run, restored after`);
   }
   const gotButton = await (async () => {
@@ -231,12 +231,12 @@ try {
   // restored in the Node-level finally alongside the generate switch.
   console.log("\nthe marketplace switch");
   const MKT = "allow-player-marketplace";
-  priorMarket = await gm.evaluate((k) => game.settings.get("air-bladder", k), MKT);
+  priorMarket = await gm.evaluate((k) => game.settings.get("mondolme", k), MKT);
   // ESTABLISH the on-state, never assume it (a probe's precondition is its
   // own to make): the dev world arrived 2026-08-09 with this switch OFF —
   // leaked or deliberate — and every "switch on" leg below redded on world
   // state, not on code. The finally still restores the captured prior.
-  await gm.evaluate((k) => game.settings.set("air-bladder", k, true), MKT);
+  await gm.evaluate((k) => game.settings.set("mondolme", k, true), MKT);
   const pcId = await gm.evaluate((before) =>
     game.actors.find((a) => a.type === "character" && !before.actors.includes(a.id))?.id ?? null, before);
   if (!pcId) fail("no minted character to run the marketplace legs on");
@@ -278,7 +278,7 @@ try {
     })();
     dialogUp ? ok("…and the shop opens for them") : fail("the shop did not open while allowed");
 
-    await gm.evaluate((k) => game.settings.set("air-bladder", k, false), MKT);
+    await gm.evaluate((k) => game.settings.set("mondolme", k, false), MKT);
     (await waitShopBtn(false))
       ? ok("flip off: the button left Alice's open sheet, live")
       : fail("flip off: Alice's sheet still shows the Marketplace button");
@@ -310,7 +310,7 @@ try {
 
     // The Warden always shops: with the switch off, the GM's own open works.
     const gmShop = await gm.evaluate(async (id) => {
-      const mkt = await import("/systems/air-bladder/module/marketplace.js");
+      const mkt = await import("/systems/mondolme/module/marketplace.js");
       await mkt.openMarketplace(game.actors.get(id));
       await new Promise((r) => setTimeout(r, 1000));
       const open = !!document.querySelector(".marketplace .mkt-row");
@@ -331,7 +331,7 @@ try {
       }
     });
     const doorRefused = await alice.evaluate(async (id) => {
-      const mkt = await import("/systems/air-bladder/module/marketplace.js");
+      const mkt = await import("/systems/mondolme/module/marketplace.js");
       await mkt.openMarketplace(game.actors.get(id));
       await new Promise((r) => setTimeout(r, 800));
       const open = !!document.querySelector(".marketplace");
@@ -343,7 +343,7 @@ try {
       ? ok("switch off: openMarketplace refuses Alice at the door")
       : fail("switch off: Alice opened the marketplace directly");
 
-    await gm.evaluate((k) => game.settings.set("air-bladder", k, true), MKT);
+    await gm.evaluate((k) => game.settings.set("mondolme", k, true), MKT);
     (await waitShopBtn(true))
       ? ok("flip on: the button returned to Alice's open sheet, live")
       : fail("flip on: Alice's Marketplace button did not return");
@@ -360,9 +360,9 @@ try {
   // finally with its two siblings.
   console.log("\nthe randomization switch");
   const RND = "allow-player-randomization";
-  priorRand = await gm.evaluate((k) => game.settings.get("air-bladder", k), RND);
+  priorRand = await gm.evaluate((k) => game.settings.get("mondolme", k), RND);
   // ESTABLISH the on-state (same rule as the marketplace section above).
-  await gm.evaluate((k) => game.settings.set("air-bladder", k, true), RND);
+  await gm.evaluate((k) => game.settings.set("mondolme", k, true), RND);
   if (!pcId) fail("no minted character to run the randomization legs on");
   else {
     // The actor's own flag ON, so the dice legs prove the world switch
@@ -389,7 +389,7 @@ try {
       ? ok("switch on: Alice sees the Randomization toggle and the re-roll dice")
       : fail(`switch on: toggle=${onState.toggleShown} dice=${onState.dice}`);
 
-    await gm.evaluate((k) => game.settings.set("air-bladder", k, false), RND);
+    await gm.evaluate((k) => game.settings.set("mondolme", k, false), RND);
     let offState = await surface();
     for (const t0 = Date.now(); Date.now() - t0 < 15000 && (offState.toggleShown || offState.dice);) {
       await new Promise((r) => setTimeout(r, 250));
@@ -470,7 +470,7 @@ try {
       ? ok("switch off: the Warden keeps the toggle and the dice")
       : fail(`switch off hid the WARDEN's surface: ${JSON.stringify(gmSurface)}`);
 
-    await gm.evaluate((k) => game.settings.set("air-bladder", k, true), RND);
+    await gm.evaluate((k) => game.settings.set("mondolme", k, true), RND);
     let backState = await surface();
     for (const t0 = Date.now(); Date.now() - t0 < 15000 && !(backState.toggleShown && backState.dice);) {
       await new Promise((r) => setTimeout(r, 250));
@@ -533,7 +533,7 @@ try {
   // anything set it on. Reading it again now would record the value this probe
   // itself wrote, and the finally would restore the PROBE's state as if it were
   // the Warden's - a leaked setting wearing a restore's clothes.
-  await gm.evaluate((k) => game.settings.set("air-bladder", k, true), SWITCH);
+  await gm.evaluate((k) => game.settings.set("mondolme", k, true), SWITCH);
 
   const genButton = (page) => page.evaluate(() =>
     !!document.querySelector("#cairn-character-gen-button .create-character-generator-button"));
@@ -552,7 +552,7 @@ try {
 
   // Live flip OFF: the GM writes, the onChange fires on Alice's client, her
   // ALREADY-OPEN directory re-renders and the hook reconciles — no reload.
-  await gm.evaluate((k) => game.settings.set("air-bladder", k, false), SWITCH);
+  await gm.evaluate((k) => game.settings.set("mondolme", k, false), SWITCH);
   (await waitButton(alice, false))
     ? ok("flip off: Alice's open directory lost the button, live")
     : fail("flip off: Alice still shows Generate PC after 15s");
@@ -579,7 +579,7 @@ try {
     : fail("no PcGenDisabled notification reached Alice");
 
   // Live flip back ON: the button returns without a reload.
-  await gm.evaluate((k) => game.settings.set("air-bladder", k, true), SWITCH);
+  await gm.evaluate((k) => game.settings.set("mondolme", k, true), SWITCH);
   (await waitButton(alice, true))
     ? ok("flip on: Alice's button returned, live")
     : fail("flip on: Alice's button did not come back");
@@ -592,7 +592,7 @@ try {
     ["allow-player-randomization", priorRand]]) {
     if (prior === null) continue;
     try {
-      await gm.evaluate(([k, v]) => game.settings.set("air-bladder", k, v), [key, prior]);
+      await gm.evaluate(([k, v]) => game.settings.set("mondolme", k, v), [key, prior]);
       console.log(`  (${key} restored to ${prior})`);
     } catch (e) {
       console.error(`  COULD NOT RESTORE ${key} (wanted ${prior}): ${e.message}`);

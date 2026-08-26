@@ -1,12 +1,12 @@
 _id: KsadW5unsUjCtKoD
 name: Aurifex
 type: background
-img: systems/air-bladder/icons/background.svg
+img: systems/mondolme/icons/background.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     backgroundSource: srd-2e
 system:
   source: 2e
@@ -80,6 +80,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!KsadW5unsUjCtKoD'

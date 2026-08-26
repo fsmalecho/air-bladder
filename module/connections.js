@@ -92,7 +92,7 @@ export const atConnectionLimit = (keeper) => connectionHeadroom(keeper) <= 0;
  *
  * Only a GM client may apply them: the server refuses any non-GM update that
  * touches `default` or another user's entry (sanitizeDocumentOwnershipField).
- * A player's connect/break instead folds `flags.air-bladder.
+ * A player's connect/break instead folds `flags.mondolme.
  * ownershipSyncPending: true` into their own write and emits `ownershipSync`
  * on the system socket; the active GM's client recomputes the shape FROM
  * DOCUMENT STATE. The flag is the authorization — only the child's owners can
@@ -189,21 +189,21 @@ export const brokenOwnershipShape = (child) => {
  * @param {{requester?: User|null}} [opts]  set by the socket relay AND the catch-up sweep
  */
 export const syncPendingOwnership = async (child, { requester = null } = {}) => {
-  if (child.getFlag("air-bladder", OWNERSHIP_SYNC_FLAG) === undefined) return;
+  if (child.getFlag("mondolme", OWNERSHIP_SYNC_FLAG) === undefined) return;
   const ops = foundry.data.operators;
   if (requester) {
     const owns = (doc) => !!doc?.testUserPermission(requester, "OWNER");
     const link = child.system?.connectedTo || "";
     const other = link ? game.actors.find((a) => a.uuid === link) : null;
     if (!owns(child) || (other && !owns(other))) {
-      console.warn(`Air Bladder | refusing an ownership sync for ${child.name}: `
+      console.warn(`Mondolme | refusing an ownership sync for ${child.name}: `
         + `${requester.name} does not own both ends`);
-      await child.update({ [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: new ops.ForcedDeletion() });
+      await child.update({ [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: new ops.ForcedDeletion() });
       return;
     }
   }
   const changes = {
-    [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: new ops.ForcedDeletion(),
+    [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: new ops.ForcedDeletion(),
   };
   if (["npc", "hireling"].includes(child.type) && child.npcRole !== "monster") {
     const link = child.system?.connectedTo || "";

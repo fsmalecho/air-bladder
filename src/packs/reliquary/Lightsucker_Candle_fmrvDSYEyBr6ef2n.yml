@@ -1,12 +1,12 @@
 _id: fmrvDSYEyBr6ef2n
 name: Lightsucker Candle
 type: item
-img: systems/air-bladder/art/game-icons/fire/candle-light.svg
+img: systems/mondolme/art/game-icons/fire/candle-light.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -25,6 +25,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!fmrvDSYEyBr6ef2n'

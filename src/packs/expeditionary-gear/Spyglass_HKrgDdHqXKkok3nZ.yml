@@ -2,7 +2,7 @@ name: Spyglass
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/spyglass.svg
+img: systems/mondolme/art/game-icons/tools/spyglass.svg
 effects: []
 _id: HKrgDdHqXKkok3nZ
 _stats:

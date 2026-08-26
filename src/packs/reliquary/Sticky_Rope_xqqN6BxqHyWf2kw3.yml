@@ -1,12 +1,12 @@
 _id: xqqN6BxqHyWf2kw3
 name: Sticky Rope
 type: item
-img: systems/air-bladder/art/game-icons/tools/rope-coil.svg
+img: systems/mondolme/art/game-icons/tools/rope-coil.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: A 100ft rope that can stick to any surface.
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!xqqN6BxqHyWf2kw3'

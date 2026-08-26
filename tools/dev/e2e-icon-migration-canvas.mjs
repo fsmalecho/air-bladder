@@ -30,8 +30,8 @@
 import { chromium } from "playwright";
 import { VIEWPORT, joinAsGM, watchErrors, dismissChrome } from "./lib.mjs";
 
-const OLD = "systems/air-bladder/icons/generic-item.png";   // deleted in 0.1.7
-const GOOD = "systems/air-bladder/icons/generic-item.svg";  // its replacement
+const OLD = "systems/mondolme/icons/generic-item.png";   // deleted in 0.1.7
+const GOOD = "systems/mondolme/icons/generic-item.svg";  // its replacement
 const SCENE = "zz-icon-canvas-probe";
 
 let failed = false;

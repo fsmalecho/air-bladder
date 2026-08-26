@@ -1,12 +1,12 @@
 _id: cv9gIH8porY6G3Cl
 name: Mapping Paper
 type: item
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Rolls of durable paper for charting the lands you cross. Still mostly blank.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!cv9gIH8porY6G3Cl'

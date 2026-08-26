@@ -337,7 +337,7 @@ export class CairnActor extends Actor {
     if (role === "companion") {
       const kindKeys = new Set(Object.entries(CONTAINER_CLASSES)
         .filter(([, c]) => c.role === role).map(([k]) => k));
-      const docs = await game.packs.get("air-bladder.mounts-transports")?.getDocuments() ?? [];
+      const docs = await game.packs.get("mondolme.mounts-transports")?.getDocuments() ?? [];
       namedDocs = docs
         .filter((d) => d.system?.role === role && !kindKeys.has(d.name.toLowerCase()))
         // Sort on the DISPLAYED (overlay-translated) name, in the reader's
@@ -598,7 +598,7 @@ export class CairnActor extends Actor {
         }
       } catch (err) {
         // A missing manifest must not block creating an actor.
-        console.warn("Air Bladder | could not assign a random npc portrait:", err);
+        console.warn("Mondolme | could not assign a random npc portrait:", err);
       }
     }
 
@@ -1118,7 +1118,7 @@ export class CairnActor extends Actor {
       if (game.user.isGM) {
         changes.ownership = foundry.data.operators.ForcedReplacement.create(brokenOwnershipShape(actor));
       } else {
-        changes[`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`] = true;
+        changes[`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`] = true;
       }
     }
     await actor.update(changes);
@@ -1374,7 +1374,7 @@ export class CairnActor extends Actor {
     if (game.user.isGM) {
       changes.ownership = foundry.data.operators.ForcedReplacement.create(connectedOwnershipShape(this));
     } else {
-      changes[`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`] = true;
+      changes[`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`] = true;
     }
     await target.update(changes);
     if (!game.user.isGM) {
@@ -1544,7 +1544,7 @@ export class CairnActor extends Actor {
           if (entry?.rate) foundry.utils.setProperty(changed, "system.dayRate", entry.rate);
         } catch (err) {
           // A missing catalogue must not block the rename that triggered this.
-          console.warn("Air Bladder | could not autofill a day rate:", err);
+          console.warn("Mondolme | could not autofill a day rate:", err);
         }
       }
     }
@@ -1656,7 +1656,7 @@ export class CairnActor extends Actor {
     this.#announceStatusChange(stash, options, userId);
     this.#postChangeLog(stash, options, userId);
     this.#renameMatchingTokens(stash, userId)
-      .catch((e) => console.error("Air Bladder | token rename after actor rename failed", e));
+      .catch((e) => console.error("Mondolme | token rename after actor rename failed", e));
   }
 
   /**

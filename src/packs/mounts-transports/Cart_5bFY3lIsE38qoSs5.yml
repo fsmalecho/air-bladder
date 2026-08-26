@@ -1,17 +1,17 @@
 _id: 5bFY3lIsE38qoSs5
 name: Cart
 type: npc
-img: systems/air-bladder/icons/cart.svg
+img: systems/mondolme/icons/cart.svg
 prototypeToken:
   name: Cart
   texture:
-    src: systems/air-bladder/icons/cart.svg
+    src: systems/mondolme/icons/cart.svg
 items: []
 effects: []
 folder: Y7FAeuwxTR9cyRtC
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     transportSource: 2e
 system:
   description: 'A two-wheeled cart, pulled by hand or beast. Holds four slots; bulky and awkward over rough country.'
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!actors!5bFY3lIsE38qoSs5'

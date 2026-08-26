@@ -184,7 +184,7 @@ for (const section of sections) {
 /* ------------------------------------------------------------------ emitting */
 
 const docYaml = (r) => {
-  const id = idFor(`air-bladder-relic:${r.name}`);
+  const id = idFor(`mondolme-relic:${r.name}`);
   const lines = [
     `_id: ${id}`,
     `name: ${y(r.name)}`,
@@ -197,7 +197,7 @@ const docYaml = (r) => {
     "folder: null",
     "sort: 0",
     "flags:",
-    "  air-bladder:",
+    "  mondolme:",
     "    relicSource: srd-2e",
     "system:",
     `  description: ${y(r.description)}`,
@@ -216,7 +216,7 @@ const docYaml = (r) => {
     lines.push(`  damageFormula: ${y(r.damage)}`, "  criticalDamage: ''", "  blast: false");
   }
   if (r.type === "armor") lines.push(`  armor: ${r.armor}`);
-  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: air-bladder",
+  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: mondolme",
     "  coreVersion: '14.365'", `_key: '!items!${id}'`, "");
   return { id, yaml: lines.join("\n") };
 };

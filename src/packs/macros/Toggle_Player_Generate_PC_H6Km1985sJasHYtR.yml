@@ -12,8 +12,8 @@ command: |-
   // says so politely.
   if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize("CAIRN.Notify.WardenOnly"));
   const KEY = "allow-player-generate";
-  const on = !game.settings.get("air-bladder", KEY);
-  await game.settings.set("air-bladder", KEY, on);
+  const on = !game.settings.get("mondolme", KEY);
+  await game.settings.set("mondolme", KEY, on);
   ui.notifications.info(game.i18n.localize(on ? "CAIRN.Notify.PlayerGenOn" : "CAIRN.Notify.PlayerGenOff"));
 folder: null
 sort: 100000
@@ -21,6 +21,6 @@ ownership:
   default: 0
 flags: {}
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!macros!H6Km1985sJasHYtR'

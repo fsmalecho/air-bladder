@@ -2,7 +2,7 @@ name: Repellent
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/bottles/potion-ball.svg
+img: systems/mondolme/art/game-icons/bottles/potion-ball.svg
 effects: []
 _id: iattBy4I6uFMIl9Y
 _stats:

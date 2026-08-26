@@ -2,7 +2,7 @@ name: Sack
 type: item
 flags:
   core: {}
-img: systems/air-bladder/icons/sack.svg
+img: systems/mondolme/icons/sack.svg
 effects: []
 _id: fElAGNYed7PDBrZ3
 _stats:

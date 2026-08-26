@@ -2,7 +2,7 @@ name: Mace
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/flanged-mace.svg
+img: systems/mondolme/art/game-icons/weapons/flanged-mace.svg
 effects: []
 _id: GAdVOvcq4KsPnCho
 _stats:

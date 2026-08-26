@@ -1,12 +1,12 @@
 _id: QSOZ6bSzwntocgd4
 name: Dice
 type: item
-img: systems/air-bladder/art/game-icons/shields/dice-shield.svg
+img: systems/mondolme/art/game-icons/shields/dice-shield.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: barebones
 system:
   description: ''
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!QSOZ6bSzwntocgd4'

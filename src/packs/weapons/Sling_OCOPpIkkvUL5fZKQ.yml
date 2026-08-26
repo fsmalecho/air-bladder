@@ -2,12 +2,12 @@ name: Sling
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/sling.svg
+img: systems/mondolme/art/game-icons/weapons/sling.svg
 effects: []
 _id: OCOPpIkkvUL5fZKQ
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.10
   createdTime: 1785873469711
   modifiedTime: 1786040324968

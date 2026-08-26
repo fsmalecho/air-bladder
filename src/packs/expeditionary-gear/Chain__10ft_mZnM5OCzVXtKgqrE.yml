@@ -2,7 +2,7 @@ name: Chain, 10ft
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/metal/crossed-chains.svg
+img: systems/mondolme/art/game-icons/metal/crossed-chains.svg
 effects: []
 _id: mZnM5OCzVXtKgqrE
 _stats:

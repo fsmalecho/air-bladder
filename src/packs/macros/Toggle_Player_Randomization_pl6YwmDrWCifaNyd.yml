@@ -14,8 +14,8 @@ command: |-
   // anyone else anyway; the check just says so politely.
   if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize("CAIRN.Notify.WardenOnly"));
   const KEY = "allow-player-randomization";
-  const on = !game.settings.get("air-bladder", KEY);
-  await game.settings.set("air-bladder", KEY, on);
+  const on = !game.settings.get("mondolme", KEY);
+  await game.settings.set("mondolme", KEY, on);
   ui.notifications.info(game.i18n.localize(on ? "CAIRN.Notify.PlayerRandomizationOn" : "CAIRN.Notify.PlayerRandomizationOff"));
 folder: null
 sort: 400000
@@ -23,6 +23,6 @@ ownership:
   default: 0
 flags: {}
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!macros!pl6YwmDrWCifaNyd'

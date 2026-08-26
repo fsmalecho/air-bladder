@@ -3,7 +3,7 @@ name: Harpy
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/harpy.svg
+img: systems/mondolme/art/game-icons/creatures/harpy.svg
 items:
   - _id: LYKnYz9qilpof6U5
     name: Tough Hide
@@ -197,7 +197,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/harpy.svg
+    src: systems/mondolme/art/game-icons/creatures/harpy.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

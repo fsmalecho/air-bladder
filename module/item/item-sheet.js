@@ -269,7 +269,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   _configureRenderParts(_options) {
     return {
       form: {
-        template: `systems/air-bladder/templates/item/${this.item.type}-sheet.html`,
+        template: `systems/mondolme/templates/item/${this.item.type}-sheet.html`,
         templates: [],
         // AppV2 restores scroll only for the selectors named here — a part with
         // no `scrollable` is replaced wholesale and the pane jumps to the top

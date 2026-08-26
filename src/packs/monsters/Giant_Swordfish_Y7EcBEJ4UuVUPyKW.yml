@@ -3,7 +3,7 @@ name: Giant Swordfish
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/fish/double-fish.svg
+img: systems/mondolme/art/game-icons/fish/double-fish.svg
 items:
   - _id: HGo78VMhESWD1kSr
     name: Bone Sword
@@ -120,7 +120,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/fish/double-fish.svg
+    src: systems/mondolme/art/game-icons/fish/double-fish.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

@@ -2,7 +2,7 @@ name: Lockpicks
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/lockpicks.svg
+img: systems/mondolme/art/game-icons/tools/lockpicks.svg
 effects: []
 _id: jf2TjD9L9DrbfAjv
 _stats:

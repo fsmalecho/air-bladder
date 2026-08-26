@@ -2,7 +2,7 @@ name: Hammer
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/claw-hammer.svg
+img: systems/mondolme/art/game-icons/tools/claw-hammer.svg
 effects: []
 _id: XYI7SR2HV0OqfBBm
 _stats:

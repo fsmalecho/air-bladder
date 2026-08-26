@@ -41,7 +41,7 @@ await dismissChrome(page);
 console.log("\nchanging the folder takes effect without a reload");
 
 const res = await page.evaluate(async () => {
-  const NS = "air-bladder";
+  const NS = "mondolme";
   const FP = foundry.applications.apps?.FilePicker?.implementation
     ?? foundry.applications.apps?.FilePicker ?? globalThis.FilePicker;
   const prior = game.settings.get(NS, "custom-portrait-folder");

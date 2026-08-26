@@ -1,7 +1,7 @@
 /**
  * Item / actor art by class.
  *
- * The SVGs live in systems/air-bladder/icons/ and are game-icons.net glyphs
+ * The SVGs live in systems/mondolme/icons/ and are game-icons.net glyphs
  * (CC BY 3.0 — see icons/CREDITS.md; authored by tools/import/icons.mjs). This is
  * the ONE source of truth for "which picture does this thing get", shared by:
  *   - the pack-data importer (tools/import/item-icons.mjs), which stamps every
@@ -13,7 +13,7 @@
  * plain ESM. Keep it that way.
  */
 
-export const ICON_DIR = "systems/air-bladder/icons";
+export const ICON_DIR = "systems/mondolme/icons";
 // SVG since 2026-07-28 (they were 512x512 PNGs: 492 KB in every release against
 // 25 KB now, and blurry when scaled up as a token). module/cairn.js migrates the
 // .png paths already baked into documents in existing worlds.
@@ -197,7 +197,7 @@ export const containerClassLabel = (name = "", legacyKind = "", stored = "") =>
  * at runtime falls through to the generic bindle.
  * @param {String} type  item type: weapon | armor | spellbook | transport | item | object | background
  * @param {String} [name]
- * @returns {String}  a systems/air-bladder/icons/*.svg path
+ * @returns {String}  a systems/mondolme/icons/*.svg path
  */
 export const iconForItem = (type = "item", name = "") => {
   switch (type) {

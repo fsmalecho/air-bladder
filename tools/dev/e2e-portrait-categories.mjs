@@ -60,7 +60,7 @@ const idsBefore = await page.evaluate(() => game.actors.map((a) => a.id));
 let R = {};
 await withSettings(page, async () => {
   R = await page.evaluate(async ({ FULL, MON, FLAT }) => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const FP = foundry.applications.apps.FilePicker.implementation;
     const cg = game.cairn.characterGenerator;
     const mg = game.cairn.monsterGenerator;

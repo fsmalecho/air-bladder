@@ -11,7 +11,7 @@
  *
  * The document type is read from `system.json` rather than guessed, because
  * Barebones tables reference BOTH items and other RollTables and the uuid differs
- * ("…air-bladder.weapons.Item.xyz" vs "…air-bladder.tables-barebones.RollTable.xyz").
+ * ("…mondolme.weapons.Item.xyz" vs "…mondolme.tables-barebones.RollTable.xyz").
  * Guessing "Item" produced a uuid that resolves to nothing, which is a broken gear
  * grant with no error attached to it.
  */
@@ -21,10 +21,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const { packs } = JSON.parse(fs.readFileSync(path.join(root, "system.json"), "utf8"));
-const DOC_TYPE = new Map(packs.map((p) => [`air-bladder.${p.name}`, p.type]));
+const DOC_TYPE = new Map(packs.map((p) => [`mondolme.${p.name}`, p.type]));
 
 /**
- * @param {String} packRef  a full pack id, e.g. "air-bladder.weapons"
+ * @param {String} packRef  a full pack id, e.g. "mondolme.weapons"
  * @param {String} id       the document's _id within that pack
  * @returns {String}        "Compendium.<pack>.<DocumentName>.<id>"
  * @throws if the pack is not declared in system.json, or the id is empty — both

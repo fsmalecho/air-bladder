@@ -37,7 +37,7 @@ try {
 
   const r = await page.evaluate(async () => {
     const CG = game.cairn.characterGenerator;
-    const gear = await import("/systems/air-bladder/module/gear.js");
+    const gear = await import("/systems/mondolme/module/gear.js");
 
     const findPoolDoc = async (name) => {
       const lower = String(name).toLowerCase();
@@ -51,7 +51,7 @@ try {
     };
 
     // 1. A background whose fixed startingGear yields an armor item.
-    const bgs = await game.packs.get("air-bladder.backgrounds-2e").getDocuments();
+    const bgs = await game.packs.get("mondolme.backgrounds-2e").getDocuments();
     let bg = null, armorName = null;
     for (const b of bgs) {
       for (const ref of b.system.startingGear ?? []) {

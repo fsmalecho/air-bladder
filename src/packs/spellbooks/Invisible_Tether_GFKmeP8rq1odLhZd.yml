@@ -2,7 +2,7 @@ name: Invisible Tether
 type: spellbook
 flags:
   core: {}
-img: systems/air-bladder/icons/spellbook.svg
+img: systems/mondolme/icons/spellbook.svg
 effects: []
 _id: GFKmeP8rq1odLhZd
 _stats:

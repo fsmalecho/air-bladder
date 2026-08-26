@@ -1,0 +1,94 @@
+MONDOLME — Fase 1: renombrado
+================================
+
+Base: air-bladder 0.1.18, rama "mondolme".
+Archivos modificados: 1476. No se añade ni se borra ninguno.
+
+
+CÓMO APLICARLO (3 pasos)
+------------------------
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. Descomprime este ZIP DENTRO de tu carpeta del repositorio:
+
+     C:\Users\sieir\Documents\GitHub\air-bladder
+
+   Windows te avisará de que ya existen archivos con esos nombres.
+   Marca la casilla "Hacer esto para todos los elementos actuales"
+   y elige "Reemplazar los archivos en el destino".
+
+   No hay que borrar nada antes. El ZIP trae las carpetas completas y
+   simplemente sobrescribe lo que ya está.
+
+3. Vuelve a GitHub Desktop. Verás unos 1476 archivos en "Changes".
+   Es lo esperado: la mayoría son objetos y tablas del compendio, que
+   llevan grabado dentro a qué sistema pertenecen.
+
+   Escribe un mensaje de commit, por ejemplo:
+
+     Fase 1: renombrar el sistema a Mondolme
+
+   Pulsa "Commit to mondolme" y después "Push origin".
+
+Y ya está.
+
+
+QUÉ HAY DENTRO DEL ZIP
+----------------------
+
+Carpetas completas:  module, tools, templates, lang, src/packs, .github
+Archivos sueltos:    system.json, package.json, package-lock.json
+
+Nada más se toca. art/, css/, docs/, fonts/, icons/, logo/, site/,
+README, LICENSE y CLAUDE.md se quedan como están.
+
+
+QUÉ CAMBIÓ
+----------
+
+- Identificador interno: "air-bladder" -> "mondolme". Es lo que permite
+  tener el Air Bladder oficial y Mondolme instalados a la vez en el
+  mismo Foundry.
+- Título mostrado en Foundry: "Mondolme".
+- Rutas internas de plantillas e imágenes: systems/mondolme/...
+- Ajustes guardados y marcas internas de cada documento: bajo "mondolme".
+- Carpetas de compendio en la barra lateral: "Mondolme - ...".
+- Etiqueta al elegir hoja en "Configurar hoja": "Mondolme".
+- Enlaces del manifiesto: ahora apuntan a TU fork (fsmalecho/air-bladder),
+  no al del autor. Hará falta para instalarlo por URL más adelante.
+
+
+QUÉ NO SE TOCÓ, A PROPÓSITO
+---------------------------
+
+- El ámbito interno "cairn": está grabado en la configuración de hojas de
+  cada mundo y renombrarlo las rompería. El propio código avisa de ello.
+- El objeto de equipo "Air Bladder" (el odre para bucear) y su traducción:
+  es un objeto del juego, no el sistema.
+- El texto de licencia del arte de Lydia Comer: la licencia se concedió al
+  proyecto Air Bladder y no es nuestra para reescribirla.
+- site/index.html: es la página web del autor y Foundry no la carga.
+- README, LICENSE, CLAUDE.md y docs/: siguen nombrando a Air Bladder.
+  Foundry no los carga; se revisarán en la fase 2, con el idioma.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 166 archivos de código pasan la comprobación de sintaxis.
+- Los JSON (system.json, idiomas, manifiestos) son válidos.
+- Los 1345 archivos YAML de compendio son válidos.
+- Ningún enlace quedó roto por el renombrado.
+
+
+TODAVÍA NO SE PUEDE INSTALAR EN FOUNDRY
+---------------------------------------
+
+Los enlaces del manifiesto ya apuntan a tu fork, pero para que funcionen
+hay que publicar una "Release" en tu repositorio, y eso se hace cuando el
+sistema esté terminado. Te guío cuando lleguemos.
+
+
+SIGUIENTE: Fase 2 — español como idioma principal, y fuera la traducción
+automática y los demás idiomas.

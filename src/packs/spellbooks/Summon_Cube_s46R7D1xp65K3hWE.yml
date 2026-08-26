@@ -2,7 +2,7 @@ name: Summon Cube
 type: spellbook
 flags:
   core: {}
-img: systems/air-bladder/icons/spellbook.svg
+img: systems/mondolme/icons/spellbook.svg
 effects: []
 _id: s46R7D1xp65K3hWE
 _stats:

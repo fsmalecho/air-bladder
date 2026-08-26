@@ -1,12 +1,12 @@
 _id: 6Ytz5NECEQjgQTgl
 name: Footpad's Friend
 type: item
-img: systems/air-bladder/art/game-icons/tools/lockpicks.svg
+img: systems/mondolme/art/game-icons/tools/lockpicks.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -26,6 +26,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!6Ytz5NECEQjgQTgl'

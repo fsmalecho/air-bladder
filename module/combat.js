@@ -6,7 +6,7 @@
  * save is rolled once when combat starts, not per round.
  *
  * Order INSIDE a bucket: the Warden may drag rows to reorder within a bucket
- * (`flags.air-bladder.combatSort`, written by the tracker's drop handler,
+ * (`flags.mondolme.combatSort`, written by the tracker's drop handler,
  * read by _sortCombatants). This SUPERSEDES the same-day ruling that order
  * inside a bucket is table talk the tracker does not manage (both rulings
  * 2026-08-08, the second with the tracker in actual play) — table talk
@@ -185,8 +185,8 @@ export class CairnCombat extends Combat {
     const ia = Number.isNumeric(a.initiative) ? a.initiative : -Infinity;
     const ib = Number.isNumeric(b.initiative) ? b.initiative : -Infinity;
     if (ia !== ib) return ib - ia;
-    const sa = a.flags?.["air-bladder"]?.combatSort ?? 0;
-    const sb = b.flags?.["air-bladder"]?.combatSort ?? 0;
+    const sa = a.flags?.["mondolme"]?.combatSort ?? 0;
+    const sb = b.flags?.["mondolme"]?.combatSort ?? 0;
     return (sa - sb) || (a.id > b.id ? 1 : -1);
   }
 }
@@ -227,7 +227,7 @@ export class CairnCombatTracker extends foundry.applications.sidebar.tabs.Combat
   static PARTS = {
     ...super.PARTS,
     tracker: {
-      template: "systems/air-bladder/templates/sidebar/combat-tracker.html",
+      template: "systems/mondolme/templates/sidebar/combat-tracker.html",
       scrollable: [""],
     },
   };
@@ -359,7 +359,7 @@ export class CairnCombatTracker extends foundry.applications.sidebar.tabs.Combat
       (c) => initiativeBucket(c.initiative) === bucket && c.id !== sourceId);
     const idx = members.findIndex((c) => c.id === target.id) + (after ? 1 : 0);
     members.splice(idx, 0, source);
-    const updates = members.map((c, i) => ({ _id: c.id, "flags.air-bladder.combatSort": (i + 1) * 10 }));
+    const updates = members.map((c, i) => ({ _id: c.id, "flags.mondolme.combatSort": (i + 1) * 10 }));
     const currentId = combat.started ? combat.combatant?.id : null;
     await combat.updateEmbeddedDocuments("Combatant", updates, { turnEvents: false });
     // setupTurns keeps `turn` as a NUMERIC INDEX (combat.mjs:488-503 — it

@@ -1,12 +1,12 @@
 _id: Ar3Dwb45qNho4dSv
 name: Roc Feather
 type: item
-img: systems/air-bladder/art/game-icons/birds/feather.svg
+img: systems/mondolme/art/game-icons/birds/feather.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: Hold while falling to float safely to the ground from any height.
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!Ar3Dwb45qNho4dSv'

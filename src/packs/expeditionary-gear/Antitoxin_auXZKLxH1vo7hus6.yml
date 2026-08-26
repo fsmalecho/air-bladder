@@ -2,7 +2,7 @@ name: Antitoxin
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/bottles/round-potion.svg
+img: systems/mondolme/art/game-icons/bottles/round-potion.svg
 effects: []
 _id: auXZKLxH1vo7hus6
 _stats:

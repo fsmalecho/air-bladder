@@ -3,7 +3,7 @@ name: Mimic
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/mimic-chest.svg
+img: systems/mondolme/art/game-icons/creatures/mimic-chest.svg
 items:
   - _id: SjbfrLyBrHXIHJcF
     name: Monstrous Skin
@@ -160,7 +160,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/mimic-chest.svg
+    src: systems/mondolme/art/game-icons/creatures/mimic-chest.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

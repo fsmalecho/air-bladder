@@ -185,7 +185,7 @@
             </nav>
             <section class="content">
                 <div class="tab {{tabs.items.cssClass}}" data-group="primary" data-tab="items">
-                    {{> "systems/air-bladder/templates/parts/items-list.html" withFatigue=1 withShop=withShop}}
+                    {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=1 withShop=withShop}}
                 </div>
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
                     <div class="description">
@@ -193,7 +193,7 @@
                               partial now — the npc sheet renders the same one
                               for role-npc people (2026-08-01). Moved, not
                               copied: this is its original home. --}}
-                        {{> "systems/air-bladder/templates/parts/bio-block.html"}}
+                        {{> "systems/mondolme/templates/parts/bio-block.html"}}
                         {{!-- The Features list rendered here until 2026-08-09,
                               behind the show-features-section setting; both went
                               (user ruling). `system.features` survives on the
@@ -209,7 +209,7 @@
                               text in `description` rather than `biography`. --}}
                         <div class="cairn-compat-footer">
                             <a href="https://cairnrpg.com" target="_blank" rel="noopener" title="{{ localize 'CAIRN.CompatibleAlt' }}">
-                                <img src="systems/air-bladder/logo/Cairn_Stamp.jpg" alt="{{ localize 'CAIRN.CompatibleAlt' }}" />
+                                <img src="systems/mondolme/logo/Cairn_Stamp.jpg" alt="{{ localize 'CAIRN.CompatibleAlt' }}" />
                             </a>
                             <div class="cairn-compat-caption">{{{ localize 'CAIRN.CompatibleCredit' }}}</div>
                         </div>
@@ -217,7 +217,7 @@
                 </div>
                 {{#if system.showContainersTab}}
                 <div class="tab {{tabs.containers.cssClass}}" data-group="primary" data-tab="containers">
-                    {{> "systems/air-bladder/templates/parts/container-list.html"}}
+                    {{> "systems/mondolme/templates/parts/container-list.html"}}
                 </div>
                 {{/if}}
                 <div class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">

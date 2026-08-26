@@ -1,12 +1,12 @@
 _id: caDKrOr1tkXkLVCk
 name: Sickle
 type: weapon
-img: systems/air-bladder/art/game-icons/tools/sickle.svg
+img: systems/mondolme/art/game-icons/tools/sickle.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: barebones
 system:
   description: A curved reaping-blade. It cuts grain and throats with equal ease.
@@ -24,6 +24,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!caDKrOr1tkXkLVCk'

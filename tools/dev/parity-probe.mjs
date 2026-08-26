@@ -32,8 +32,8 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const NS = "air-bladder";
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
+    const NS = "mondolme";
+    const gen = await import("/systems/mondolme/module/character-generator.js");
     const out = { made: [] };
 
     const was = {
@@ -83,7 +83,7 @@ try {
       await game.settings.set(NS, "barebones-failed-career", true);
 
       // 3. ...and the 2e differential for the unconditional hide above
-      const p2 = game.packs.get("air-bladder.backgrounds-2e");
+      const p2 = game.packs.get("mondolme.backgrounds-2e");
       const bg2 = (await p2.getDocuments())[0];
       const c2 = await gen.generate2eCharacter(bg2);
       const a2 = await gen.createActorWithCharacter(c2);

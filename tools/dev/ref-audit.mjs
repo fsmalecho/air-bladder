@@ -44,7 +44,7 @@ const docsIn = (pack) => {
 const byId = new Map();
 for (const pack of packDirs) {
   for (const d of docsIn(pack)) {
-    if (d._id) byId.set(`air-bladder.${pack}/${d._id}`, { name: d.name, pack });
+    if (d._id) byId.set(`mondolme.${pack}/${d._id}`, { name: d.name, pack });
   }
 }
 
@@ -110,7 +110,7 @@ for (const pack of packDirs) {
     for (const r of d.results) {
       for (const m of String(r.description ?? "").matchAll(INLINE_UUID)) {
         const p = m[1].split(".");
-        if (p[0] !== "Compendium" || p.length !== 5 || p[1] !== "air-bladder") {
+        if (p[0] !== "Compendium" || p.length !== 5 || p[1] !== "mondolme") {
           inlineUnresolvable.push(`${d.name} [${(r.range ?? []).join("-")}] -> ${m[1]}`);
           continue;
         }
@@ -187,7 +187,7 @@ if (inlineChecked < EXPECTED_INLINE_REFS) {
 if (inlineUnresolvable.length) {
   failed = true;
   console.error(`\nUNRESOLVABLE — ${inlineUnresolvable.length} inline link(s) are world-scoped or `
-    + "foreign (only Compendium.air-bladder.* can resolve in a user's world):");
+    + "foreign (only Compendium.mondolme.* can resolve in a user's world):");
   for (const d of inlineUnresolvable) console.error(`  ${d}`);
 }
 
@@ -274,7 +274,7 @@ const listIn = (relPath, constName) => {
   const m = new RegExp(`const ${constName}\\s*=\\s*\\[([\\s\\S]*?)\\]`).exec(src);
   if (!m) return null;
   return [...m[1].matchAll(/["']([\w.-]+)["']/g)]
-    .map((x) => x[1].replace(/^air-bladder\./, ""));
+    .map((x) => x[1].replace(/^mondolme\./, ""));
 };
 
 const truth = listIn("module/gear.js", "CANONICAL_GEAR_PACKS");
@@ -366,9 +366,9 @@ if (scrubHits.length) {
 // classifier's own output cannot rot this way (it is generated); a chosen path
 // can, which is exactly why choosing is worth gating.
 //
-// `systems/air-bladder/...` maps to the repo root. Anything else — a core
+// `systems/mondolme/...` maps to the repo root. Anything else — a core
 // `icons/svg/...` path, a module's art — is not ours to resolve and is skipped.
-const PREFIX = "systems/air-bladder/";
+const PREFIX = "systems/mondolme/";
 const artMissing = [];
 const walkPackArt = (dir) => {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

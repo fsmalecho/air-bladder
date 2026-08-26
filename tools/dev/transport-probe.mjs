@@ -42,7 +42,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const mkt = await import("/systems/mondolme/module/marketplace.js");
     const made = [];                      // actors to clean up
 
     // 1. ONE pack now: mounts-transports, npc Actors only. The legacy
@@ -50,8 +50,8 @@ try {
     //    Sack) are Actor documents in a Containers folder, and every shop row
     //    references the Actor pack. Its continued absence is asserted: a
     //    resurrected Item pack would mean the dissolution regressed.
-    const aPack = game.packs.get("air-bladder.mounts-transports");
-    if (!aPack) return { error: "air-bladder.mounts-transports pack is not registered" };
+    const aPack = game.packs.get("mondolme.mounts-transports");
+    if (!aPack) return { error: "mondolme.mounts-transports pack is not registered" };
     const aDocs = await aPack.getDocuments();
     const catalog = await mkt.getMarketplaceCatalog();
     const cat = (catalog.categories ?? []).find((c) => c.name === "Transports & Containers");
@@ -64,13 +64,13 @@ try {
 
     const shopMule = cat.items.find((i) => i.name === "Mule");
     const setup = {
-      legacyPackGone: !game.packs.get("air-bladder.transports"),
+      legacyPackGone: !game.packs.get("mondolme.transports"),
       actorCount: aDocs.filter((d) => d.documentName === "Actor" && d.type === "npc").length,
       // The pack holds two kinds: what the shop stocks, and the beasts a 2e
       // background rolls up. Both are editable documents; only the first kind
       // is for sale.
-      stockedCount: aDocs.filter((d) => d.getFlag("air-bladder", "transportSource") === "2e").length,
-      beastCount: aDocs.filter((d) => d.getFlag("air-bladder", "transportSource") === "background-2e").length,
+      stockedCount: aDocs.filter((d) => d.getFlag("mondolme", "transportSource") === "2e").length,
+      beastCount: aDocs.filter((d) => d.getFlag("mondolme", "transportSource") === "background-2e").length,
       folderCount: aPack.folders.size,
       wornInContainers: ["Backpack", "Sack"].every((n) =>
         aDocs.find((d) => d.name === n)?.folder?.name === "Containers"),
@@ -204,7 +204,7 @@ try {
     //     `maxConnections()` is refused BEFORE any gold moves. Seeded through
     //     creation data (connectActor would trip the same wall), witnessed
     //     below the cap: one child fewer and the SAME purchase lands.
-    const { maxConnections } = await import("/systems/air-bladder/module/connections.js");
+    const { maxConnections } = await import("/systems/mondolme/module/connections.js");
     const max = maxConnections();
     const capped = await CONFIG.Actor.documentClass.create({
       name: "PROBE Capped", type: "character", system: { gold: 500 },
@@ -250,7 +250,7 @@ try {
     //     with entries invented here — no world write, and no dependence on
     //     what the shipped Spanish pack happens to call a mule. Restored in a
     //     finally, or every leg after this one runs translated.
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
     const warns = [];
     const origWarn = ui.notifications.warn;
     ui.notifications.warn = (m, ...rest) => {
@@ -368,7 +368,7 @@ try {
       worn: dirRow(packActor?.id)?.classList.contains("hidden") === false,
       // The thumbnail must be greyed to match the sheet, on the role.
       mountGrey: dirRow(muleActor?.id)?.classList.contains("cairn-grayscale-portrait") ?? false,
-      settingGone: game.settings.settings.get("air-bladder.show-container-actors") === undefined,
+      settingGone: game.settings.settings.get("mondolme.show-container-actors") === undefined,
     };
 
     for (const a of made) { try { await a.delete(); } catch { /* already gone */ } }

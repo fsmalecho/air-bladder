@@ -1,7 +1,7 @@
 _id: fqhnNctO4vbBmjr1
 name: Rations
 type: item
-img: systems/air-bladder/art/game-icons/tools/knife-fork.svg
+img: systems/mondolme/art/game-icons/tools/knife-fork.svg
 effects: []
 folder: null
 sort: 0
@@ -23,7 +23,7 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.11
   coreVersion: '14.365'
   createdTime: 1785873591137

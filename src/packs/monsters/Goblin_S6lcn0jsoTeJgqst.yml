@@ -3,7 +3,7 @@ name: Goblin
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/goblin.svg
+img: systems/mondolme/art/game-icons/creatures/goblin.svg
 items:
   - _id: 9gEAyLauUUD7ZH4O
     name: Dagger
@@ -160,7 +160,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/goblin.svg
+    src: systems/mondolme/art/game-icons/creatures/goblin.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

@@ -2,12 +2,12 @@ name: Crossbow
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/crossbow.svg
+img: systems/mondolme/art/game-icons/weapons/crossbow.svg
 effects: []
 _id: mjddKpJ42HUs5GA7
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.10
   createdTime: 1786058536947
   modifiedTime: 1786058537849

@@ -3,7 +3,7 @@ name: Lizard, Giant Gecko
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/reptiles/chameleon-glyph.svg
+img: systems/mondolme/art/game-icons/reptiles/chameleon-glyph.svg
 items:
   - _id: MDmGaUhhbIHjsED0
     name: Bite
@@ -152,7 +152,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/reptiles/chameleon-glyph.svg
+    src: systems/mondolme/art/game-icons/reptiles/chameleon-glyph.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

@@ -23,7 +23,7 @@ const playerMarketClosed = () =>
  * The marketplace: a shop dialog a character opens from their Inventory tab.
  *
  * Unlike the fork's inlined price list, the catalog is a REFERENCE pack. The
- * `air-bladder.marketplace` compendium holds one RollTable per category
+ * `mondolme.marketplace` compendium holds one RollTable per category
  * ("Market: Weapons/Armor/Gear"), each a list of document results pointing at
  * items in the editable gear pool. A row's price, description, and tags are read
  * off the referenced Item at open time — so editing a pool item's cost in Foundry
@@ -52,7 +52,7 @@ export const TRANSPORTS_CATEGORY = "Transports & Containers";
 // Shopper-facing category order; a table whose stripped name isn't listed falls
 // to the end in pack order.
 const CATEGORY_ORDER = ["Weapons", "Armor", "Gear", TRANSPORTS_CATEGORY];
-const MARKETPLACE_PACK = "air-bladder.marketplace";
+const MARKETPLACE_PACK = "mondolme.marketplace";
 
 /** A resolved pool document → a fresh owned-item payload; carries the item's
  *  cost/description/tags.
@@ -404,7 +404,7 @@ export const acquireTransport = async (actor, doc, pay) => {
       ownership: foundry.data.operators.ForcedReplacement.create(connectedOwnershipShape(actor)),
     });
   } else {
-    await container.update({ [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: true });
+    await container.update({ [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: true });
     game.socket.emit(`system.${game.system.id}`, { action: "ownershipSync", childUuid: container.uuid });
   }
   if (pay) {
@@ -576,7 +576,7 @@ export const openMarketplace = async (actor, opts = {}) => {
           if (isCarrier(data)) await acquireTransport(actor, data, pay);
           else await acquire(actor, foundry.utils.deepClone(data), pay);
         } catch (err) {
-          console.error("Air Bladder | marketplace acquire failed:", err);
+          console.error("Mondolme | marketplace acquire failed:", err);
           ui.notifications.error(game.i18n.localize("CAIRN.Notify.DropFailed"));
         } finally {
           refresh();

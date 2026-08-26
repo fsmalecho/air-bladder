@@ -3,7 +3,7 @@ name: Elemental, Air
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/spike/tornado-discs.svg
+img: systems/mondolme/art/game-icons/spike/tornado-discs.svg
 items:
   - _id: h839dXN4GqhCQHs7
     name: Whirlwind
@@ -116,7 +116,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/spike/tornado-discs.svg
+    src: systems/mondolme/art/game-icons/spike/tornado-discs.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

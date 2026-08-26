@@ -1,12 +1,12 @@
 _id: MTjmvB11bhGdbk7F
 name: Acrobat
 type: background
-img: systems/air-bladder/icons/background.svg
+img: systems/mondolme/icons/background.svg
 effects: []
 folder: null
 sort: 200
 flags:
-  air-bladder:
+  mondolme:
     backgroundSource: barebones
     roll: 2
 system:
@@ -23,6 +23,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!MTjmvB11bhGdbk7F'

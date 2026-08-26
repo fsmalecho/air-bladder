@@ -2,7 +2,7 @@ name: Net
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/insects/bug-net.svg
+img: systems/mondolme/art/game-icons/insects/bug-net.svg
 effects: []
 _id: MnTO11a4CyCTaPPN
 system:

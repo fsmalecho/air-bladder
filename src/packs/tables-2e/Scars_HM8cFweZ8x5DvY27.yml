@@ -13,7 +13,7 @@ results:
       - 1
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           Roll 1d6. 1: Neck, 2: Hands, 3: Eye, 4: Chest, 5: Legs, 6: Ear.
 
@@ -42,7 +42,7 @@ results:
       - 2
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           You're disoriented and shaken. Describe how you refocus.
 
@@ -71,7 +71,7 @@ results:
       - 3
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: >-
           You're sent flying and land flat on your face, winded. You are
           deprived until you rest for a few hours.
@@ -103,7 +103,7 @@ results:
       - 4
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           Roll 1d6. 1-2: Leg, 3-4: Arm, 5: Rib, 6: Skull.
 
@@ -132,7 +132,7 @@ results:
       - 5
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           You're afflicted with a gross, uncomfortable infection.
 
@@ -161,7 +161,7 @@ results:
       - 6
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: >-
           Roll 1d6. 1-2: STR, 3-4: DEX, 5-6: WIL.
 
@@ -193,7 +193,7 @@ results:
       - 7
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           You can barely move until you get serious help and rest.
 
@@ -222,7 +222,7 @@ results:
       - 8
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           You cannot hear anything until you find extraordinary aid.
 
@@ -251,7 +251,7 @@ results:
       - 9
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           Some hidden part of your psyche is knocked loose.
 
@@ -280,7 +280,7 @@ results:
       - 10
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: >-
           An appendage is torn off, crippled, or useless. (The Warden will tell
           you which.)
@@ -312,7 +312,7 @@ results:
       - 11
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: |-
           You are deprived and out of action. You die in one hour unless healed.
 
@@ -341,7 +341,7 @@ results:
       - 12
     drawn: false
     flags:
-      air-bladder:
+      mondolme:
         description: >-
           Death seemed ever so close, but somehow you survived. If your next
           save against critical damage is a fail, you die horribly.
@@ -372,7 +372,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.9
   createdTime: null

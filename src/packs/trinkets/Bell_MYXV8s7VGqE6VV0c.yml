@@ -1,12 +1,12 @@
 _id: MYXV8s7VGqE6VV0c
 name: Bell
 type: item
-img: systems/air-bladder/art/game-icons/metal/ringing-bell.svg
+img: systems/mondolme/art/game-icons/metal/ringing-bell.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: barebones
 system:
   description: ''
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!MYXV8s7VGqE6VV0c'

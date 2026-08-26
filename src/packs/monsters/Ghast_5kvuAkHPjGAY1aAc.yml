@@ -3,7 +3,7 @@ name: Ghast
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/shambling-zombie.svg
+img: systems/mondolme/art/game-icons/creatures/shambling-zombie.svg
 items:
   - _id: 1TiwZnpQoMgWI2mX
     name: Claws*
@@ -122,7 +122,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/shambling-zombie.svg
+    src: systems/mondolme/art/game-icons/creatures/shambling-zombie.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

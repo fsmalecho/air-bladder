@@ -68,7 +68,7 @@ try {
 
   const r = await withSettings(page, () => page.evaluate(async () => {
     const CG = game.cairn.characterGenerator;
-    const gear = await import("/systems/air-bladder/module/gear.js");
+    const gear = await import("/systems/mondolme/module/gear.js");
 
     const findPoolDoc = async (name) => {
       const lower = String(name).toLowerCase();
@@ -119,7 +119,7 @@ try {
     const book = list.find((h) => h.name === actor.system.profession);
     if (!book) return { error: `generated profession "${actor.system.profession}" is not in the catalogue` };
 
-    const tagged = actor.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "profession");
+    const tagged = actor.items.filter((i) => i.getFlag("mondolme", "grantSource") === "profession");
     const gen = {
       profession: book.name,
       dayRate: actor.system.dayRate === book.rate,
@@ -208,7 +208,7 @@ try {
       staleCleared: (() => {
         const now = list.find((h) => h.name === actor.system.profession);
         const names = new Set((now?.gear ?? []).map((g) => g.name.toLowerCase()));
-        const tagged2 = actor.items.filter((i) => i.getFlag("air-bladder", "grantSource") === "profession");
+        const tagged2 = actor.items.filter((i) => i.getFlag("mondolme", "grantSource") === "profession");
         // Aliased names resolve to a differently-named pool item, so compare on
         // COUNT rather than identity: no more tagged items than the statblock grants.
         return tagged2.length <= (now?.gear?.length ?? 0);

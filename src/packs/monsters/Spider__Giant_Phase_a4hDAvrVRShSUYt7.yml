@@ -3,7 +3,7 @@ name: Spider, Giant Phase
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/animals/spider-face.svg
+img: systems/mondolme/art/game-icons/animals/spider-face.svg
 items:
   - _id: Mp06O1wuepVkTT71
     name: Bite*
@@ -119,7 +119,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/animals/spider-face.svg
+    src: systems/mondolme/art/game-icons/animals/spider-face.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

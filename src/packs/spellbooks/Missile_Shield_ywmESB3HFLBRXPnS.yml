@@ -2,7 +2,7 @@ name: Missile Shield
 type: spellbook
 flags:
   core: {}
-img: systems/air-bladder/icons/spellbook.svg
+img: systems/mondolme/icons/spellbook.svg
 effects: []
 _id: ywmESB3HFLBRXPnS
 _stats:

@@ -1,12 +1,12 @@
 _id: zlO4pXrVRLnPih7Z
 name: Boiled Leather
 type: armor
-img: systems/air-bladder/art/game-icons/armor/leather-armor.svg
+img: systems/mondolme/art/game-icons/armor/leather-armor.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Hardened leather armor — light, quiet, and enough to turn a glancing blow.
@@ -22,6 +22,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!zlO4pXrVRLnPih7Z'

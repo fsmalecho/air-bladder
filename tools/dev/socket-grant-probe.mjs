@@ -128,7 +128,7 @@ await dismissChrome(alicePage);
 /* ---- positive path: the real player grant, end to end -------------------- */
 
 const granted = await alicePage.evaluate(async ({ pcUuid }) => {
-  const gen = await import("/systems/air-bladder/module/character-generator.js");
+  const gen = await import("/systems/mondolme/module/character-generator.js");
   const pc = await fromUuid(pcUuid);
   // The exact call a player's generation makes. Returns [] on this side; the
   // document appears when the Warden's client answers over the socket.
@@ -165,7 +165,7 @@ const granted = await alicePage.evaluate(async ({ pcUuid }) => {
       && Object.keys(horse.ownership).every((id) =>
         id === "default" || id === game.user.id || game.users.get(id)?.isGM),
     shape: { ...horse.ownership },
-    flagged: horse.getFlag("air-bladder", "grantSource") === "question:9",
+    flagged: horse.getFlag("mondolme", "grantSource") === "question:9",
     capacity: horse.system.slotsMax,
   };
 }, { pcUuid: scene.pcUuid });
@@ -341,18 +341,18 @@ const sweepScene = await gmPage.evaluate(async () => {
 });
 
 await alicePage.evaluate(async ({ sackUuid, victimUuid }) => {
-  const { OWNERSHIP_SYNC_FLAG } = await import("/systems/air-bladder/module/connections.js");
+  const { OWNERSHIP_SYNC_FLAG } = await import("/systems/mondolme/module/connections.js");
   const sack = await fromUuid(sackUuid);
   // The attack verbatim: point the own container at a stranger's PC, raise the
   // flag, emit NOTHING.
   await sack.update({
     "system.connectedTo": victimUuid,
-    [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: true,
+    [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: true,
   });
 }, { sackUuid: sweepScene.sackUuid, victimUuid: sweepScene.victimUuid });
 
 const planted = await gmPage.evaluate((id) =>
-  game.actors.get(id)?.getFlag("air-bladder", "ownershipSyncPending") === true, sweepScene.sackId);
+  game.actors.get(id)?.getFlag("mondolme", "ownershipSyncPending") === true, sweepScene.sackId);
 planted
   ? ok("Alice planted flag + connectedTo without emitting", "the offline route is live")
   : fail("the plant did not land", "sweep leg is vacuous");
@@ -367,11 +367,11 @@ const swept = await gmPage.evaluate(async ({ sackId, bobId, aliceId }) => {
   let sack = game.actors.get(sackId);
   while (Date.now() < deadline) {
     sack = game.actors.get(sackId);
-    if (sack && sack.getFlag("air-bladder", "ownershipSyncPending") === undefined) break;
+    if (sack && sack.getFlag("mondolme", "ownershipSyncPending") === undefined) break;
     await new Promise((r) => setTimeout(r, 500));
   }
   return {
-    flagCleared: sack?.getFlag("air-bladder", "ownershipSyncPending") === undefined,
+    flagCleared: sack?.getFlag("mondolme", "ownershipSyncPending") === undefined,
     bobLevel: sack?.ownership?.[bobId] ?? null,
     aliceKept: sack?.ownership?.[aliceId] ?? null,
     defaultLevel: sack?.ownership?.default ?? null,
@@ -387,15 +387,15 @@ swept.bobLevel === null && swept.aliceKept === 3 && swept.defaultLevel === 0
 
 // Control: the same plant through the OLD call shape (no requester).
 await alicePage.evaluate(async ({ sackUuid, victimUuid }) => {
-  const { OWNERSHIP_SYNC_FLAG } = await import("/systems/air-bladder/module/connections.js");
+  const { OWNERSHIP_SYNC_FLAG } = await import("/systems/mondolme/module/connections.js");
   const sack = await fromUuid(sackUuid);
   await sack.update({
     "system.connectedTo": victimUuid,
-    [`flags.air-bladder.${OWNERSHIP_SYNC_FLAG}`]: true,
+    [`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`]: true,
   });
 }, { sackUuid: sweepScene.sackUuid, victimUuid: sweepScene.victimUuid });
 const sweepControl = await gmPage.evaluate(async ({ sackId, bobId }) => {
-  const { syncPendingOwnership } = await import("/systems/air-bladder/module/connections.js");
+  const { syncPendingOwnership } = await import("/systems/mondolme/module/connections.js");
   const sack = game.actors.get(sackId);
   await syncPendingOwnership(sack, {}); // the pre-fix sweep: no requester, no check
   return { bobLevel: sack.ownership?.[bobId] ?? null };
@@ -414,7 +414,7 @@ sweepControl.bobLevel === 3
 // reads as "generation lost my mule". Runs AFTER the old-handler control above
 // is unregistered — the old handler has no cap and would mint these payloads.
 const capScene = await gmPage.evaluate(async () => {
-  const { maxConnections } = await import("/systems/air-bladder/module/connections.js");
+  const { maxConnections } = await import("/systems/mondolme/module/connections.js");
   const max = maxConnections();
   const alice = game.users.getName("Alice");
   const pc = await CONFIG.Actor.documentClass.create({

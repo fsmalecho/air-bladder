@@ -65,7 +65,7 @@ Hooks.once("init", async function () {
   // (document-sheet-config.mjs:472) and the whole system fails to load out of
   // `init`. Removing them is the fix and it costs nothing today.
   //
-  // The "cairn" scope is deliberate and must NOT be renamed to "air-bladder": it
+  // The "cairn" scope is deliberate and must NOT be renamed to "mondolme": it
   // is baked into the `core.sheetClasses` setting of every existing world as
   // `cairn.CairnActorSheet`, so changing it silently resets any sheet a Warden
   // chose by hand.
@@ -76,7 +76,7 @@ Hooks.once("init", async function () {
   // frozen scope above, spelled out at them. The system NAME, not a localized
   // key: it is a proper noun, identical in every language, and one dropdown row
   // per document type needs nothing more to be unambiguous.
-  const label = "Air Bladder";
+  const label = "Mondolme";
   foundry.documents.collections.Actors.registerSheet("cairn", CairnActorSheet, { makeDefault: true, label });
   foundry.documents.collections.Items.registerSheet("cairn", CairnItemSheet, { makeDefault: true, label });
 
@@ -134,7 +134,7 @@ Hooks.once("ready", () => {
     // escapes it as an unhandled rejection naming nothing, which is how a
     // failed hotbar drop reported itself as a blank console entry.
     createCairnMacro(data, slot).catch((err) =>
-      console.error("Air Bladder | hotbar drop failed", err));
+      console.error("Mondolme | hotbar drop failed", err));
     return false;
   });
   // Settings used to be registered under the "cairn" namespace, which Foundry
@@ -151,7 +151,7 @@ Hooks.once("ready", () => {
     try {
       await migrateSettingsNamespace();
     } catch (err) {
-      console.error("Air Bladder | settings namespace migration failed (continuing):", err);
+      console.error("Mondolme | settings namespace migration failed (continuing):", err);
     }
   })();
 });
@@ -233,7 +233,7 @@ const wrapTranslatedSearch = (app, displayOf) => {
         }
       }
     } catch (err) {
-      console.warn("Air Bladder | translated directory-search pass failed; English search is unaffected", err);
+      console.warn("Mondolme | translated directory-search pass failed; English search is unaffected", err);
     }
   };
 };
@@ -400,7 +400,7 @@ const wrapCompendiumDocumentSearch = (app) => {
           }
         }
       } catch (err) {
-        console.warn("Air Bladder | translated compendium document-search pass failed; English search is unaffected", err);
+        console.warn("Mondolme | translated compendium document-search pass failed; English search is unaffected", err);
       }
     };
   }
@@ -425,7 +425,7 @@ const wrapCompendiumDocumentSearch = (app) => {
           if (display && display !== english) el.textContent = display;
         }
       } catch (err) {
-        console.warn("Air Bladder | translated compendium document-search render failed; names stay English", err);
+        console.warn("Mondolme | translated compendium document-search render failed; names stay English", err);
       }
     };
   }
@@ -695,7 +695,7 @@ Hooks.once("init", () => {
         if (foundry.applications.ux.SearchFilter.testQuery(rgx, es)) el.hidden = false;
       }
     } catch (err) {
-      console.warn("Air Bladder | translated journal page-search pass failed; English search is unaffected", err);
+      console.warn("Mondolme | translated journal page-search pass failed; English search is unaffected", err);
     }
   };
 });
@@ -795,19 +795,19 @@ async function handleGrantActors(msg, senderId) {
   if (!owner || !user) return;
   // A world Actor, not whatever else the uuid resolved to.
   if (!(owner instanceof getDocumentClass("Actor")) || owner.pack || owner.parent) {
-    console.warn(`Air Bladder | refused a grant request from ${user.name}: ${msg.ownerUuid} is not a world Actor`);
+    console.warn(`Mondolme | refused a grant request from ${user.name}: ${msg.ownerUuid} is not a world Actor`);
     return;
   }
   // The SENDER must already own the character they are attaching to.
   if (!owner.testUserPermission(user, "OWNER")) {
-    console.warn(`Air Bladder | refused a grant request from ${user.name}: not an owner of ${owner.name}`);
+    console.warn(`Mondolme | refused a grant request from ${user.name}: not an owner of ${owner.name}`);
     return;
   }
   // ...and the target must be able to KEEP. Alice owns the mule her horse
   // grant minted (ownership is copied), so without this she could aim a
   // second request at the mule and chain-nest through the Warden's client.
   if (!owner.canKeepConnected) {
-    console.warn(`Air Bladder | refused a grant request from ${user.name}: ${owner.name} cannot keep connected actors`);
+    console.warn(`Mondolme | refused a grant request from ${user.name}: ${owner.name} cannot keep connected actors`);
     return;
   }
   // A background grants a handful; anything more is not a background. And
@@ -820,7 +820,7 @@ async function handleGrantActors(msg, senderId) {
   const room = Math.min(8, connectionHeadroom(owner));
   const asked = Array.isArray(msg.payloads) ? msg.payloads : [];
   if (asked.length > room) {
-    console.warn(`Air Bladder | grant request from ${user.name} clamped: ${owner.name} has room for ${room} of ${asked.length} (connection limit)`);
+    console.warn(`Mondolme | grant request from ${user.name} clamped: ${owner.name} has room for ${room} of ${asked.length} (connection limit)`);
   }
   const payloads = asked.slice(0, room);
   // `img` comes off the wire into a FilePathField, which refuses an unknown
@@ -905,7 +905,7 @@ async function handleGrantActors(msg, senderId) {
       ownership: foundry.data.operators.ForcedReplacement.create(connectedOwnershipShape(owner)),
     })));
   } catch (err) {
-    console.error(`Air Bladder | grant request from ${user.name} for ${owner.name} failed:`, err);
+    console.error(`Mondolme | grant request from ${user.name} for ${owner.name} failed:`, err);
     ui.notifications.error(game.i18n.format("CAIRN.Notify.GrantFailedFor", { player: user.name }));
   }
 }
@@ -938,7 +938,7 @@ Hooks.once("init", () => {
         if (!(child instanceof getDocumentClass("Actor")) || child.pack || child.parent) return;
         await syncPendingOwnership(child, { requester: game.users.get(senderId) ?? null });
       } catch (err) {
-        console.error(`Air Bladder | ownershipSync request from ${game.users.get(senderId)?.name ?? senderId} failed:`, err);
+        console.error(`Mondolme | ownershipSync request from ${game.users.get(senderId)?.name ?? senderId} failed:`, err);
       }
       return;
     }
@@ -1006,7 +1006,7 @@ Hooks.once("init", () => {
           action: "pcGenerated", userId: senderId, uuid: actor?.uuid ?? null,
         });
       } catch (err) {
-        console.error(`Air Bladder | generatePC failed for ${user.name}:`, err);
+        console.error(`Mondolme | generatePC failed for ${user.name}:`, err);
         ui.notifications.error(game.i18n.format("CAIRN.Notify.PcGenFailedFor", { player: user.name }));
         // `failed` distinguishes this from the Warden dismissing the picker:
         // the player is told to ask again, not told it was cancelled.
@@ -1076,7 +1076,7 @@ Hooks.once("init", () => {
       // whole grant lost with nothing on either screen, the exact silence
       // the inner catch was built to prevent (review #17).
       const player = game.users.get(senderId)?.name ?? senderId;
-      console.error(`Air Bladder | grant request from ${player} failed:`, err);
+      console.error(`Mondolme | grant request from ${player} failed:`, err);
       ui.notifications.error(game.i18n.format("CAIRN.Notify.GrantFailedFor", { player }));
     } finally {
       grantActorsInFlight.delete(senderId);
@@ -1121,7 +1121,7 @@ Hooks.once("ready", async () => {
       await u.update({ name: warden });
       if (!ours) await u.setFlag(FLAG_SCOPE, "renamedFrom", original);
     } catch (err) {
-      console.warn(`Air Bladder | could not rename user "${u.name}":`, err);
+      console.warn(`Mondolme | could not rename user "${u.name}":`, err);
     }
   }
 });
@@ -1131,7 +1131,7 @@ Hooks.once("ready", async () => {
    actor). It went with the type on 2026-07-31: it selected on
    `a.type === "container"`, so with the type retired it could only ever match
    nothing. An npc that came through the built type migration already carries a
-   systems/air-bladder/icons/ path, which was never in the set anyway. */
+   systems/mondolme/icons/ path, which was never in the set anyway. */
 
 // GM-only, single-writer, like the rename above.
 Hooks.once("ready", async () => {
@@ -1152,7 +1152,7 @@ Hooks.once("ready", async () => {
     try {
       await fn();
     } catch (err) {
-      console.error(`Air Bladder | ${label} failed (continuing):`, err);
+      console.error(`Mondolme | ${label} failed (continuing):`, err);
     }
   };
 
@@ -1222,7 +1222,7 @@ Hooks.once("ready", async () => {
  * never touched. Idempotent by construction: a rewritten path no longer matches.
  * Batched per collection so a failure cannot leave half a world remapped.
  */
-const ICON_PNG = /^systems\/air-bladder\/icons\/([a-z-]+)\.png$/;
+const ICON_PNG = /^systems\/mondolme\/icons\/([a-z-]+)\.png$/;
 const toSvg = (src) => (ICON_PNG.test(src ?? "") ? src.replace(/\.png$/, ".svg") : null);
 
 const migrateIconsToSvg = async () => {
@@ -1255,7 +1255,7 @@ const migrateIconsToSvg = async () => {
     if (tokens.length) { await scene.updateEmbeddedDocuments("Token", tokens); count += tokens.length; }
   }
 
-  if (count) console.log(`Air Bladder | moved ${count} document(s) from .png to .svg class icons`);
+  if (count) console.log(`Mondolme | moved ${count} document(s) from .png to .svg class icons`);
 };
 
 /**
@@ -1277,7 +1277,7 @@ const migrateIconsToSvg = async () => {
  * anything under a moved folder moves with it, and nothing else is touched. A
  * pasted URL, a custom upload and anything under icons/ all fail the prefix and
  * are left alone. Idempotent by construction — a rewritten path begins
- * `systems/air-bladder/art/…` and matches no `from` — which matters because
+ * `systems/mondolme/art/…` and matches no `from` — which matters because
  * this runs on every GM load, not behind a version marker.
  *
  * Covers ROLLTABLE RESULTS as well, which the .svg migration above does not
@@ -1297,8 +1297,8 @@ const migrateIconsToSvg = async () => {
 const ART_MIGRATION_GENERATION = 1;
 
 const ART_MOVES = [
-  ["systems/air-bladder/character_portraits/", "systems/air-bladder/art/jon-aspeheim/portraits/"],
-  ["systems/air-bladder/character_tokens/", "systems/air-bladder/art/jon-aspeheim/tokens/"],
+  ["systems/mondolme/character_portraits/", "systems/mondolme/art/jon-aspeheim/portraits/"],
+  ["systems/mondolme/character_tokens/", "systems/mondolme/art/jon-aspeheim/tokens/"],
   // The two tlomdev folders that lost their SPACES (2026-08-04, user ruling —
   // Foundry's media guidance forbids them, and a spaced path was invisible to
   // licence-check's reference regex). These four sit ABOVE the generic
@@ -1307,19 +1307,19 @@ const ART_MOVES = [
   // folder that no longer exists, and a second pass never comes. Two entries
   // per folder — the pre-art/ prefix and the art/-era spaced prefix — because
   // a world can hold either, depending on when it last opened.
-  ["systems/air-bladder/tlomdev/human npcs for itmod/", "systems/air-bladder/art/tlomdev/human-npcs-for-itmod/"],
-  ["systems/air-bladder/tlomdev/Kettlewright Portraits/", "systems/air-bladder/art/tlomdev/kettlewright-portraits/"],
-  ["systems/air-bladder/art/tlomdev/human npcs for itmod/", "systems/air-bladder/art/tlomdev/human-npcs-for-itmod/"],
-  ["systems/air-bladder/art/tlomdev/Kettlewright Portraits/", "systems/air-bladder/art/tlomdev/kettlewright-portraits/"],
-  ["systems/air-bladder/tlomdev/", "systems/air-bladder/art/tlomdev/"],
-  ["systems/air-bladder/game-icons/", "systems/air-bladder/art/game-icons/"],
+  ["systems/mondolme/tlomdev/human npcs for itmod/", "systems/mondolme/art/tlomdev/human-npcs-for-itmod/"],
+  ["systems/mondolme/tlomdev/Kettlewright Portraits/", "systems/mondolme/art/tlomdev/kettlewright-portraits/"],
+  ["systems/mondolme/art/tlomdev/human npcs for itmod/", "systems/mondolme/art/tlomdev/human-npcs-for-itmod/"],
+  ["systems/mondolme/art/tlomdev/Kettlewright Portraits/", "systems/mondolme/art/tlomdev/kettlewright-portraits/"],
+  ["systems/mondolme/tlomdev/", "systems/mondolme/art/tlomdev/"],
+  ["systems/mondolme/game-icons/", "systems/mondolme/art/game-icons/"],
   // Lydia's never reached a RELEASE — it landed and moved within the same day —
   // and it was left out of this table on that reasoning. dev:smoke then found a
   // token in the dev world still pointing at it. `dev` mirrors to GitHub in
   // seconds precisely so people can clone it and test unreleased code, so "it
   // never shipped" is only ever true of tagged releases, and a migration that
   // reasons about releases misses every world that tracked the branch. One line.
-  ["systems/air-bladder/lydia-comer/", "systems/air-bladder/art/lydia-comer/"],
+  ["systems/mondolme/lydia-comer/", "systems/mondolme/art/lydia-comer/"],
 ];
 
 /**
@@ -1336,7 +1336,7 @@ const ART_MOVES = [
  * string; here the front is already right and the EXTENSION is wrong.
  */
 const ART_REENCODED = [
-  { prefix: "systems/air-bladder/art/lydia-comer/", from: /\.(jpe?g|png)$/i, to: ".webp" },
+  { prefix: "systems/mondolme/art/lydia-comer/", from: /\.(jpe?g|png)$/i, to: ".webp" },
   // tlomdev's 298 category drawings, the same day. CC BY-SA 4.0 permits the
   // conversion outright — no grant to negotiate — but it obliges the change to
   // be INDICATED, which is what the Modifications section of that gallery's
@@ -1345,7 +1345,7 @@ const ART_REENCODED = [
   // `kettlewright-portraits/` is untouched and needs no rule: those arrived as
   // WebP from Kettlewright and the extension pattern cannot match them. That is
   // luck rather than design, so the importer skips the folder BY NAME.
-  { prefix: "systems/air-bladder/art/tlomdev/", from: /\.png$/i, to: ".webp" },
+  { prefix: "systems/mondolme/art/tlomdev/", from: /\.png$/i, to: ".webp" },
 ];
 
 /**
@@ -1353,7 +1353,7 @@ const ART_REENCODED = [
  * leave it alone.
  *
  * The two rules CHAIN, and they have to: a world last opened before the `art/`
- * restructure holds `systems/air-bladder/lydia-comer/portraits/Dragon.jpg`,
+ * restructure holds `systems/mondolme/lydia-comer/portraits/Dragon.jpg`,
  * which needs both the move and the re-encode to arrive anywhere real. Applying
  * only one leaves a path that is wrong in a different way, and the migration
  * runs once — there is no second pass to catch it.
@@ -1485,7 +1485,7 @@ const migrateArtPaths = async () => {
     }
   }
 
-  if (count) console.log(`Air Bladder | repointed ${count} document(s) at the art/ gallery folders`);
+  if (count) console.log(`Mondolme | repointed ${count} document(s) at the art/ gallery folders`);
   await game.settings.set(SETTINGS_NS, "art-migration-generation", ART_MIGRATION_GENERATION);
 };
 
@@ -1507,7 +1507,7 @@ const migrateArtPaths = async () => {
  * already spent, `sort` (so drag-ordered inventories keep their order), `folder`
  * and `ownership` (a world scroll stays where the Warden filed it and stays
  * visible to whoever could already see it) and ALL flags —
- * `flags.air-bladder.grantSource` is how a bond or question re-roll finds the
+ * `flags.mondolme.grantSource` is how a bond or question re-roll finds the
  * items it granted, so dropping it would orphan them.
  *
  * Idempotent: a converted scroll is no longer `type: "item"`, so a re-run matches
@@ -1600,7 +1600,7 @@ const migrateScrollsToSpellbooks = async () => {
     }
   }
 
-  if (count) console.log(`Air Bladder | converted ${count} spellscroll(s) to flagged spellbooks`);
+  if (count) console.log(`Mondolme | converted ${count} spellscroll(s) to flagged spellbooks`);
 };
 
 
@@ -1672,7 +1672,7 @@ const migrateNpcRoles = async () => {
     .map((a) => ({ _id: a.id, "system.role": a.system.role }));
   if (updates.length) {
     await Actor.updateDocuments(updates, { diff: false });   // one batch, so it can't half-finish
-    console.log(`Air Bladder | stamped role on ${updates.length} npc(s)`);
+    console.log(`Mondolme | stamped role on ${updates.length} npc(s)`);
   }
   await game.settings.set(SETTINGS_NS, "roles-restamped", true);
 };
@@ -1773,11 +1773,11 @@ const migrateHirelingSplit = async () => {
       }
     } catch (err) {
       packFailed = true;
-      console.warn(`Air Bladder | could not split roles in world pack "${pack.metadata.label}":`, err);
+      console.warn(`Mondolme | could not split roles in world pack "${pack.metadata.label}":`, err);
     }
   }
 
-  if (count) console.log(`Air Bladder | npc -> hireling on ${count} document(s)`);
+  if (count) console.log(`Mondolme | npc -> hireling on ${count} document(s)`);
   // The docblock's own contract, actually kept (review #17): the marker is
   // set only after the writes LAND. A pack failure above is caught so the
   // other packs still convert — but stamping over it would record the one
@@ -1785,7 +1785,7 @@ const migrateHirelingSplit = async () => {
   // store the old meaning of "npc". Selection is what makes the retry safe:
   // everything already converted no longer matches.
   if (packFailed) {
-    console.warn("Air Bladder | hireling split incomplete — marker not set; it will retry on the next GM load");
+    console.warn("Mondolme | hireling split incomplete — marker not set; it will retry on the next GM load");
     return;
   }
   await game.settings.set(SETTINGS_NS, "hireling-split", true);
@@ -1818,7 +1818,7 @@ const migrateMountToCompanion = async () => {
     .map((a) => ({ _id: a.id, "system.role": a.system.role }));
   if (updates.length) {
     await Actor.updateDocuments(updates, { diff: false });
-    console.log(`Air Bladder | role restamped on ${updates.length} npc(s) (mount -> companion)`);
+    console.log(`Mondolme | role restamped on ${updates.length} npc(s) (mount -> companion)`);
   }
   await game.settings.set(SETTINGS_NS, "companion-restamped", true);
 };
@@ -1914,10 +1914,10 @@ const migrateGrimoirePages = async () => {
   }
 
   if (books || pages) {
-    console.log(`Air Bladder | grimoire keys: ${books} book(s) stamped, ${pages} page(s) matched to theirs`);
+    console.log(`Mondolme | grimoire keys: ${books} book(s) stamped, ${pages} page(s) matched to theirs`);
   }
   if (unresolved.length) {
-    console.warn(`Air Bladder | bound pages sitting with SEVERAL Grimoires, where nothing in the`
+    console.warn(`Mondolme | bound pages sitting with SEVERAL Grimoires, where nothing in the`
       + ` data says which book each belongs to: ${unresolved.join(", ")}. They are left as they`
       + ` are — they stay put when a book moves, rather than travelling with the wrong one. Move`
       + ` the books out one at a time: the last book on the shelf takes what is left.`);
@@ -1932,7 +1932,7 @@ const migrateGrimoirePages = async () => {
  * Generation used to write one line onto a character's Background & Notes for
  * each thing a background, question or bond granted them — "Companion: Raven
  * [Question] — A Raven Familiar…" — and keep a LEDGER of exactly what it wrote
- * in `flags.air-bladder.grantNotes` so a deleted beast could take its own line
+ * in `flags.mondolme.grantNotes` so a deleted beast could take its own line
  * away again. The feature is gone; the granted Actors are NOT, and are not
  * touched here.
  *
@@ -1984,7 +1984,7 @@ const migrateGrimoirePages = async () => {
  *   is what left the warning with no way to ever stop.
  */
 const grantNoteRemoval = (actor) => {
-  const ledger = actor.getFlag("air-bladder", "grantNotes");
+  const ledger = actor.getFlag("mondolme", "grantNotes");
   if (!Array.isArray(ledger) || !ledger.length) return null;
   const before = String(actor.system.notes ?? "");
   let notes = before;
@@ -2020,10 +2020,10 @@ const grantNoteUpdate = ({ notes, unmatched, removed }) => ({
   //
   // UNCONDITIONAL, and the second flag is why that is safe now: the ledger is
   // the selector, so leaving it behind is what made a miss permanent business.
-  "flags.air-bladder.grantNotes": new foundry.data.operators.ForcedDeletion(),
+  "flags.mondolme.grantNotes": new foundry.data.operators.ForcedDeletion(),
   // What missed, kept where nothing selects on it. Read by no code, ever — it
   // exists so the bullet on the sheet still has a description somewhere.
-  ...(unmatched.length ? { "flags.air-bladder.grantNotesUnmatched": unmatched } : {}),
+  ...(unmatched.length ? { "flags.mondolme.grantNotesUnmatched": unmatched } : {}),
 });
 
 const removeGrantNotes = async () => {
@@ -2079,16 +2079,16 @@ const removeGrantNotes = async () => {
 
   const touched = updates.length + tokenActors;
   if (touched) {
-    console.log(`Air Bladder | removed ${removed} grant note(s) from ${touched} character(s)`);
+    console.log(`Mondolme | removed ${removed} grant note(s) from ${touched} character(s)`);
   }
   // NAMED, never a bare count: the bullet is still on the sheet and this is the
   // only way anyone finds out. Said ONCE — the ledger it selects on has just
   // gone, so there is no load after this one that can say it again.
   if (leftovers.length) {
-    console.warn(`Air Bladder | grant notes whose recorded line no longer matches what is on the `
+    console.warn(`Mondolme | grant notes whose recorded line no longer matches what is on the `
       + `sheet, left exactly as they are: ${leftovers.join(", ")}. A line edited by hand is the `
       + `player's now — delete it on the sheet if it is not wanted. What generation originally `
-      + `wrote is kept on each of them under flags.air-bladder.grantNotesUnmatched, because this `
+      + `wrote is kept on each of them under flags.mondolme.grantNotesUnmatched, because this `
       + `is the last time anything reports it.`);
   }
 };
@@ -2171,7 +2171,7 @@ const flattenConnections = async () => {
   }
   if (updates.length) {
     await Actor.updateDocuments(updates);                 // one batch, so it can't half-finish
-    console.log(`Air Bladder | flattened/ownership-normalized ${updates.length} connected actor(s)`);
+    console.log(`Mondolme | flattened/ownership-normalized ${updates.length} connected actor(s)`);
   }
   await game.settings.set(SETTINGS_NS, "connections-migrated", true);
 };
@@ -2275,7 +2275,7 @@ Hooks.on("renderDialogV2", function abSpellscrollTypeOption(dialog, element) {
  *
  * Since 2026-08-22 every Warden-facing setting lives behind one of four
  * `registerMenu` buttons (settings-menus.js) and the main window shows no
- * air-bladder rows at all. Core's settings search matches a row's label and
+ * mondolme rows at all. Core's settings search matches a row's label and
  * hint plus any `[data-searchable]` text inside it (category-browser.mjs:
  * 228-232) — so a button row, knowing only its own name, would stop matching
  * "gold" the moment the gold-threshold row moved behind it. Stamp each button
@@ -2941,9 +2941,9 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
 const configureHandleBar = () => {
   // Pre-load templates
   const templatePaths = [
-    "systems/air-bladder/templates/parts/items-list.html",
-    "systems/air-bladder/templates/parts/container-list.html",
-    "systems/air-bladder/templates/parts/bio-block.html",
+    "systems/mondolme/templates/parts/items-list.html",
+    "systems/mondolme/templates/parts/container-list.html",
+    "systems/mondolme/templates/parts/bio-block.html",
   ];
 
   foundry.applications.handlebars.loadTemplates(templatePaths);

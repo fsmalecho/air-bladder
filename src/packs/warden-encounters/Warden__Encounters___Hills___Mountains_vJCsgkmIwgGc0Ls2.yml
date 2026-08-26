@@ -9,7 +9,7 @@ results:
   - _id: AGUFLEHJAOFzo9DD
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.IXxn817B5SFZf6qm]{Cyclops}
+      1 @UUID[Compendium.mondolme.monsters.Actor.IXxn817B5SFZf6qm]{Cyclops}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -32,7 +32,7 @@ results:
   - _id: 8mxVSBzKTVuRxDwA
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.bmZBRmZ5ci84Eouu]{Banshee}
+      1 @UUID[Compendium.mondolme.monsters.Actor.bmZBRmZ5ci84Eouu]{Banshee}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -55,7 +55,7 @@ results:
   - _id: bVH8f7y5uDQr0N1n
     type: text
     description: >-
-      2d4 @UUID[Compendium.air-bladder.monsters.Actor.o1YZYLD04Frr7H9x]{Cave
+      2d4 @UUID[Compendium.mondolme.monsters.Actor.o1YZYLD04Frr7H9x]{Cave
       Locusts}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -79,7 +79,7 @@ results:
   - _id: FTlLmgR95VKiumGu
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.lHkthPHDYcegFU04]{Dire
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.lHkthPHDYcegFU04]{Dire
       Wolves}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -125,7 +125,7 @@ results:
   - _id: ZcY9umoHX2CmQF2k
     type: text
     description: >-
-      1d6 @UUID[Compendium.air-bladder.monsters.Actor.vilAIkfWFALYkkNP]{Wolves}
+      1d6 @UUID[Compendium.mondolme.monsters.Actor.vilAIkfWFALYkkNP]{Wolves}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -148,7 +148,7 @@ results:
   - _id: rRZFwwtWmPGeAwqu
     type: text
     description: >-
-      1d6 @UUID[Compendium.air-bladder.monsters.Actor.uLYRD40eBgzTuPKC]{Dwarves}
+      1d6 @UUID[Compendium.mondolme.monsters.Actor.uLYRD40eBgzTuPKC]{Dwarves}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -171,7 +171,7 @@ results:
   - _id: x0bm9GkH9yPoNnxw
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.gZNwDJm20aKLCt2S]{Harpies}
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.gZNwDJm20aKLCt2S]{Harpies}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -194,7 +194,7 @@ results:
   - _id: jJU5BAo02ldO5aIW
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.PeCa3OvEr7zjIE45]{Griffon}
+      1 @UUID[Compendium.mondolme.monsters.Actor.PeCa3OvEr7zjIE45]{Griffon}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -217,7 +217,7 @@ results:
   - _id: e604RBWE2F1gbJwX
     type: text
     description: >-
-      1d2 @UUID[Compendium.air-bladder.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres}
+      1d2 @UUID[Compendium.mondolme.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -240,7 +240,7 @@ results:
   - _id: YpsYy8q5dUL92V59
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.iAygOSV2asxDBHxq]{Mountain
+      1 @UUID[Compendium.mondolme.monsters.Actor.iAygOSV2asxDBHxq]{Mountain
       Lion} (use Tiger, pg 127)
     img: icons/svg/d20-black.svg
     weight: 1
@@ -264,7 +264,7 @@ results:
   - _id: TAgNpLDJQA1iTwMH
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.IBs0FSpebF0Xx74S]{Manticore}
+      1 @UUID[Compendium.mondolme.monsters.Actor.IBs0FSpebF0Xx74S]{Manticore}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -287,7 +287,7 @@ results:
   - _id: spxZNf7lHpQnMiQn
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.DKGif4NO4Jgu4qMc]{Red
+      1 @UUID[Compendium.mondolme.monsters.Actor.DKGif4NO4Jgu4qMc]{Red
       Dragon}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -311,7 +311,7 @@ results:
   - _id: VrKTpvCZsUDIayLt
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.temXizg97jCmnoBj]{Roc}
+      1 @UUID[Compendium.mondolme.monsters.Actor.temXizg97jCmnoBj]{Roc}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -334,7 +334,7 @@ results:
   - _id: 2OvvFPEkGAsjLW8g
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.BI0XNm1nghvHmDXN]{Sky Giant}
+      1 @UUID[Compendium.mondolme.monsters.Actor.BI0XNm1nghvHmDXN]{Sky Giant}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -363,7 +363,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

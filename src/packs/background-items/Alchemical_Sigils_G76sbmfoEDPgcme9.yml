@@ -1,12 +1,12 @@
 _id: G76sbmfoEDPgcme9
 name: Alchemical Sigils
 type: armor
-img: systems/air-bladder/icons/armor.svg
+img: systems/mondolme/icons/armor.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Your chest is lined with alchemical sigils, _toughening the skin_ (1 Armor).
@@ -22,6 +22,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!G76sbmfoEDPgcme9'

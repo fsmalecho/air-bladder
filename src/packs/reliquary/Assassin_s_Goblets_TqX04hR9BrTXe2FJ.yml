@@ -1,12 +1,12 @@
 _id: TqX04hR9BrTXe2FJ
 name: Assassin's Goblets
 type: item
-img: systems/air-bladder/art/game-icons/bottles/round-potion.svg
+img: systems/mondolme/art/game-icons/bottles/round-potion.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     relicSource: srd-2e
 system:
   description: >-
@@ -25,6 +25,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!TqX04hR9BrTXe2FJ'

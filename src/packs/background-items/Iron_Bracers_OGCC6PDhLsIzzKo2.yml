@@ -1,12 +1,12 @@
 _id: OGCC6PDhLsIzzKo2
 name: Iron Bracers
 type: armor
-img: systems/air-bladder/icons/armor.svg
+img: systems/mondolme/icons/armor.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: Heavy iron forearm-guards, scarred from turning blows meant for the throat.
@@ -22,6 +22,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!OGCC6PDhLsIzzKo2'

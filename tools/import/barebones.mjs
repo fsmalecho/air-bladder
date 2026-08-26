@@ -45,7 +45,7 @@
  * differences across all four structures — so the switch changed provenance, not
  * content.)
  *
- * Idempotent: authored gear carries flags.air-bladder.gearSource: barebones and
+ * Idempotent: authored gear carries flags.mondolme.gearSource: barebones and
  * is wiped before each run; the two new pack dirs are ours entirely and are
  * rewritten whole. Every id is name-hashed, so a rerun is byte-identical.
  *
@@ -395,19 +395,19 @@ for (const [key, g] of [...entries].sort((a, b) => a[0].localeCompare(b[0]))) {
   if (META.has(key) || TRANSPORTS.has(key) || ALIASES.has(key) || pool.has(key)) continue;
   const item = buildGearItem(entryToRecord(g));
   const pack = categorize(item);
-  const id = idFor(`air-bladder-gear-barebones:${item.name}`);
+  const id = idFor(`mondolme-gear-barebones:${item.name}`);
   const s = item.system;
   const lines = [
     `_id: ${id}`, `name: ${y(item.name)}`, `type: ${item.type}`, "img: icons/svg/item-bag.svg",
     "effects: []", "folder: null", "sort: 0",
-    "flags:", "  air-bladder:", "    gearSource: barebones",
+    "flags:", "  mondolme:", "    gearSource: barebones",
     "system:", `  description: ${y(s.description)}`, `  weightless: ${s.weightless}`,
     "  equipped: false", `  bulky: ${s.bulky}`, `  cost: ${s.cost}`, "  quantity: 1",
     "  uses:", `    value: ${s.uses.value}`, `    max: ${s.uses.max}`,
   ];
   if (item.type === "weapon") lines.push(`  damageFormula: ${y(s.damageFormula)}`, "  criticalDamage: ''", `  blast: ${s.blast}`);
   if (item.type === "armor") lines.push(`  armor: ${s.armor}`);
-  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: air-bladder", "  coreVersion: '14.365'", `_key: '!items!${id}'`, "");
+  lines.push("ownership:", "  default: 0", "_stats:", "  systemId: mondolme", "  coreVersion: '14.365'", `_key: '!items!${id}'`, "");
   if (!dry) fs.writeFileSync(path.join(packDir(pack), fileFor(item.name, id)), lines.join("\n"), "utf8");
   authored.push({ name: item.name, pack, type: item.type });
   // Register it as pool immediately rather than rescanning the directory, so a
@@ -440,7 +440,7 @@ const bgYaml = (bg, id) => {
   const lines = [
     `_id: ${id}`, `name: ${y(bg.name)}`, "type: background", "img: icons/svg/item-bag.svg",
     "effects: []", "folder: null", `sort: ${bg.roll * 100}`,
-    "flags:", "  air-bladder:", "    backgroundSource: barebones", `    roll: ${bg.roll}`,
+    "flags:", "  mondolme:", "    backgroundSource: barebones", `    roll: ${bg.roll}`,
     "system:",
     "  source: barebones",
     "  archetype: ''",
@@ -456,7 +456,7 @@ const bgYaml = (bg, id) => {
       : ["  containers: []"]),
     "  tables: []",
     "ownership:", "  default: 0",
-    "_stats:", "  systemId: air-bladder", "  coreVersion: '14.365'",
+    "_stats:", "  systemId: mondolme", "  coreVersion: '14.365'",
     `_key: '!items!${id}'`, "",
   ];
   return { yaml: lines.join("\n"), refs, containers };
@@ -471,7 +471,7 @@ let refCount = 0;
 let containerCount = 0;
 const unresolved = [];
 for (const bg of backgrounds) {
-  const id = idFor(`air-bladder-bg-barebones:${bg.name}`);
+  const id = idFor(`mondolme-bg-barebones:${bg.name}`);
   const { yaml: text, refs, containers } = bgYaml(bg, id);
   if (!dry) fs.writeFileSync(path.join(bgDir, fileFor(bg.name, id)), text, "utf8");
   refCount += refs.length;
@@ -486,7 +486,7 @@ for (const bg of backgrounds) {
 
 /** One RollTable result: a reference to a pool item, or plain text. */
 const resultYaml = (tid, i, r) => {
-  const rid = idFor(`air-bladder-bb-result:${tid}:${i}:${r.text}`);
+  const rid = idFor(`mondolme-bb-result:${tid}:${i}:${r.text}`);
   const range = r.range ?? [i + 1, i + 1];
   // `text` names a document row and carries prose on a text row — two different
   // schema fields since v13, and `text` is neither of them any more.
@@ -505,7 +505,7 @@ const resultYaml = (tid, i, r) => {
 };
 
 const tableYaml = (name, description, formula, results) => {
-  const tid = idFor(`air-bladder-bb-table:${name}`);
+  const tid = idFor(`mondolme-bb-table:${name}`);
   return [
     `_id: ${tid}`,
     `name: ${y(name)}`,
@@ -516,10 +516,10 @@ const tableYaml = (name, description, formula, results) => {
     `formula: ${formula}`,
     "replacement: true",
     "displayRoll: true",
-    "flags:", "  air-bladder:", "    tableSource: barebones",
+    "flags:", "  mondolme:", "    tableSource: barebones",
     "folder: null", "sort: 0",
     "ownership:", "  default: 0",
-    "_stats:", "  systemId: air-bladder", "  coreVersion: '14.365'",
+    "_stats:", "  systemId: mondolme", "  coreVersion: '14.365'",
     `_key: '!tables!${tid}'`, "",
   ].join("\n");
 };
@@ -529,7 +529,7 @@ const poolResult = (name, range) => {
   const key = ALIASES.get(String(name).toLowerCase()) ?? String(name);
   const e = pool.get(key.toLowerCase());
   if (!e) { unresolved.push(`table: ${name}`); return { text: String(name), range }; }
-  return { text: e.name, img: e.img, pack: `air-bladder.${e.pack}`, id: e.id, range };
+  return { text: e.name, img: e.img, pack: `mondolme.${e.pack}`, id: e.id, range };
 };
 
 const tables = [];
@@ -564,7 +564,7 @@ tables.push({
     const range = [i + 1, i + 1];
     if ((r.options ?? []).length > 1) {
       const name = TIER_LABEL[r.damage] ?? `Barebones: Weapon Tier - ${r.damage}`;
-      return { text: name, img: "icons/svg/d20-grey.svg", pack: `air-bladder.${TABLE_PACK}`, id: idFor(`air-bladder-bb-table:${name}`), range };
+      return { text: name, img: "icons/svg/d20-grey.svg", pack: `mondolme.${TABLE_PACK}`, id: idFor(`mondolme-bb-table:${name}`), range };
     }
     return poolResult(r.options[0], range);
   }),
@@ -596,7 +596,7 @@ tables.push({
         return { text: nm, range };
       }
       const t = load(fs.readFileSync(path.join(dir, f), "utf8"));
-      return { text: nm, img: t?.img, pack: "air-bladder.mounts-transports", id: t?._id, range };
+      return { text: nm, img: t?.img, pack: "mondolme.mounts-transports", id: t?._id, range };
     }
     return poolResult(g.name, range);
   }),
@@ -607,7 +607,7 @@ if (!dry) {
   fs.mkdirSync(tblDir, { recursive: true });
   for (const f of fs.readdirSync(tblDir).filter((f) => f.endsWith(".yml"))) fs.rmSync(path.join(tblDir, f));
   for (const t of tables) {
-    const id = idFor(`air-bladder-bb-table:${t.name}`);
+    const id = idFor(`mondolme-bb-table:${t.name}`);
     fs.writeFileSync(path.join(tblDir, fileFor(t.name, id)), tableYaml(t.name, t.description, t.formula, t.results), "utf8");
   }
 }

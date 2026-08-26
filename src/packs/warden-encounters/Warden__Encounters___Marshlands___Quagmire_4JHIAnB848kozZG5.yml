@@ -9,7 +9,7 @@ results:
   - _id: EBFlA5ChXWzOPpsy
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.n6qiiCxlLjdf8Qpv]{Giant
+      1 @UUID[Compendium.mondolme.monsters.Actor.n6qiiCxlLjdf8Qpv]{Giant
       Crocodile}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -33,7 +33,7 @@ results:
   - _id: FM84kSVC9yMVdZG8
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.NY94UhmWTBgw3gMC]{Water
+      1 @UUID[Compendium.mondolme.monsters.Actor.NY94UhmWTBgw3gMC]{Water
       Elemental}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -58,7 +58,7 @@ results:
     type: text
     description: >-
       1
-      @UUID[Compendium.air-bladder.monsters.Actor.OfaCrvATIqJDr3ns]{Catoblepas}
+      @UUID[Compendium.mondolme.monsters.Actor.OfaCrvATIqJDr3ns]{Catoblepas}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -81,7 +81,7 @@ results:
   - _id: YukzDIUO9DY9szXo
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.bKy98z6f6VgGsKPh]{Viper}
+      1 @UUID[Compendium.mondolme.monsters.Actor.bKy98z6f6VgGsKPh]{Viper}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -126,7 +126,7 @@ results:
   - _id: vwi1r91u1q6ZGv4G
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.X827Q1OhOMlNkNvm]{Root
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.X827Q1OhOMlNkNvm]{Root
       Goblins} or 1 Root Witch
     img: icons/svg/d20-black.svg
     weight: 1
@@ -151,7 +151,7 @@ results:
     type: text
     description: >-
       1d4
-      @UUID[Compendium.air-bladder.monsters.Actor.gnqJAsLHGhqGJnWK]{Reptilians}
+      @UUID[Compendium.mondolme.monsters.Actor.gnqJAsLHGhqGJnWK]{Reptilians}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -196,7 +196,7 @@ results:
   - _id: 4hVvDQkoORv7FE7U
     type: text
     description: >-
-      2d4 @UUID[Compendium.air-bladder.monsters.Actor.QhJ4wH9BX3piTGCi]{Zombies}
+      2d4 @UUID[Compendium.mondolme.monsters.Actor.QhJ4wH9BX3piTGCi]{Zombies}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -219,7 +219,7 @@ results:
   - _id: 2wGavIFvbPg8c8I1
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.bFpRUtpbR1G05Hy9]{Giant
+      1 @UUID[Compendium.mondolme.monsters.Actor.bFpRUtpbR1G05Hy9]{Giant
       Aquatic Spider}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -265,7 +265,7 @@ results:
   - _id: gH3LNYSkHSYbPn1Q
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.YFnHWQ7mAi068Zsp]{Night Hag}
+      1 @UUID[Compendium.mondolme.monsters.Actor.YFnHWQ7mAi068Zsp]{Night Hag}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -288,7 +288,7 @@ results:
   - _id: InGkXABXqngIOClK
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.o3Fd5JdfnJuvWQfK]{Troll}
+      1 @UUID[Compendium.mondolme.monsters.Actor.o3Fd5JdfnJuvWQfK]{Troll}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -311,7 +311,7 @@ results:
   - _id: PZPZn3npmFueLodJ
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.zlSMKSJmEdrnG2ws]{Shambling
+      1 @UUID[Compendium.mondolme.monsters.Actor.zlSMKSJmEdrnG2ws]{Shambling
       Mound}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -335,7 +335,7 @@ results:
   - _id: sWMNLeLkmK5tGGAD
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.6APbclPukyhqVuFD]{Black
+      1 @UUID[Compendium.mondolme.monsters.Actor.6APbclPukyhqVuFD]{Black
       Dragon}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -365,7 +365,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

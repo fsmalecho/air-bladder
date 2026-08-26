@@ -3,7 +3,7 @@ name: Pixie
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/fairy-lorc.svg
+img: systems/mondolme/art/game-icons/creatures/fairy-lorc.svg
 items:
   - _id: OdJFvoIc8kacfYqU
     name: Dagger
@@ -122,7 +122,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/fairy-lorc.svg
+    src: systems/mondolme/art/game-icons/creatures/fairy-lorc.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

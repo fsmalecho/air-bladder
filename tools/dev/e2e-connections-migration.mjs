@@ -85,8 +85,8 @@ const seeded = await page.evaluate(async () => {
     system: { role: "mount", containerClass: "horse", connectedTo: pc.uuid },
   });
 
-  const was = game.settings.get("air-bladder", "connections-migrated");
-  await game.settings.set("air-bladder", "connections-migrated", false);
+  const was = game.settings.get("mondolme", "connections-migrated");
+  await game.settings.set("mondolme", "connections-migrated", false);
   return {
     markerWas: was,
     aliceId: alice.id, bobId: bob.id,
@@ -106,7 +106,7 @@ await page.reload({ waitUntil: "networkidle" });
 await page.waitForFunction(() => globalThis.game?.ready === true, null, { timeout: 90000 });
 await dismissChrome(page);
 await page.waitForFunction(
-  () => game.settings.get("air-bladder", "connections-migrated") === true,
+  () => game.settings.get("mondolme", "connections-migrated") === true,
   null, { timeout: 30000 }
 ).catch(() => {});
 
@@ -126,7 +126,7 @@ const after = await page.evaluate(async ({ ids, aliceId, bobId, pcUuid }) => {
     && Object.keys(own).every((id) => id === "default" || id === aliceId || game.users.get(id)?.isGM);
   const out = {};
   for (const [k, id] of Object.entries(ids)) out[k] = read(id);
-  out.marker = game.settings.get("air-bladder", "connections-migrated");
+  out.marker = game.settings.get("mondolme", "connections-migrated");
   out.deepShapeExact = shapeExact(out.deep.own);
   out.midShapeExact = shapeExact(out.mid.own);
   out.mountShapeExact = shapeExact(out.mount.own) && out.mount.own[bobId] === undefined;
@@ -197,8 +197,8 @@ await page.evaluate(async () => {
   for (const a of game.actors.filter((x) => x.name.startsWith("ZZ Mig"))) await a.delete();
   // The marker must be left TRUE — a probe that leaves it false makes the
   // NEXT GM load re-run the migration over the user's world.
-  if (game.settings.get("air-bladder", "connections-migrated") !== true) {
-    await game.settings.set("air-bladder", "connections-migrated", true);
+  if (game.settings.get("mondolme", "connections-migrated") !== true) {
+    await game.settings.set("mondolme", "connections-migrated", true);
   }
 });
 

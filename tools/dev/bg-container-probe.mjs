@@ -40,8 +40,8 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const gen = await import("/systems/air-bladder/module/character-generator.js");
-    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const gen = await import("/systems/mondolme/module/character-generator.js");
+    const mkt = await import("/systems/mondolme/module/marketplace.js");
     const made = [];
     const keptBy = (actor) =>
       game.actors.filter((a) =>
@@ -54,8 +54,8 @@ try {
     //    grantContainers resolves against, so this is the pack whose absence
     //    review #5 caught (the old Item pack still ships, but nothing grants
     //    from it).
-    const bgPack = game.packs.get("air-bladder.backgrounds-2e");
-    const tPack = game.packs.get("air-bladder.mounts-transports");
+    const bgPack = game.packs.get("mondolme.backgrounds-2e");
+    const tPack = game.packs.get("mondolme.mounts-transports");
     if (!bgPack || !tPack) return { error: "backgrounds-2e or mounts-transports pack missing" };
     const bgs = await bgPack.getDocuments();
     const tDocs = await tPack.getDocuments();
@@ -113,7 +113,7 @@ try {
       // stale until something else touches the owner. The sheet rebuilds it at
       // render for the same reason.
       listed: actor.connectedActors().some((c) => c.id === horse?.id),
-      flagged: horse?.getFlag("air-bladder", "grantSource")?.startsWith("question:"),
+      flagged: horse?.getFlag("mondolme", "grantSource")?.startsWith("question:"),
       // A mount travels alongside: it must cost the rider nothing. Compare the
       // rider's usage against the same actor with the container detached, so this
       // measures the container's contribution rather than restating the total.
@@ -156,7 +156,7 @@ try {
     made.push(...after);
     const regen = {
       // exactly one granted beast + the player's chest
-      grantedNow: after.filter((a) => a.getFlag("air-bladder", "grantSource")).length,
+      grantedNow: after.filter((a) => a.getFlag("mondolme", "grantSource")).length,
       oldGone: !game.actors.get(beforeUuid?.split(".").pop()),
       mineSurvives: !!game.actors.get(mine.id),
       mineStillListed: actor.connectedActors().some((c) => c.id === mine.id),
@@ -196,8 +196,8 @@ try {
     made.push(...afterReroll);
     const reroll = {
       questionIndex: qIdx,
-      grantedNow: afterReroll.filter((a) => a.getFlag("air-bladder", "grantSource")).length,
-      name: afterReroll.find((a) => a.getFlag("air-bladder", "grantSource"))?.name,
+      grantedNow: afterReroll.filter((a) => a.getFlag("mondolme", "grantSource")).length,
+      name: afterReroll.find((a) => a.getFlag("mondolme", "grantSource"))?.name,
       mineSurvives: !!game.actors.get(mine.id),
       noDangling: game.actors.get(mine.id)?.system.connectedTo === actor.uuid,
     };
@@ -216,7 +216,7 @@ try {
       minted: !!cart,
       capacity: cart?.system.slotsMax,
       capacityRight: cart?.system.slotsMax === rootSpec?.slots,
-      flagged: cart?.getFlag("air-bladder", "grantSource") === "background",
+      flagged: cart?.getFlag("mondolme", "grantSource") === "background",
       // ...and it is a container, not an item on the sheet
       notAnItem: !mActor.items.some((i) => i.name === rootSpec?.name),
     };
@@ -284,7 +284,7 @@ try {
     //    This is the player-facing copy of the broker's wall: it cannot bind a
     //    crafted client (dev:socket-grant proves the wall), but it is what
     //    tells an honest player why their mule did not arrive.
-    const { maxConnections } = await import("/systems/air-bladder/module/connections.js");
+    const { maxConnections } = await import("/systems/mondolme/module/connections.js");
     const max = maxConnections();
     const cappedPc = await CONFIG.Actor.documentClass.create({ name: "PROBE Cap Keeper", type: "character" });
     made.push(cappedPc);

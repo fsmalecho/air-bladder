@@ -222,7 +222,7 @@ try {
   // the one this state does not render: a sheet drawn while the book had pages,
   // clicked after they left.
   const emptyRefusal = await gm.evaluate(async (id) => {
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
     const a = game.actors.get(id);
     const warns = [];
     const origWarn = ui.notifications.warn;
@@ -303,7 +303,7 @@ try {
   // asked to bind "Rope". Dismissed rather than accepted: leg 5 counts the
   // pages this would have added.
   const spanishAsk = await gm.evaluate(async (id) => {
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const a = game.actors.get(id);
     const out = {};
@@ -519,7 +519,7 @@ try {
     // The full-book refusal names the book, so it reads through the overlay too
     // (review #16). Installed here rather than in its own leg because the
     // fixture it needs -- a book at capacity -- is this leg's.
-    const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+    const i18n = await import("/systems/mondolme/module/i18n-content.js");
     i18n._setOverlay({ "item.name": { "ZZ Grim Tome": "ZZ-TOMO" } });
     try {
       await a.sheet.constructor.prototype.constructor
@@ -574,7 +574,7 @@ try {
             whisperFlavor: whisper?.flavor ?? "",
             whisperTo: whisper?.whisper ?? [],
             whisperId: whisper?.id, publicId: publicCard?.id,
-            flag: publicCard?.getFlag("air-bladder", "glogCast") ?? null,
+            flag: publicCard?.getFlag("mondolme", "glogCast") ?? null,
             userId: game.user.id,
           };
         }

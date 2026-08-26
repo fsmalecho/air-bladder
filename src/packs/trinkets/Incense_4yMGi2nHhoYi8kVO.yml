@@ -3,7 +3,7 @@ name: Incense
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/fire/candle-light.svg
+img: systems/mondolme/art/game-icons/fire/candle-light.svg
 effects: []
 system:
   description: ''

@@ -64,7 +64,7 @@ const addBg = (n, src) => { const k=norm(n); if(!k) return; (bgSources.get(k) ??
 
 for (const { doc } of readPack("backgrounds-2e")) { for (const g of doc.system?.startingGear ?? []) addBg(g.name, doc.name); for (const t of doc.system?.tables ?? []) for (const o of t.options ?? []) for (const it of o.items ?? []) addBg(it.name, doc.name); }
 for (const { doc } of readPack("backgrounds-barebones")) for (const g of doc.system?.startingGear ?? []) addBg(g.name, doc.name);
-for (const { doc } of readPack("tables-2e")) for (const r of doc.results ?? []) for (const sc of ["air-bladder","cairn"]) for (const it of r.flags?.[sc]?.items ?? []) addBg(it.name ?? it, "bond");
+for (const { doc } of readPack("tables-2e")) for (const r of doc.results ?? []) for (const sc of ["mondolme","cairn"]) for (const it of r.flags?.[sc]?.items ?? []) addBg(it.name ?? it, "bond");
 // v13 split `TableResult#text` in two and the halves went to DIFFERENT fields: a
 // text row's value is `description`, a document row's is `name`. Reading `r.text`
 // made the marketplace contribute NOTHING to `keep`, which does not error — it

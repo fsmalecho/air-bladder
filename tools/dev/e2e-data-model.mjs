@@ -31,7 +31,7 @@ await dismissChrome(page);
 
 console.log("\ngeneration on every 2e background");
 const gen = await page.evaluate(async () => {
-  const pack = game.packs.get("air-bladder.backgrounds-2e");
+  const pack = game.packs.get("mondolme.backgrounds-2e");
   const bgs = await pack.getDocuments();
   const out = [];
   for (const bg of bgs) {
@@ -165,7 +165,7 @@ glogControl.glog === true && glogControl.fake === undefined
 console.log("\nderived data reaches the sheet");
 const derived = await page.evaluate(async () => {
   const actor = await Actor.create({ name: "__rt_derived", type: "character" });
-  const pack = game.packs.get("air-bladder.market-goods");
+  const pack = game.packs.get("mondolme.market-goods");
   const goods = await pack.getDocuments();
   await actor.createEmbeddedDocuments("Item", [goods[0].toObject()]);
   await actor.update({ "system.gold": 250 });
@@ -213,14 +213,14 @@ const containers = await page.evaluate(async () => {
   // The mounts-transports ACTOR pack — the legacy transports Item pack is
   // dissolved, so what the shop resolves and what this feeds acquireTransport
   // are npc documents either way.
-  const transports = await game.packs.get("air-bladder.mounts-transports").getDocuments();
+  const transports = await game.packs.get("mondolme.mounts-transports").getDocuments();
   const mule = transports.find((t) => t.system.slots > 0) ?? transports[0];
   // The real marketplace path, not a reimplementation of it — acquireTransport is
   // where a transport document becomes a connected NPC, i.e. where the slots
   // shape used to be converted. (It minted a `container` keeper-linked through
   // the owner's array before containers-as-NPCs; this section asserted that
   // old shape long after the code stopped producing it.)
-  const mkt = await import("/systems/air-bladder/module/marketplace.js");
+  const mkt = await import("/systems/mondolme/module/marketplace.js");
   const bought = await mkt.acquireTransport(actor, mule, true);
   const container = game.actors.find((a) => a.type === "npc" && a.system.connectedTo === actor.uuid);
   if (!container) return { error: "no connected npc minted" };

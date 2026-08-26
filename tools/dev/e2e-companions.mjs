@@ -80,12 +80,12 @@ const role = await page.evaluate(async () => {
 
   // The RESTAMP: reset the marker, run the world migration's own writes the
   // way the ready hook does — write the read value back, diff: false.
-  await game.settings.set("air-bladder", "companion-restamped", false);
+  await game.settings.set("mondolme", "companion-restamped", false);
   const updates = game.actors
     .filter((a) => ["npc", "hireling"].includes(a.type))
     .map((a) => ({ _id: a.id, "system.role": a.system.role }));
   await ActorImpl.updateDocuments(updates, { diff: false });
-  await game.settings.set("air-bladder", "companion-restamped", true);
+  await game.settings.set("mondolme", "companion-restamped", true);
   r.rawAfter = await rawRole();
 
   // The sheet's role select carries the new word and never the old.
@@ -115,7 +115,7 @@ check("the sheet says Companion, never Mount", role.roleOptions.includes("Compan
 console.log("\nthe Companions & Transports pack");
 const pack = await page.evaluate(async () => {
   const r = {};
-  const p = game.packs.get("air-bladder.mounts-transports");
+  const p = game.packs.get("mondolme.mounts-transports");
   r.label = p?.metadata.label ?? null;
   r.folders = [...(p?.folders ?? [])].map((f) => f.name).sort();
   const docs = await p.getDocuments();
@@ -134,7 +134,7 @@ const pack = await page.evaluate(async () => {
   // option's ITEM grant is GONE — the Outrider precedent, "an outrider's horse
   // should never appear in their inventory". The tattoo stays prose (ruled),
   // which is the control that proves this reader distinguishes.
-  const bgs = await game.packs.get("air-bladder.backgrounds-2e").getDocuments();
+  const bgs = await game.packs.get("mondolme.backgrounds-2e").getDocuments();
   const opt = (bgName, t, o) => bgs.find((b) => b.name === bgName)?.system.tables?.[t]?.options?.[o] ?? {};
   const falconry = opt("Fletchwind", 0, 1);
   const ravenOpt = opt("Half Witch", 0, 3);
@@ -142,7 +142,7 @@ const pack = await page.evaluate(async () => {
   r.falconGrant = (falconry.containers ?? []).map((c) => c.name);
   r.ravenGrant = { containers: (ravenOpt.containers ?? []).map((c) => c.name), items: (ravenOpt.items ?? []).map((i) => i.name) };
   r.tattooStaysProse = !(tattooOpt.containers?.length);
-  r.ravenItemGone = !(await game.packs.get("air-bladder.background-items").getIndex())
+  r.ravenItemGone = !(await game.packs.get("mondolme.background-items").getIndex())
     .some((e) => e.name === "Raven Familiar");
   return r;
 });
@@ -179,7 +179,7 @@ const grant = await page.evaluate(async () => {
   const r = {};
   const keeper = await ActorImpl.create({ name: "ZZ Falconer", type: "character" });
   const hpBefore = keeper._source.system.hp.value;
-  const { grantContainers } = await import("/systems/air-bladder/module/character-generator.js");
+  const { grantContainers } = await import("/systems/mondolme/module/character-generator.js");
   r.prose = "Falcon: it can scout ahead and harry a foe. 3 HP. +0 slots.";
   const made = await grantContainers(keeper, [
     { name: "Falcon", grantSource: "question:0", grantNote: r.prose },
@@ -225,14 +225,14 @@ check("and none on the beast either", !grant.beastNotes,
  * ------------------------------------------------------------------------- */
 const stock = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
-  const { grantContainers } = await import("/systems/air-bladder/module/character-generator.js");
+  const { grantContainers } = await import("/systems/mondolme/module/character-generator.js");
   const keeper = await ActorImpl.create({ name: "ZZ Mountebank", type: "character" });
   await grantContainers(keeper, [{ name: "Cart", slots: 4, grantSource: "background" }]);
   const kids = game.actors.filter((a) => a.system?.connectedTo === keeper.uuid);
   return {
     notes: keeper.system.notes,
-    ledger: keeper.getFlag("air-bladder", "grantNotes") ?? null,
-    stamped: kids.some((a) => a.getFlag("air-bladder", "grantNoteId")),
+    ledger: keeper.getFlag("mondolme", "grantNotes") ?? null,
+    stamped: kids.some((a) => a.getFlag("mondolme", "grantNoteId")),
     carted: kids.map((a) => a.name),
     keeperId: keeper.id,
     cartIds: kids.map((a) => a.id),
@@ -252,7 +252,7 @@ check("...while the cart itself still lands",
  * ------------------------------------------------------------------------- */
 const pair = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
-  const { grantContainers } = await import("/systems/air-bladder/module/character-generator.js");
+  const { grantContainers } = await import("/systems/mondolme/module/character-generator.js");
   const keeper = await ActorImpl.create({ name: "ZZ Bonekeeper", type: "character" });
   const made = await grantContainers(keeper, [
     { name: "Burial Wagon", slots: 6, grantSource: "question:0" },
@@ -275,7 +275,7 @@ check("...and still writes nothing", pair.notes === "", JSON.stringify(pair.note
  * ------------------------------------------------------------------------- */
 const reroll = await page.evaluate(async () => {
   const ActorImpl = CONFIG.Actor.documentClass;
-  const gen = await import("/systems/air-bladder/module/character-generator.js");
+  const gen = await import("/systems/mondolme/module/character-generator.js");
   const first = "Rivertooth: Impressively strong. 4 HP. +6 slots.";
   const mine = "<p>The player's own line, which must survive.</p>";
   const keeper = await ActorImpl.create({
@@ -319,7 +319,7 @@ const legacy = await page.evaluate(async () => {
     + `<li>ZZ My own bullet.</li><li>${orphan}</li></ul>`;
   const a = await ActorImpl.create({
     name: "ZZ Legacy Notes", type: "character", system: { notes },
-    flags: { "air-bladder": { grantNotes: [
+    flags: { "mondolme": { grantNotes: [
       { id: "aaaaaaaaaaaaaaaa", html: granted, names: ["Raven"], source: "question:0" },
       // A record whose things are ALREADY gone: the removal must not care
       // whether anything still answers for a line, only that it wrote it.
@@ -338,7 +338,7 @@ const legacy = await page.evaluate(async () => {
   const edited = await ActorImpl.create({
     name: "ZZ Legacy Edited", type: "character",
     system: { notes: `<ul><li>${editedTo}</li><li>${alsoGranted}</li></ul>` },
-    flags: { "air-bladder": { grantNotes: [
+    flags: { "mondolme": { grantNotes: [
       { id: "cccccccccccccccc", html: editedFrom, names: ["Owl"], source: "bond:0" },
       { id: "dddddddddddddddd", html: alsoGranted, names: ["Mule"], source: "background" },
     ] } },
@@ -349,7 +349,7 @@ const legacy = await page.evaluate(async () => {
   const untouched = await ActorImpl.create({
     name: "ZZ Legacy Untouched", type: "character",
     system: { notes: "<ul><li>ZZ Nothing here was ever written by generation.</li></ul>" },
-    flags: { "air-bladder": { grantNotes: [
+    flags: { "mondolme": { grantNotes: [
       { id: "eeeeeeeeeeeeeeee", html: editedFrom, names: ["Owl"], source: "bond:0" },
     ] } },
   });
@@ -362,7 +362,7 @@ const legacy = await page.evaluate(async () => {
   const base = await ActorImpl.create({
     name: "ZZ Legacy Token Base", type: "character",
     system: { notes: `<ul><li>${tokenGranted}</li></ul>` },
-    flags: { "air-bladder": { grantNotes: [
+    flags: { "mondolme": { grantNotes: [
       { id: "ffffffffffffffff", html: tokenGranted, names: ["Toad"], source: "bond:0" },
     ] } },
   });
@@ -384,14 +384,14 @@ const legacy = await page.evaluate(async () => {
   }]);
   return {
     id: a.id, before: a.system.notes,
-    ledger: (a.getFlag("air-bladder", "grantNotes") ?? []).length,
+    ledger: (a.getFlag("mondolme", "grantNotes") ?? []).length,
     editedId: edited.id, editedBefore: edited.system.notes,
     untouchedId: untouched.id, untouchedBefore: untouched.system.notes,
     tokenBaseId: base.id, sceneId: scene.id, tokenId: tok.id,
     tokenBefore: tok.actor.system.notes,
     tokenDeltaKeys: Object.keys(tok.delta._source.system ?? {}),
-    tokenDeltaHasLedger: tok.delta._source.flags?.["air-bladder"]?.grantNotes !== undefined,
-    tokenSeesLedger: (tok.actor.getFlag("air-bladder", "grantNotes") ?? []).length,
+    tokenDeltaHasLedger: tok.delta._source.flags?.["mondolme"]?.grantNotes !== undefined,
+    tokenSeesLedger: (tok.actor.getFlag("mondolme", "grantNotes") ?? []).length,
     plainTokenId: plain.id,
     plainDeltaKeys: Object.keys(plain.delta._source.system ?? {}),
   };
@@ -429,7 +429,7 @@ await page.waitForTimeout(3000);
 
 const swept = await page.evaluate((id) => {
   const a = game.actors.get(id);
-  return { notes: a.system.notes, ledger: a.getFlag("air-bladder", "grantNotes") ?? null };
+  return { notes: a.system.notes, ledger: a.getFlag("mondolme", "grantNotes") ?? null };
 }, legacy.id);
 check("both grant bullets are gone", !swept.notes.includes("ZZ It remembers.")
   && !swept.notes.includes("ZZ Long gone."),
@@ -451,11 +451,11 @@ const missed = await page.evaluate(({ editedId, untouchedId }) => {
   const u = game.actors.get(untouchedId);
   return {
     editedNotes: e.system.notes,
-    editedLedger: e.getFlag("air-bladder", "grantNotes") ?? null,
-    editedKept: e.getFlag("air-bladder", "grantNotesUnmatched") ?? null,
+    editedLedger: e.getFlag("mondolme", "grantNotes") ?? null,
+    editedKept: e.getFlag("mondolme", "grantNotesUnmatched") ?? null,
     untouchedNotes: u.system.notes,
-    untouchedLedger: u.getFlag("air-bladder", "grantNotes") ?? null,
-    untouchedKept: u.getFlag("air-bladder", "grantNotesUnmatched") ?? null,
+    untouchedLedger: u.getFlag("mondolme", "grantNotes") ?? null,
+    untouchedKept: u.getFlag("mondolme", "grantNotesUnmatched") ?? null,
   };
 }, legacy);
 check("a hand-edited line stays on the sheet, as it should",
@@ -493,7 +493,7 @@ const tokenSwept = await page.evaluate(({ sceneId, tokenId, plainTokenId }) => {
   const p = scene?.tokens.get(plainTokenId);
   return {
     notes: t?.actor?.system?.notes ?? null,
-    ledger: t?.actor?.getFlag("air-bladder", "grantNotes") ?? null,
+    ledger: t?.actor?.getFlag("mondolme", "grantNotes") ?? null,
     plainNotes: p?.actor?.system?.notes ?? null,
     plainDeltaKeys: Object.keys(p?.delta?._source?.system ?? {}),
   };
@@ -528,7 +528,7 @@ check("the leftovers warning is not repeated on the next load",
   `said ${leftoverLog.length - warnedOnce} more time(s) — ${leftoverLog[warnedOnce] ?? ""}`);
 const kept = await page.evaluate(({ editedId }) => {
   const e = game.actors.get(editedId);
-  return { kept: e.getFlag("air-bladder", "grantNotesUnmatched") ?? null };
+  return { kept: e.getFlag("mondolme", "grantNotesUnmatched") ?? null };
 }, legacy);
 check("and what missed is still readable afterwards, or silence is just forgetting",
   Array.isArray(kept.kept) && kept.kept[0]?.names?.[0] === "Owl", JSON.stringify(kept.kept));
@@ -556,7 +556,7 @@ try {
     Object.assign(alice, await alicePage.evaluate(async ({ pcId }) => {
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const pc = game.actors.get(pcId);
-      const { grantContainers } = await import("/systems/air-bladder/module/character-generator.js");
+      const { grantContainers } = await import("/systems/mondolme/module/character-generator.js");
       const returned = await grantContainers(pc, [
         { name: "Raven Familiar", grantSource: "background" },
       ]);

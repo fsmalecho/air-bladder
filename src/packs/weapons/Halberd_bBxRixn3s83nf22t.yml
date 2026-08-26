@@ -2,12 +2,12 @@ name: Halberd
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/blade/glaive.svg
+img: systems/mondolme/art/game-icons/blade/glaive.svg
 effects: []
 _id: bBxRixn3s83nf22t
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.9
   createdTime: 1785879709667
   modifiedTime: 1785879710515

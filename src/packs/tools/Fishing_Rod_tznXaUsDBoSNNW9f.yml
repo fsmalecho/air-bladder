@@ -2,7 +2,7 @@ name: Fishing Rod
 type: item
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/tools/fishhook-fork.svg
+img: systems/mondolme/art/game-icons/tools/fishhook-fork.svg
 effects: []
 _id: tznXaUsDBoSNNW9f
 _stats:

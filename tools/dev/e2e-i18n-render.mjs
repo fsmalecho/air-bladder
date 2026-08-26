@@ -86,7 +86,7 @@ try {
       return app.element;
     };
 
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const limitWas = game.settings.get(NS, "character-inventory-limit");
     try {
       // The equipment-limit tooltip only exists while the limit feature is on.
@@ -95,8 +95,8 @@ try {
       await game.settings.set(NS, "character-inventory-limit", true);
 
       // ---- character sheet: ability saves, crit banner, spellbook rows -------
-      const gen = await import("/systems/air-bladder/module/character-generator.js");
-      const bg = (await game.packs.get("air-bladder.backgrounds-2e").getDocuments())[0];
+      const gen = await import("/systems/mondolme/module/character-generator.js");
+      const bg = (await game.packs.get("mondolme.backgrounds-2e").getDocuments())[0];
       const actor = await gen.createActorWithCharacter(await gen.generate2eCharacter(bg));
       r.cleanup.actorId = actor.id;
 
@@ -197,7 +197,7 @@ try {
       // CAIRN.Uses is "Available uses", the LABEL above the uses input. Borrowed
       // as a unit it read "3 Available uses" — wrong in English, and unfixable in
       // any language where the count does not lead.
-      const market = await import("/systems/air-bladder/module/marketplace.js");
+      const market = await import("/systems/mondolme/module/marketplace.js");
       await market.openMarketplace(actor);
       for (let i = 0; i < 30 && !document.querySelector(".marketplace"); i++) await settle(150);
       await settle(500);
@@ -214,7 +214,7 @@ try {
       // Intl.PluralRules at runtime, so the SINGULAR key is reachable only
       // through formatCount -- read it here, under the same sentinel swap, so a
       // regression cannot hide behind whatever the catalogue happens to stock.
-      const utils = await import("/systems/air-bladder/module/utils.js");
+      const utils = await import("/systems/mondolme/module/utils.js");
       r.usesOne = utils.formatCount("CAIRN.NUses", 1);
       r.usesMany = utils.formatCount("CAIRN.NUses", 3);
       r.slotOne = utils.formatCount("CAIRN.NSlot", 1);

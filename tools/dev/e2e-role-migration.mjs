@@ -229,7 +229,7 @@ try {
     for (const s of game.actors.filter((a) => [h, r, m, l, p].includes(a.name))) await s.delete();
     // "Pre-migration" includes the COMPLETION MARKERS being unset — both
     // migrations are one-shot and gated on their own.
-    await game.settings.set("air-bladder", "roles-restamped", false);
+    await game.settings.set("mondolme", "roles-restamped", false);
     const Cls = CONFIG.Actor.documentClass;
     // `hireling` is still a registered alias, so a document of that type is
     // what an upgraded world actually holds.
@@ -439,7 +439,7 @@ try {
   const finalState = await page.evaluate(({ m, p }) => ({
     role: game.actors.getName(m)?._source.system.role,
     forHire: game.actors.getName(p)?.system.forHire,
-    marker: game.settings.get("air-bladder", "roles-restamped"),
+    marker: game.settings.get("mondolme", "roles-restamped"),
   }), { m: MONSTER, p: PLANTED });
 
   if (finalState.role === "monster") ok("it is STILL a monster after a reload — the Warden's choice stuck");
@@ -487,7 +487,7 @@ try {
       .filter((a) => a.id !== doc.id && ["npc", "hireling"].includes(a.type)
         && a._source?.system?.role === "npc")
       .map((a) => a.id);
-    await game.settings.set("air-bladder", "hireling-split", false);
+    await game.settings.set("mondolme", "hireling-split", false);
     return { id: doc.id, bystanders };
   }, { name: SPLIT, rate: RATE });
 
@@ -535,7 +535,7 @@ try {
   // value it converts, so a second pass would turn every one of them into a
   // hireling. The marker is what makes that impossible, and this is the leg
   // that proves the marker is doing it — not the migration being clever.
-  const marked = await page.evaluate(() => game.settings.get("air-bladder", "hireling-split"));
+  const marked = await page.evaluate(() => game.settings.get("mondolme", "hireling-split"));
   marked === true
     ? ok("the marker is set, so the split is one-shot")
     : fail(`marker ${JSON.stringify(marked)} — the split will run again on the next load`);

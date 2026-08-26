@@ -68,7 +68,7 @@ try {
       // Stale actors first — a leftover from an aborted run carries an already
       // regenerated statblock and would satisfy the "unchanged" check vacuously.
       for (const s of game.actors.filter((a) => a.name === name)) await s.delete();
-      await game.settings.set("air-bladder", "show-generate-header", true);
+      await game.settings.set("mondolme", "show-generate-header", true);
       const npc = await CONFIG.Actor.documentClass.create({
         name,
         type: "npc",

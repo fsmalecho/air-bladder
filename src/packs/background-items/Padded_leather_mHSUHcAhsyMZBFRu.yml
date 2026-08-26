@@ -1,12 +1,12 @@
 _id: mHSUHcAhsyMZBFRu
 name: Padded leather
 type: armor
-img: systems/air-bladder/icons/armor.svg
+img: systems/mondolme/icons/armor.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: A thick quilted-and-leather coat. Light armor that softens a blow.
@@ -22,6 +22,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!mHSUHcAhsyMZBFRu'

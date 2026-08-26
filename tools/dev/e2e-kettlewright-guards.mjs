@@ -137,8 +137,8 @@ await page.evaluate(({ floor, ceiling }) => {
   const orig = game.settings.get;
   window.__kwAgeShadow = orig;
   game.settings.get = function (ns, key) {
-    if (ns === "air-bladder" && key === "min-age") return floor;
-    if (ns === "air-bladder" && key === "max-age") return ceiling;
+    if (ns === "mondolme" && key === "min-age") return floor;
+    if (ns === "mondolme" && key === "max-age") return ceiling;
     return orig.call(this, ns, key);
   };
 }, { floor: FLOOR, ceiling: CEILING });

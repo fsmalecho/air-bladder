@@ -8,7 +8,7 @@
  * scroll, a looted library, "what spell was that?" — and Foundry has no
  * dynamic pack-backed table, so the system ships a MAINTAINED snapshot
  * (ruling 2026-08-05: ship tables + a reseed action). Rows are
- * `type: document` results whose uuids point INTO `air-bladder.spellbooks`;
+ * `type: document` results whose uuids point INTO `mondolme.spellbooks`;
  * this importer regenerates the shipped table whenever the pack's contents
  * change, and the Reseed Spell Table action (module/spell-tables.js) rebuilds
  * a Warden's own WORLD copy from a pack index at the table — same shape, same
@@ -39,7 +39,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const dry = process.argv.includes("--dry");
 
 const TABLE_NAME = "Spells — Canon (1d100)";
-const SOURCE_PACK = "air-bladder.spellbooks";
+const SOURCE_PACK = "mondolme.spellbooks";
 const OUT_DIR = path.join(root, "src", "packs", "tables-2e");
 
 // Same emitters as marketplace.mjs — a bareword-safe scalar quoter and the
@@ -69,9 +69,9 @@ if (!spells.length) throw new Error("spell-tables: src/packs/spellbooks holds no
 spells.sort((a, b) => a.name.localeCompare(b.name));
 
 // ---- serialize the table, marketplace.mjs's exact emitted shape ----
-const tid = idFor(`air-bladder-spell-table:canon`);
+const tid = idFor(`mondolme-spell-table:canon`);
 const results = spells.map((s, i) => {
-  const rid = idFor(`air-bladder-spell-table-row:canon:${s.id}`);
+  const rid = idFor(`mondolme-spell-table-row:canon:${s.id}`);
   return [
     `  - _id: ${rid}`,
     "    type: document",
@@ -103,7 +103,7 @@ const table = [
   "ownership:",
   "  default: 0",
   "_stats:",
-  "  systemId: air-bladder",
+  "  systemId: mondolme",
   "  coreVersion: '14.365'",
   `_key: '!tables!${tid}'`,
   "",

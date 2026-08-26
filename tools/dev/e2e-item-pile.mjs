@@ -77,8 +77,8 @@ try {
   // class, the shipped art and the label all still agree per document.
   console.log("\nclass labels");
   const classes = await gmPage.evaluate(async () => {
-    const icons = await import("/systems/air-bladder/module/icons.js");
-    const docs = await game.packs.get("air-bladder.mounts-transports").getDocuments();
+    const icons = await import("/systems/mondolme/module/icons.js");
+    const docs = await game.packs.get("mondolme.mounts-transports").getDocuments();
     return docs.map((d) => ({
       name: d.name,
       label: game.i18n.localize(icons.containerClassLabel(d.name, "", d.system.containerClass)),
@@ -128,7 +128,7 @@ try {
     "Draft Horse": "horse", Handicraft: "chest",
   };
   const named = await gmPage.evaluate(async (names) => {
-    const icons = await import("/systems/air-bladder/module/icons.js");
+    const icons = await import("/systems/mondolme/module/icons.js");
     return Object.fromEntries(names.map((n) => [n, icons.containerClass(n)]));
   }, Object.keys(BY_NAME));
   const misnamed = Object.entries(BY_NAME).filter(([n, want]) => named[n] !== want);

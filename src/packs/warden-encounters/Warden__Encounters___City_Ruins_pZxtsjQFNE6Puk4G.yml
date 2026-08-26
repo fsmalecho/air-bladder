@@ -9,7 +9,7 @@ results:
   - _id: 3A55Fpivjd5hBO3W
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.eA1lxkIpmRf9Vcpg]{Bronze
+      1 @UUID[Compendium.mondolme.monsters.Actor.eA1lxkIpmRf9Vcpg]{Bronze
       Construct}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -33,7 +33,7 @@ results:
   - _id: gtVmMEFPV4bZHYc0
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.fZPvIDFDk6MQSURn]{Medusa}
+      1 @UUID[Compendium.mondolme.monsters.Actor.fZPvIDFDk6MQSURn]{Medusa}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -57,7 +57,7 @@ results:
     type: text
     description: >-
       1d2
-      @UUID[Compendium.air-bladder.monsters.Actor.KtZAnOjQ8lTjBxYF]{Gargoyles}
+      @UUID[Compendium.mondolme.monsters.Actor.KtZAnOjQ8lTjBxYF]{Gargoyles}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -80,7 +80,7 @@ results:
   - _id: l0Mn5mHxQXaL26zN
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.TPDznKjahIZQcHVo]{Black
+      1 @UUID[Compendium.mondolme.monsters.Actor.TPDznKjahIZQcHVo]{Black
       Pudding}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -126,7 +126,7 @@ results:
   - _id: 3w4htI2T7btNcV8E
     type: text
     description: >-
-      2d4 @UUID[Compendium.air-bladder.monsters.Actor.g6PFqJoE3HUgjYJq]{Fire
+      2d4 @UUID[Compendium.mondolme.monsters.Actor.g6PFqJoE3HUgjYJq]{Fire
       Beetles}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -151,7 +151,7 @@ results:
     type: text
     description: >-
       1d2
-      @UUID[Compendium.air-bladder.monsters.Actor.AcO1yWVL9r38fpqX]{Cobblehounds}
+      @UUID[Compendium.mondolme.monsters.Actor.AcO1yWVL9r38fpqX]{Cobblehounds}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -175,7 +175,7 @@ results:
     type: text
     description: >-
       2d4
-      @UUID[Compendium.air-bladder.monsters.Actor.Cs7gfocqm6ij1hxh]{Skeletons}
+      @UUID[Compendium.mondolme.monsters.Actor.Cs7gfocqm6ij1hxh]{Skeletons}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -198,7 +198,7 @@ results:
   - _id: cmF3o9wNCD3qEWv2
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.bFpRUtpbR1G05Hy9]{Giant
+      1 @UUID[Compendium.mondolme.monsters.Actor.bFpRUtpbR1G05Hy9]{Giant
       Aquatic Spider}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -222,7 +222,7 @@ results:
   - _id: V0OSN5II0ZBfL3uc
     type: text
     description: >-
-      1d2 @UUID[Compendium.air-bladder.monsters.Actor.ncPpG2cBkkgbtxMa]{Giant
+      1d2 @UUID[Compendium.mondolme.monsters.Actor.ncPpG2cBkkgbtxMa]{Giant
       Centipedes}
     img: icons/svg/d20-black.svg
     weight: 1
@@ -247,7 +247,7 @@ results:
     type: text
     description: >-
       1d4
-      @UUID[Compendium.air-bladder.monsters.Actor.PqMlr88DrhaCHp7e]{Acolytes}
+      @UUID[Compendium.mondolme.monsters.Actor.PqMlr88DrhaCHp7e]{Acolytes}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -270,7 +270,7 @@ results:
   - _id: BVkPEXbKdU1FGBPZ
     type: text
     description: >-
-      1d2 @UUID[Compendium.air-bladder.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres}
+      1d2 @UUID[Compendium.mondolme.monsters.Actor.jgtycd2HoWTQEU5T]{Ogres}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -293,7 +293,7 @@ results:
   - _id: HnLy3RUQ1jTMFM94
     type: text
     description: >-
-      1d4 @UUID[Compendium.air-bladder.monsters.Actor.t0neKoOGF9FKyN61]{Ghouls}
+      1d4 @UUID[Compendium.mondolme.monsters.Actor.t0neKoOGF9FKyN61]{Ghouls}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -316,7 +316,7 @@ results:
   - _id: T022MXSAdkpOLrRK
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.DXVKJIPIjDmVKiTQ]{Mummy}
+      1 @UUID[Compendium.mondolme.monsters.Actor.DXVKJIPIjDmVKiTQ]{Mummy}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -339,7 +339,7 @@ results:
   - _id: PxOPjEGl0tYlYDOd
     type: text
     description: >-
-      1 @UUID[Compendium.air-bladder.monsters.Actor.Lj5QQeJmOclaBySh]{Chimera}
+      1 @UUID[Compendium.mondolme.monsters.Actor.Lj5QQeJmOclaBySh]{Chimera}
     img: icons/svg/d20-black.svg
     weight: 1
     range:
@@ -368,7 +368,7 @@ sort: 0
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
   systemVersion: 0.1.14
   createdTime: null

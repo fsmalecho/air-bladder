@@ -1,12 +1,12 @@
 _id: MZ7Bg9ss9oqYAbY4
 name: Fancy Hat
 type: item
-img: systems/air-bladder/icons/generic-item.svg
+img: systems/mondolme/icons/generic-item.svg
 effects: []
 folder: null
 sort: 0
 flags:
-  air-bladder:
+  mondolme:
     gearSource: 2e
 system:
   description: An extravagant hat that draws the eye. All the better to misdirect it.
@@ -21,6 +21,6 @@ system:
 ownership:
   default: 0
 _stats:
-  systemId: air-bladder
+  systemId: mondolme
   coreVersion: '14.365'
 _key: '!items!MZ7Bg9ss9oqYAbY4'

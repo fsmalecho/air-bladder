@@ -89,7 +89,7 @@ try {
 
   const unit = await page.evaluate(async () => {
     const gen = await import(`/systems/${game.system.id}/module/character-generator.js`);
-    const pack = game.packs.get("air-bladder.tables-2e");
+    const pack = game.packs.get("mondolme.tables-2e");
     const table = (await pack.getDocuments()).find((t) => t.name === "Bonds");
     if (!table) return { error: "no shipped Bonds table" };
     const faces = 20;

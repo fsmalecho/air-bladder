@@ -24,7 +24,7 @@ export const createCairnMacro = async (data, slot) => {
         type: "script",
         img: item.img,
         command: 'await foundry.applications.ui.Hotbar.toggleDocumentSheet("' + item.uuid + '")',
-        flags: { "air-bladder.itemMacro": true },
+        flags: { "mondolme.itemMacro": true },
       });
       await game.user.assignHotbarMacro(macro, slot);
     }
@@ -48,7 +48,7 @@ export const createCairnMacro = async (data, slot) => {
       type: "script",
       img: item.img,
       command,
-      flags: { "air-bladder.itemMacro": true },
+      flags: { "mondolme.itemMacro": true },
     });
   }
   await game.user.assignHotbarMacro(macro, slot);
@@ -120,7 +120,7 @@ export const rollItemMacro = async (actorId, itemId) => {
     }
   }
   
-  const rollMessageTpl = "systems/air-bladder/templates/chat/dmg-roll-card.html";
+  const rollMessageTpl = "systems/mondolme/templates/chat/dmg-roll-card.html";
   const tplData = {
     label: label, targets: targetIds,
     weapon: weaponName,

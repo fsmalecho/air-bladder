@@ -68,7 +68,7 @@ try {
   /* --- setup, as GM ---------------------------------------------------------- */
 
   const setup = await gm.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     // A stale actor from an aborted run would satisfy every precondition below
     // without this run having established any of them.
     for (const a of game.actors.filter((a) => a.name?.startsWith("ZZ BGOrder"))) await a.delete();
@@ -90,7 +90,7 @@ try {
       regenWarning: game.i18n.localize("CAIRN.Notify.NoContainerRegen"),
     };
 
-    const pack = game.packs.get("air-bladder.backgrounds-2e")
+    const pack = game.packs.get("mondolme.backgrounds-2e")
       ?? game.packs.find((p) => p.metadata.name?.startsWith("backgrounds"));
     if (!pack) return { error: "no backgrounds pack in this world" };
     const idx = await pack.getIndex();
@@ -139,14 +139,14 @@ try {
     // So mint one, flagged the way generation flags them.
     const countGranted = () => game.actors.filter(
       (a) => (a.system?.connectedTo === pc.uuid || a.system?.keeper === pc.uuid)
-        && a.getFlag("air-bladder", "grantSource")).length;
+        && a.getFlag("mondolme", "grantSource")).length;
     out.grantedByBackground = countGranted();
     if (!out.grantedByBackground) {
       await CONFIG.Actor.documentClass.create({
         name: "ZZ BGOrder Granted Mule",
         type: "npc",
         system: { role: "mount", containerClass: "mule", connectedTo: pc.uuid, generationEnabled: false },
-        flags: { "air-bladder": { grantSource: "probe" } },
+        flags: { "mondolme": { grantSource: "probe" } },
       });
     }
     out.grantedContainers = countGranted();
@@ -261,7 +261,7 @@ try {
   /* --- leg 2: the reorder ordering ------------------------------------------- */
 
   const reorderDrop = (control) => gm.evaluate(async ({ control }) => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const name = `ZZ BGOrder Reorder${control ? " Control" : ""}`;
     for (const a of game.actors.filter((a) => a.name === name)) await a.delete();
 

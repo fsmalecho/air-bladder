@@ -47,15 +47,15 @@ try {
 
   console.log(`\nFoundry ${info.coreVersion} | system ${info.system} ${info.systemVersion} | world ${info.world}\n`);
 
-  info.system === "air-bladder" ? ok("system loaded") : fail(`wrong system: ${info.system}`);
+  info.system === "mondolme" ? ok("system loaded") : fail(`wrong system: ${info.system}`);
 
   // Only SHIPPED packs must be non-empty. game.packs also carries world-level ones,
   // and `world.custom-backgrounds` (created on demand by character-generator.js for
   // GM-authored backgrounds) is empty until a GM authors one — so asserting over
   // every pack failed on a perfectly healthy world, and told you to run build:packs,
   // which could never have fixed it.
-  const shipped = info.packs.filter(p => p.id.startsWith("air-bladder."));
-  const world = info.packs.filter(p => !p.id.startsWith("air-bladder."));
+  const shipped = info.packs.filter(p => p.id.startsWith("mondolme."));
+  const world = info.packs.filter(p => !p.id.startsWith("mondolme."));
   const total = shipped.reduce((n, p) => n + p.size, 0);
   const empty = shipped.filter(p => !p.size);
   if (empty.length) fail(`empty packs (did you run build:packs?): ${empty.map(p => p.name).join(", ")}`);

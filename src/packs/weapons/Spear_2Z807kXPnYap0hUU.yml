@@ -2,12 +2,12 @@ name: Spear
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/barbed-spear.svg
+img: systems/mondolme/art/game-icons/weapons/barbed-spear.svg
 effects: []
 _id: 2Z807kXPnYap0hUU
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.11
   createdTime: 1786149118149
   modifiedTime: 1786149119034

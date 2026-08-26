@@ -2,12 +2,12 @@ name: Bow
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/high-shot.svg
+img: systems/mondolme/art/game-icons/weapons/high-shot.svg
 effects: []
 _id: iQFZEdDJKyjvGtY8
 _stats:
   coreVersion: '14.365'
-  systemId: air-bladder
+  systemId: mondolme
   systemVersion: 0.1.9
   createdTime: 1785878727519
   modifiedTime: 1785879824586

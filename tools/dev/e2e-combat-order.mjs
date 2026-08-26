@@ -337,7 +337,7 @@ const drag = await page.evaluate(async () => {
   r.after = firstNames();
   r.batches = batches;
   r.flags = combat.turns.filter((c) => c.initiative === 1)
-    .map((c) => c.flags?.["air-bladder"]?.combatSort ?? null);
+    .map((c) => c.flags?.["mondolme"]?.combatSort ?? null);
   await sleep(700); // let the re-render (and the order guard behind it) land
   r.domFirstBucket = domNames().slice(0, r.after.length);
 
@@ -346,7 +346,7 @@ const drag = await page.evaluate(async () => {
   const origWarn = ui.notifications.warn;
   ui.notifications.warn = (m, ...rest) => { warned.push(String(m)); return origWarn.call(ui.notifications, m, ...rest); };
   const snapshot = () => JSON.stringify(combat.turns.map(
-    (c) => `${c.name}:${c.initiative}:${c.flags?.["air-bladder"]?.combatSort ?? ""}`));
+    (c) => `${c.name}:${c.initiative}:${c.flags?.["mondolme"]?.combatSort ?? ""}`));
   const beforeCross = snapshot();
   drive("ZZ Init Foe", r.after[0], false);
   await sleep(1200);

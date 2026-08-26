@@ -109,7 +109,7 @@ await withSettings(page, async () => {
       };
 
       // The Background must come off the SHIPPED table, not be any old string.
-      const bgPack = game.packs.get("air-bladder.warden-npcs");
+      const bgPack = game.packs.get("mondolme.warden-npcs");
       const bgTable = bgPack ? (await bgPack.getDocuments()).find((t) => t.name === "Warden: NPC - Background") : null;
       out.backgroundTable = bgTable ? bgTable.results.map((r) => r.description ?? r.text ?? "") : [];
       const careers = await cg.getNpcCareers2e();
@@ -178,7 +178,7 @@ await withSettings(page, async () => {
       // show-generate-header is a world setting and gates the Roll button, so
       // it is set BEFORE the render that builds the frame — a frame is built
       // once. withSettings puts it back.
-      await game.settings.set("air-bladder", "show-generate-header", true);
+      await game.settings.set("mondolme", "show-generate-header", true);
       const warningOf = async (actor) => {
         await actor.update({ "system.generationEnabled": true });
         const s = actor.sheet;
@@ -265,12 +265,12 @@ await withSettings(page, async () => {
         return (bg?.system?.startingGear ?? []).map((g) => g.name).sort();
       };
       const bySource = (a, src) => a.items
-        .filter((i) => i.getFlag("air-bladder", "grantSource") === src)
+        .filter((i) => i.getFlag("mondolme", "grantSource") === src)
         .map((i) => i.name).sort();
       const grantedOf = (a) => bySource(a, "background");
       const kitOf = (a) => bySource(a, "npc-kit");
       const kitIds = (a) => a.items
-        .filter((i) => i.getFlag("air-bladder", "grantSource") === "npc-kit")
+        .filter((i) => i.getFlag("mondolme", "grantSource") === "npc-kit")
         .map((i) => i.id).sort();
 
       // (a) Whatever THIS run happened to roll, the gear must match that
@@ -282,7 +282,7 @@ await withSettings(page, async () => {
         want: await gearNamesOf(MAP[npc.system.background]),
         got: grantedOf(npc),
         kit: kitOf(npc),
-        untagged: npc.items.filter((i) => !i.getFlag("air-bladder", "grantSource")).map((i) => i.name),
+        untagged: npc.items.filter((i) => !i.getFlag("mondolme", "grantSource")).map((i) => i.name),
       };
 
       // (b) The mapping must cover the table. Every row except Lord and
@@ -344,7 +344,7 @@ await withSettings(page, async () => {
       out.birthKit = {
         names: kitOf(gift),
         weaponEquipped: gift.items.some((i) => i.type === "weapon" && i.system.equipped === true
-          && i.getFlag("air-bladder", "grantSource") === "npc-kit"),
+          && i.getFlag("mondolme", "grantSource") === "npc-kit"),
       };
       await gift.createEmbeddedDocuments("Item", [{ name: "ZZ Warden Gift", type: "item" }]);
       const kitIdsAtBirth = kitIds(gift);
@@ -388,7 +388,7 @@ await withSettings(page, async () => {
         out.instruction.kit = kitOf(gift);
         out.instruction.kitWeaponEquipped = gift.items.some((i) => i.type === "weapon"
           && i.system.equipped === true
-          && i.getFlag("air-bladder", "grantSource") === "npc-kit");
+          && i.getFlag("mondolme", "grantSource") === "npc-kit");
       }
 
       // (e) A WHOLE new person replaces the kit as well. The two sources part
@@ -398,10 +398,10 @@ await withSettings(page, async () => {
       //     name — a fresh Rations is a different document with the same name,
       //     and a name compare would call a replacement a survival.
       const kitIdsBefore = gift.items
-        .filter((i) => i.getFlag("air-bladder", "grantSource") === "npc-kit").map((i) => i.id);
+        .filter((i) => i.getFlag("mondolme", "grantSource") === "npc-kit").map((i) => i.id);
       await cg.regenerateNpc(gift);
       const kitIdsAfter = gift.items
-        .filter((i) => i.getFlag("air-bladder", "grantSource") === "npc-kit").map((i) => i.id);
+        .filter((i) => i.getFlag("mondolme", "grantSource") === "npc-kit").map((i) => i.id);
       out.regen = {
         before: kitIdsBefore.length,
         after: kitIdsAfter.length,

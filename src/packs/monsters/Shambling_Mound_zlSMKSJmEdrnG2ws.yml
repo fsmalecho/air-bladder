@@ -3,7 +3,7 @@ name: Shambling Mound
 type: npc
 sort: 100001
 flags: {}
-img: systems/air-bladder/art/game-icons/creatures/shambling-mound.svg
+img: systems/mondolme/art/game-icons/creatures/shambling-mound.svg
 items:
   - _id: W4dR5v01LsFwLEBi
     name: Fists
@@ -156,7 +156,7 @@ prototypeToken:
       min: 0
       max: 1
   texture:
-    src: systems/air-bladder/art/game-icons/creatures/shambling-mound.svg
+    src: systems/mondolme/art/game-icons/creatures/shambling-mound.svg
     tint: '#ffffff'
     scaleX: 1
     scaleY: 1

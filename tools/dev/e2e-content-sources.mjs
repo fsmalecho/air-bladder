@@ -6,7 +6,7 @@
  *   npm run dev:content-sources     (needs Foundry running, world launched)
  *
  * The bug this exists for (issue #9): `generate2eCharacter` read the shipped pack
- * inline — `game.packs.get("air-bladder.backgrounds-2e")` — instead of going
+ * inline — `game.packs.get("mondolme.backgrounds-2e")` — instead of going
  * through `getBackgroundsFor("2e")`. Only the picker and `changeBackground` used
  * the union, so RANDOM generation ignored both toggles: a Warden running a
  * homebrew-only game (shipped off, custom on) got shipped backgrounds and their
@@ -39,7 +39,7 @@ try {
   await joinAsGM(page);
 
   const r = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const CG = game.cairn.characterGenerator;
     const CUSTOM = "ZZ Probe Homebrew Background";
     const prior = {
@@ -68,7 +68,7 @@ try {
           label: "ZZ Probe Custom Backgrounds", name: "zz-probe-custom-bgs",
           type: "Item", packageType: "world",
         });
-      const shipped = await game.packs.get("air-bladder.backgrounds-2e").getDocuments();
+      const shipped = await game.packs.get("mondolme.backgrounds-2e").getDocuments();
       out.shippedCount = shipped.length;
       out.shippedNames = shipped.map((b) => b.name);
 

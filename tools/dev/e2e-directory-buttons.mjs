@@ -189,7 +189,7 @@ try {
       return test();
     };
     // The source of truth the clone is judged against.
-    const pack = game.packs.get("air-bladder.mounts-transports");
+    const pack = game.packs.get("mondolme.mounts-transports");
     const idx = await pack.getDocuments();
     const srcDoc = idx.find((d) => d.name === "Heavy Destrier");
     const src = srcDoc ? {
@@ -375,7 +375,7 @@ try {
   // time. Reported as issue #6.
   console.log("\ndismissing the content-source picker");
   const cancel = await page.evaluate(async () => {
-    const NS = "air-bladder";
+    const NS = "mondolme";
     const prior = {
       twoE: game.settings.get(NS, "content-source-2e"),
       bare: game.settings.get(NS, "content-source-barebones"),
@@ -456,11 +456,11 @@ try {
   // CAPTURE then SET, and the finally restores the CAPTURED value — so a world
   // that keeps the switch off keeps it off through every run, and the probe is
   // green either way. Never assert a state nothing established.
-  const priorGen = await page.evaluate(() => game.settings.get("air-bladder", "allow-player-generate"));
+  const priorGen = await page.evaluate(() => game.settings.get("mondolme", "allow-player-generate"));
   let relayMintedUuid = null;
   try {
     await page.evaluate(async () => {
-      await game.settings.set("air-bladder", "allow-player-generate", true);
+      await game.settings.set("mondolme", "allow-player-generate", true);
     });
     // GRANT first, as dev:monster-gen's Alice leg does and for its reason: the
     // dev world's PLAYER role does not hold ACTOR_CREATE, so without the grant
@@ -489,7 +489,7 @@ try {
         // Read on ALICE's client, not the Warden's: a setting set on the GM page
         // reaches her over the socket, and an assertion made on the page that
         // WROTE it proves only that the write happened.
-        allowGen: game.settings.get("air-bladder", "allow-player-generate"),
+        allowGen: game.settings.get("mondolme", "allow-player-generate"),
       };
     });
 
@@ -667,7 +667,7 @@ try {
     // Warden's switch flipped by a test run.
     await page.evaluate(async ([perms, gen]) => {
       await game.settings.set("core", "permissions", perms);
-      await game.settings.set("air-bladder", "allow-player-generate", gen);
+      await game.settings.set("mondolme", "allow-player-generate", gen);
     }, [priorPerms, priorGen]);
     // The relay-minted PC has a rolled name, not a ZZ prefix — delete it (and
     // any container its background granted) by the uuid the mint leg kept.

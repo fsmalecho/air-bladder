@@ -12,7 +12,7 @@ import { registerSettingMenus } from "./settings-menus.js";
  *
  * Do not "tidy" this back to a friendlier string. It is not a label; it is a key.
  */
-export const SETTINGS_NS = "air-bladder";
+export const SETTINGS_NS = "mondolme";
 
 /**
  * Every key registered below, kept in registration order.
@@ -90,11 +90,11 @@ export const migrateSettingsNamespace = async () => {
       await game.settings.set(SETTINGS_NS, key, JSON.parse(old.value));
       moved.push(key);
     } catch (e) {
-      console.warn(`Air Bladder | could not migrate setting "${key}":`, e);
+      console.warn(`Mondolme | could not migrate setting "${key}":`, e);
     }
   }
   if (moved.length) {
-    console.log(`Air Bladder | migrated ${moved.length} setting(s) from the "cairn" namespace: ${moved.join(", ")}`);
+    console.log(`Mondolme | migrated ${moved.length} setting(s) from the "cairn" namespace: ${moved.join(", ")}`);
   }
 };
 
@@ -131,7 +131,7 @@ export const INTERNAL_SETTING_KEYS = [
  * The Warden's settings, as SUBMENUS (2026-08-22, user ruling: "one submenu
  * per group" — four of them, once GLOG & Other Hacks was asked for the same
  * day): the main Configure Settings window shows one button per group under
- * Air Bladder and nothing else, and each opens a small application holding
+ * Mondolme and nothing else, and each opens a small application holding
  * that group's rows — see `settings-menus.js`. Every key listed here is
  * registered `config: false`, which is what keeps it off the flat list.
  *
@@ -556,7 +556,7 @@ export const registerSettings = () => {
         try {
           await runGlogConversion();
         } catch (err) {
-          console.error("air-bladder | GLOG world conversion failed:", err);
+          console.error("mondolme | GLOG world conversion failed:", err);
           ui.notifications.error(game.i18n.localize("CAIRN.Notify.GlogConversionFailed"));
         }
       }
@@ -744,7 +744,7 @@ export const registerSettings = () => {
     scope: "world",
     config: false,
     type: String,
-    default: "air-bladder-portraits",
+    default: "mondolme-portraits",
     requiresReload: false,
     // requiresReload: false was a claim nothing made true. Both functions that act
     // on this setting ran only in the `ready` hook and from the gallery's GM
@@ -906,6 +906,6 @@ export const registerSettings = () => {
 
   // The submenu buttons, in group order — registered after every
   // setting so each app finds its keys registered when it opens. These are
-  // the only air-bladder rows the main settings window shows.
+  // the only mondolme rows the main settings window shows.
   registerSettingMenus(SETTINGS_NS, SETTING_GROUPS);
 };

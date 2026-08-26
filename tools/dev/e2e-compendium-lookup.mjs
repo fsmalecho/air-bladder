@@ -46,7 +46,7 @@ try {
 
   /* ------------------------------------------------ 1. the shop's lookups ---- */
   const shop = await page.evaluate(async () => {
-    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const mkt = await import("/systems/mondolme/module/marketplace.js");
     const Pack = foundry.documents.collections.CompendiumCollection;
     const original = Pack.prototype.getDocuments;
 
@@ -98,19 +98,19 @@ try {
 
   /* ------------------------------------------------------- 2. the guards ---- */
   const guards = await page.evaluate(async () => {
-    const c = await import("/systems/air-bladder/module/compendium.js");
+    const c = await import("/systems/mondolme/module/compendium.js");
     const out = {};
     const attempt = async (key, fn) => {
       try { out[key] = { value: await fn(), threw: false }; }
       catch (e) { out[key] = { value: null, threw: true, message: e.message }; }
     };
-    await attempt("missingPack", () => c.findCompendiumItem("air-bladder.no-such-pack", "Anything"));
-    await attempt("missingItem", () => c.findCompendiumItem("air-bladder.utils", "ZZ No Such Table"));
-    await attempt("drawMissing", () => c.drawTable("air-bladder.utils", "ZZ No Such Table"));
-    await attempt("textMissing", () => c.drawTableText("air-bladder.utils", "ZZ No Such Table"));
+    await attempt("missingPack", () => c.findCompendiumItem("mondolme.no-such-pack", "Anything"));
+    await attempt("missingItem", () => c.findCompendiumItem("mondolme.utils", "ZZ No Such Table"));
+    await attempt("drawMissing", () => c.drawTable("mondolme.utils", "ZZ No Such Table"));
+    await attempt("textMissing", () => c.drawTableText("mondolme.utils", "ZZ No Such Table"));
     // ...and the happy path still works, so "never throws" cannot pass by never working.
     await attempt("drawReal", async () => {
-      const d = await c.drawTable("air-bladder.utils", "Scars");
+      const d = await c.drawTable("mondolme.utils", "Scars");
       return d?.results?.length ?? 0;
     });
     return out;
@@ -143,7 +143,7 @@ try {
   const cache = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const MARK = "ZZ Probe Scar";
-    const pack = game.packs.get("air-bladder.tables-2e");
+    const pack = game.packs.get("mondolme.tables-2e");
     const wasLocked = pack.locked;
 
     // Always re-fetch the table before writing to it. A compendium document is

@@ -2,7 +2,7 @@ name: Detect Magic
 type: spellbook
 flags:
   core: {}
-img: systems/air-bladder/icons/spellbook.svg
+img: systems/mondolme/icons/spellbook.svg
 effects: []
 _id: F9iv9MP5mDJWNK0Z
 _stats:

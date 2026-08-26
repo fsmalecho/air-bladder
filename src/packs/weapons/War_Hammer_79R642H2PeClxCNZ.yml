@@ -2,7 +2,7 @@ name: War Hammer
 type: weapon
 flags:
   core: {}
-img: systems/air-bladder/art/game-icons/weapons/warhammer.svg
+img: systems/mondolme/art/game-icons/weapons/warhammer.svg
 effects: []
 _id: 79R642H2PeClxCNZ
 _stats:
