@@ -37,7 +37,6 @@ const NPC_TRAIT_LABELS = {
   vice: "CAIRN.Trait.Vice",
 };
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
-import { actorDisplayName, localizeNameDesc, sourceOf, t } from "../i18n-content.js";
 import { FATIGUE_NAME } from "../item/item.js";
 import { castFromGrimoire, castScroll, grimoiresOn, pagesOfGrimoire, ensureGrimoireKey,
   groupPagesUnderBooks } from "../grimoire.js";
@@ -247,15 +246,11 @@ const owned = (fn) => function (event, target) {
     // the pack is locked, or this user fails `editPermission` on the document.
     // Name whichever it is, because the fix is different for each.
     const pack = this.document?.pack ? game.packs.get(this.document.pack) : null;
-    // `actorDisplayName`, not a bare `.name`: this wrapper only ever runs on an
-    // ACTOR sheet, and the refusal is most often about a compendium monster,
-    // whose sheet title beside it is translated. The helper carries the
-    // character gate, so a PC's player-authored name still comes through
-    // untouched. `pack.title` needs nothing — core localizes a pack LABEL per
-    // viewer already (compendium-collection.mjs:46).
+    // `pack.title` needs nothing — core localizes a pack LABEL per viewer
+    // already (compendium-collection.mjs:46).
     ui.notifications.warn(pack?.locked
       ? game.i18n.format("CAIRN.Notify.PackLocked", { pack: pack.title ?? pack.collection })
-      : game.i18n.format("CAIRN.Notify.NotEditable", { name: actorDisplayName(this.document) }));
+      : game.i18n.format("CAIRN.Notify.NotEditable", { name: this.document.name ?? "" }));
     return undefined;
   }
   return fn.call(this, event, target);
@@ -830,10 +825,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // (slot math, worn rows) still read it.
     context.connectionRows = context.system.containerObjects.map((c) => ({
       uuid: c.uuid,
-      // Display-only: a connected Sack/Mule is an Actor doc, which the extractor
-      // files under monster.name — the same row's expanded CONTENTS were already
-      // localized (#onItemDescription), so the row read English over Spanish.
-      name: t("monster.name", c.name),
+      name: c.name,
       slotsUsed: c.system.slotsUsed,
       slots: c.system.slots,
       canUnlink: game.user.isGM || (this.actor.isOwner && c.isOwner),
@@ -895,15 +887,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         .map(([key, v]) => ({ key, label: game.i18n.localize(v.label), selected: key === cls }));
       context.kindIsCustom = !!cls && !CONTAINER_CLASSES[cls];
       context.kindCustomValue = context.kindIsCustom ? cls : "";
-      // Display half of the Career display/value split; the submit half lives
-      // in _processFormData. The stored English career is a MATCH KEY
-      // (randomCareer's repeat-exclusion, _preUpdate's day-rate fill), so the
-      // input shows t() and the submit maps back through sourceOf().
-      context.professionDisplay = t("npc.career", this.actor.system.profession);
-      // The NPC role's Background, same display half, different namespace: a
-      // Background is a RollTable result, a Career a catalogue entry. Its submit
-      // half is in _processFormData beside the career's.
-      context.backgroundDisplay = t("table.result", this.actor.system.background);
+      context.professionDisplay = this.actor.system.profession;
+      context.backgroundDisplay = this.actor.system.background;
       // Every role says plain "Notes" (user ruling 2026-08-08). The person role
       // used to mirror the character sheet's "Background & Notes" wording; that
       // parity read as noise on an NPC, so only the character sheet keeps it.
@@ -975,19 +960,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       system: { ...i.system },
     }));
 
-    // Alphabetical must be alphabetical in the language the eye reads (review
-    // #9): sorting on stored English and translating afterwards rendered the
-    // list shuffled for any other language. `_sortItemsForDisplay` sorts on the
-    // same display copy the render below produces (Fatigue's UI label included)
-    // and is the SAME helper the printed page uses, so the two cannot drift; the
-    // stored names stay English and every identity test still uses them.
-    items = this._sortItemsForDisplay(items, this._itemNamespaces().nameNs);
+    // `_sortItemsForDisplay` sorts on the same display copy the render below
+    // produces (Fatigue's UI label included) and is the SAME helper the printed
+    // page uses, so the two cannot drift.
+    items = this._sortItemsForDisplay(items);
 
-    // Display-only content localization: translate inventory item names/descriptions
-    // into the active language for rendering only. These are plain data copies (not
-    // the stored documents, which stay English), so name-matching elsewhere is
-    // unaffected. A no-op in an English world (overlay null); a miss shows English.
-    items = items.map((i) => localizeNameDesc(i, this._itemNamespaces()));
     // Fatigue is STORED in English (see FATIGUE_NAME) so its identity survives a
     // mixed-language table. Its label is localized here, at display time, from the
     // UI key every language file already carries — so a Spanish player still reads
@@ -1064,7 +1041,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // (content-link/inline-roll) carries no data-action, so the strip is safe.
       context.enrichedDescription =
         cleanDescription(await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-          t("monster.desc", this.actor.system.description),
+          this.actor.system.description,
           { relativeTo: this.actor },
         ));
       // Enriched but NOT translated: notes are the Warden's own prose, and no
@@ -1090,23 +1067,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       context.descriptionPlaceholder = game.i18n.localize("CAIRN.DescriptionPlaceholder");
     }
 
-    // The NAME INPUT's display half, and the ONE place the PC exclusion is
-    // enforced (2026-08-04, ruled by the user alongside the item-sheet fix).
-    //
-    // A non-character actor's name is pack content: every actor doc is
-    // extracted under `monster.name`, the window title above this field has
-    // localized through it since round 2, and leaving the field raw gave the
-    // same "one sheet, two answers" tell Malecho reported on items.
-    //
-    // A CHARACTER'S NAME IS NEVER LOCALIZED. It is player-authored, it belongs
-    // to no namespace, and a PC who happens to share a name with a shipped
-    // creature ("Horse") must not have their own character renamed on screen by
-    // the overlay. `t()` returning the input unchanged made that safe by
-    // accident; the type gate makes it safe on purpose, which is what a ruling
-    // deserves over a coincidence.
-    context.nameDisplay = this.actor.type === "character"
-      ? this.actor.name
-      : t("monster.name", this.actor.name);
+    context.nameDisplay = this.actor.name;
 
     if (this.actor.type === "character") await this._prepareCharacterContext(context);
 
@@ -1169,49 +1130,19 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Content-overlay namespaces for THIS actor's EMBEDDED ITEMS.
-   *
-   * One definition because two places need it and they MUST agree: the render path
-   * localizes the inventory rows, and #onItemDescription rebuilds the expanded panel
-   * from the stored document. They did not agree — the panel never asked the overlay
-   * at all — so every item description read English in every language while the name
-   * above it read Spanish. That is what a translator reported (2026-08-02), and no
-   * amount of translating could have fixed it.
-   *
-   * Keyed on ROLE, not on type. A monster stores its attacks and features as items,
-   * which the extractor files under monster.itemName/monster.itemDesc; everything
-   * else — a character, a hireling, a person, and a CONTAINER — holds gear from the
-   * item packs, which is item.*. Type was the right key only while `container` was
-   * its own type: since it became `npc` + role, `type === "npc"` swept a container's
-   * gear into the monster namespaces, where it could only ever miss.
-   *
-   * The actor's OWN name/description stay type-keyed (monster.name / monster.desc),
-   * because that is what the extractor emits for every actor doc including mounts
-   * and containers. The split is deliberate: item rule by role, actor rule by type.
-   * @private
-   */
-  _itemNamespaces(actor = this.actor) {
-    return actor.npcRole === "monster"
-      ? { nameNs: "monster.itemName", descNs: "monster.itemDesc" }
-      : { nameNs: "item.name", descNs: "item.desc" };
-  }
-
-  /**
    * Order an item list the way the inventory tab renders it, so the sheet and the
    * printed page cannot drift (review #12: print built rows in insertion order
    * while the sheet sorted). Manual `sort` when drag-to-reorder is on, else
    * alphabetical by DISPLAY name (localeCompare in the reader's language),
-   * equipped first, Fatigue last. `nameNs` is the OWNING actor's item namespace —
-   * a connected monster's gear is filed under monster.itemName — and Fatigue's
-   * label comes from the UI key, both matching `_prepareContext`. Returns a copy;
-   * the source array is never mutated.
+   * equipped first, Fatigue last. Fatigue's label comes from the UI key,
+   * matching `_prepareContext`. Returns a copy; the source array is never
+   * mutated.
    * @param {Item[]} items
-   * @param {string} nameNs  the name namespace for display sorting
    * @returns {Item[]}
    */
-  _sortItemsForDisplay(items, nameNs) {
+  _sortItemsForDisplay(items) {
     const displayNameOf = (i) =>
-      i.name === FATIGUE_NAME ? game.i18n.localize("CAIRN.Fatigue") : t(nameNs, i.name);
+      i.name === FATIGUE_NAME ? game.i18n.localize("CAIRN.Fatigue") : i.name;
     const byDisplayName = (a, b) =>
       displayNameOf(a).localeCompare(displayNameOf(b), game.i18n.lang);
     const sorted = [...items];
@@ -1226,37 +1157,26 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Window title: "<Role>: <display name>" for anything role-bearing, core's
+   * Window title: "<Role>: <name>" for anything role-bearing, core's
    * "<type label>: <name>" for a character.
    *
    * The ROLE is the prefix (2026-08-02, user ask): "Non-Player Character:
    * Albino Tusks…" said the least informative thing twice and truncated the
    * name for it — "Monster: Albino Tusks Creature" / "Mount: Bucephalus" is
-   * what the sheet body already says in the Role select. The name half keeps
-   * the display-name translation (every actor doc's name is extracted under
-   * monster.name; a CHARACTER is excluded outright — see the guard below, and
-   * the name input in _prepareContext that follows the same rule).
+   * what the sheet body already says in the Role select.
    * es note: the CAIRN.Role* value keys are untranslated in es,
    * so a Spanish title shows the English role word — consistent with its Role
    * dropdown today; translator-handoff item.
    * @override
    */
   get title() {
-    // A character's name never goes through the overlay — ruled 2026-08-04, and
-    // now stated rather than relied on. The old comment argued this was safe
-    // because a PC never reaches the role branch; that is true of the FORMAT
-    // and not of the LOOKUP, and a PC named "Horse" would have had a Spanish
-    // window title over an English name field.
     if (this.actor.type === "character") return super.title;
-    const name = t("monster.name", this.actor.name);
     const role = this.actor.npcRole;
     if (role) {
       const key = `CAIRN.Role${role.charAt(0).toUpperCase()}${role.slice(1)}`;
-      return `${game.i18n.localize(key)}: ${name || this.actor.name}`;
+      return `${game.i18n.localize(key)}: ${this.actor.name}`;
     }
-    if (!name || name === this.actor.name) return super.title;
-    const prefix = CONFIG.Actor.typeLabels[this.actor.type] ?? "";
-    return `${game.i18n.localize(prefix)}: ${name}`;
+    return super.title;
   }
 
   /**
@@ -1339,26 +1259,19 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const texts = table ? table.results.map(resultText).sort() : [];
       return {
         key,
-        // A tables-2e trait's label IS its table name (Physique, Skin…), so it
-        // localizes through the same table.name namespace as the compendium
-        // list. The four NPC tables cannot: they are named "Warden: NPC -
+        // A tables-2e trait's label IS its table name (Physique, Skin…). The
+        // four NPC tables cannot use theirs: they are named "Warden: NPC -
         // Quirk", which is a table name a Warden browses by and a terrible
-        // label to put beside a select. Those take a UI key instead — the
-        // labels are ours, and a UI translator can do them without touching
-        // the content overlay.
+        // label to put beside a select. Those take a UI key instead.
         label: NPC_TRAIT_LABELS[key] && key in npcTraits
           ? game.i18n.localize(NPC_TRAIT_LABELS[key])
-          : t("table.name", tableName),
+          : tableName,
         value,
-        // Display-only: the <option> VALUE stays the English trait text (what
-        // system.traits.<key> stores on save), only the visible label is
-        // localized. So picking a Spanish option never bakes a Spanish string,
-        // and `selected` still matches English↔English. (See i18n-content.js.)
-        options: texts.map((text) => ({ value: text, display: t("table.result", text), selected: text === value })),
+        options: texts.map((text) => ({ value: text, display: text, selected: text === value })),
         // An off-table value (legacy free-typed) is preserved as its own option
         // so switching to a dropdown never silently drops it.
         customValue: value && !texts.includes(value) ? value : "",
-        customDisplay: value && !texts.includes(value) ? t("table.result", value) : "",
+        customDisplay: value && !texts.includes(value) ? value : "",
       };
     });
 
@@ -1373,26 +1286,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const tables2e = byPack["mondolme.tables-2e"] ?? (await cachedPackDocuments("mondolme.tables-2e"));
     const scarTable = tables2e.find((tbl) => tbl.name === "Scars");
     const selectedScars = this.actor.system.scars ?? [];
-    // Same display/value split as the trait options above, and for the same reason:
-    // `.scar-check` persists its `value` verbatim into system.scars, and `selected`
-    // matches English↔English, so `name` must stay the English source. Only `display`
-    // and `description` are localized. Both were plain English before — the scar
-    // NAMES were already in the overlay and simply never looked up.
     context.scarOptions = scarTable
       ? scarTable.results.map((r) => {
           const name = resultText(r);
           return {
             name,
-            display: t("table.result", name),
-            // Our own per-row annotation, not the row's text — hence its own
-            // namespace (see tools/i18n/extract-content.mjs).
-            description: t("table.resultDesc", r.flags?.["mondolme"]?.description ?? ""),
+            display: name,
+            // Our own per-row annotation, not the row's text.
+            description: r.flags?.["mondolme"]?.description ?? "",
             selected: selectedScars.includes(name),
           };
         })
       : [];
     context.scarDisplay = selectedScars.length
-      ? selectedScars.map((s) => t("table.result", s)).join(", ")
+      ? selectedScars.join(", ")
       : null;
     context.scarsCollapsed = this._scarsCollapsed ?? false;
   }
@@ -1412,19 +1319,16 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const bg = bgUuid ? await fromUuid(bgUuid) : null;
     context.backgroundDescription = bg?.system?.description
       ? cleanDescription(await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-          t("bg.desc", bg.system.description), { relativeTo: this.actor }))
+          bg.system.description, { relativeTo: this.actor }))
       : "";
     // The background's credit line, shown in Background & Notes. Same field the
     // printed footer uses, off the SAME `bg` already resolved above — no second
-    // lookup. Deliberately NOT through `t()`, unlike the description and name
-    // beside it: this is authored data, and a citation's two names, title and
-    // licence code are what a reader in any language needs. Empty for the canon
-    // 2e and Barebones backgrounds by design, and empty renders nothing.
+    // lookup. A citation's two names, title and licence code are what a reader
+    // in any language needs. Empty for the canon 2e and Barebones backgrounds by
+    // design, and empty renders nothing.
     context.backgroundAttribution = String(bg?.system?.attribution ?? "").trim();
-    // Translated background name for the header (generated case). The editable
-    // input for a hand-made character keeps the raw system.background so a Warden
-    // never edits a translated string.
-    context.backgroundName = t("bg.name", this.actor.system.background ?? "");
+    // The background name for the header (generated case).
+    context.backgroundName = this.actor.system.background ?? "";
     context.contentSourceLabel = sourceLabel(this.actor.system.contentSource);
 
     // A generated background (either edition) is a linked document, so its name
@@ -1467,36 +1371,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // this repo insists on governs ACQUISITION — walking past a slot limit —
     // not whether a field is drawn. Stored omen text is never cleared.
     context.showOmen = omenVisible(this.actor);
-    // The omen shows t("table.result", …) on BOTH surfaces — the read span and
-    // the TEXTAREA — with the submit anchored back to the stored English in
-    // _processFormData (2026-08-06, Malecho's second omen report). The textarea
-    // stayed raw English for two rounds and both grounds expired: "no
-    // display/value split built for it" ended when the name inputs gained the
-    // anchor (2026-08-04), and the READ span the first fix leaned on was
-    // UNREACHABLE with an omen present — rolling one requires the checkbox ON
-    // (the textarea state), and unticking it CLEARS the omen, so no character
-    // holding an omen could ever reach the branch that translated. A display
-    // fix must land on the state a real user is in, not just one the template
-    // can render.
-    context.omenDisplay = t("table.result", this.actor.system.omen);
+    context.omenDisplay = this.actor.system.omen;
     // Barebones-only: the career that didn't work out — a name, plus the one
     // keepsake item below (this line read "Grants nothing" until 2026-08-22).
     // Read the setting live, so a Warden switching it off hides the line on an
     // already-generated character rather than only affecting the next one.
-    // Localized like the pickers that set them (promptFailedCareer shows
-    // t("bg.name")/t("item.name") labels): the stored value stays the English
-    // match key; only these display copies translate.
-    context.failedCareer = t("bg.name", this.actor.system.failedCareer ?? "");
+    context.failedCareer = this.actor.system.failedCareer ?? "";
     context.showFailedCareer =
       this.actor.system.contentSource === "barebones" &&
       game.settings.get(SETTINGS_NS, "barebones-failed-career");
     // The single keepsake item the failed career left (grantSource
     // "failed-career") — shown on its own line under the career, with a re-roll
     // dice. It also appears in the inventory tagged "Failed Career" + "Petty".
-    context.failedCareerItem = t(
-      "item.name",
-      this.actor.items.find((i) => i.getFlag("mondolme", "grantSource") === "failed-career")?.name ?? "",
-    );
+    context.failedCareerItem =
+      this.actor.items.find((i) => i.getFlag("mondolme", "grantSource") === "failed-career")?.name ?? "";
 
     // Random-generation mode (default on): gates the per-field dice rollers
     // (age, omen). Legacy characters lack the field -> default to enabled.
@@ -1511,11 +1399,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // re-rollable questions. Questions are 2e; bonds are 2e, but a legacy
     // Barebones character may still hold one from the retired lending
     // setting, so show the section whenever the character actually has one.
-    // Translate bond prose for display (bonds are drawn from the Bonds table →
-    // table.result). A composed bond string that doesn't match a source key
-    // falls back to English; the count/entitlement below is unaffected.
-    context.bonds = this._effectiveBonds()
-      .map((b) => ({ ...b, description: t("table.result", b.description) }));
+    context.bonds = this._effectiveBonds().map((b) => ({ ...b }));
     context.showBonds = context.is2eBackground || context.bonds.length > 0;
     // "Add a bond" shows only while below the background's entitlement (base 1,
     // plus a second for Fieldwarden / Outrider's debt option). A fresh character
@@ -1523,13 +1407,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.canAddBond = context.bonds.length < (await this._bondEntitlement(bg));
     // Divider between the bonds/questions area and the free-form notes editor.
     context.showNotesDivider = context.showBonds;
-    // Questions render from a translated copy (template iterates `questions`, not
-    // system.questions): each prompt is a bg.question, each answer a background
-    // option description (bg.optionDesc). Misses fall back to English.
     context.questions = (this.actor.system.questions ?? []).map((q) => ({
       ...q,
-      question: t("bg.question", q.question ?? ""),
-      answer: t("bg.optionDesc", q.answer ?? ""),
+      question: q.question ?? "",
+      answer: q.answer ?? "",
     }));
     // The Notes editor is TOGGLED (character-sheet.html), so this is its
     // light-DOM DISPLAY half. Enriched but NOT translated: notes are the
@@ -1921,9 +1802,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // HTML/script into the keeper's (or GM's) sheet when the row is expanded.
       const div = document.createElement("div");
       div.className = "item-description";
-      // What a container holds is gear, whatever the KEEPER is — so item.name,
-      // not this keeper's namespaces.
-      div.textContent = container.items.map((it) => t("item.name", it.name)).join(", ");
+      div.textContent = container.items.map((it) => it.name).join(", ");
       return div;
     }
     const item = this.actor.items.get(row.dataset.itemId);
@@ -1933,24 +1812,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       : "";
     // A relic's Recharge condition, the crit line's treatment — icon plus
     // italics (Malecho's ask, issue #22). Keyed on the TEXT, not the relic
-    // flag, the same rule the Charges relabel follows. THROUGH the overlay,
-    // unlike criticalDamage: shipped relics carry recharge prose (all 46), so
-    // a Spanish client would otherwise read English under a translated
-    // description — `item.recharge` is extracted since 2026-08-21. Flat ns on
-    // every carrier: no monster-embedded item ships recharge text, so a
-    // monster-side namespace would be rows nothing fills.
-    const rechargeText = t("item.recharge", item.system.recharge ?? "");
+    // flag, the same rule the Charges relabel follows.
+    const rechargeText = item.system.recharge ?? "";
     const recharge = cleanDescription(rechargeText) !== ""
       ? `<div><i class="fa-regular fa-arrows-rotate"></i> <i>${cleanDescription(rechargeText)}</i></div>`
       : "";
     const div = document.createElement("div");
     div.className = "item-description";
-    // Localized like the row above it (_itemNamespaces), and sanitized AFTER —
-    // the overlay is a shipped file, but it reaches innerHTML, so it goes
-    // through the same cleaner the stored string does rather than around it.
-    // criticalDamage is not translated because it is not EXTRACTED: no shipped
-    // item carries any, so there is nothing for a translator to have filled.
-    const desc = t(this._itemNamespaces().descNs, item.system.description);
+    const desc = item.system.description;
     div.innerHTML = `${cleanDescription(desc)}${crit}${recharge}`;
     return div;
   }
@@ -2087,19 +1956,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return null;
     }
     if (!this._mayChangeBackground()) return null;
-    // Through the content overlay, like every other background-name surface: the
-    // sheet header (_prepareContext), the picker and the failed-career list all
-    // show `t("bg.name", …)`, so naming the raw English here would ask a Spanish
-    // Warden about "Aeronaut" the moment after their own sheet called it
-    // "Aeronauta". Latent while lang/content/es.json is empty — and this is the one
-    // call site that would NOT come along when the content phase lands.
-    //
-    // Escaped because the result is interpolated into HTML. `bg.name` is a stored
-    // document field, and a world Item is creatable by any player a Warden has
-    // granted Create Item to — the same player→GM escalation this repo has paid
-    // for before (see cleanDescription in utils.js), and this dialog renders in
-    // the GM's client.
-    const bgName = foundry.utils.escapeHTML(t("bg.name", bg.name));
+    // Escaped because the result is interpolated into HTML. The name is a
+    // stored document field, and a world Item is creatable by any player a
+    // Warden has granted Create Item to — the same player→GM escalation this
+    // repo has paid for before (see cleanDescription in utils.js), and this
+    // dialog renders in the GM's client.
+    const bgName = foundry.utils.escapeHTML(bg.name);
     const ok = await foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize("CAIRN.ChangeBackgroundTitle") },
       content:
@@ -2235,15 +2097,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    */
   _buildTraitSentence(traits = {}, age = "") {
     // i18n-driven so the whole sentence localizes: each clause/conjunction is a
-    // CAIRN.Bio.* key (English defaults reproduce the original wording exactly),
-    // and each trait VALUE goes through the content overlay (table.result), so a
-    // Spanish world reads coherent Spanish once both the UI keys and the trait
-    // tables are translated. Age is a number and is never overlaid.
+    // CAIRN.Bio.* key (English defaults reproduce the original wording exactly).
     const F = (k, data) => game.i18n.format(this._wording(k), data);
-    const val = (key) => {
-      const raw = String(traits?.[key] ?? "").trim();
-      return raw ? t("table.result", raw) : "";
-    };
+    const val = (key) => String(traits?.[key] ?? "").trim();
     const sep = game.i18n.localize("CAIRN.Bio.ListSep");
     const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     const andList = (arr) =>
@@ -2363,8 +2219,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // `owner` is the actor these items belong to, which is NOT always the one
     // being printed: the connected sections below render a companion's gear,
     // and grouping a page under a book asks about that companion's shelf.
-    const rows = (owner, items, nameNs) => groupPagesUnderBooks(
-      owner, this._sortItemsForDisplay(items, nameNs), (i) => i.id,
+    const rows = (owner, items) => groupPagesUnderBooks(
+      owner, this._sortItemsForDisplay(items), (i) => i.id,
     ).map((it) => {
       const notes = [];
       // A bound page is the book's, not the carrier's, so it carries neither of
@@ -2400,13 +2256,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (printGrantTags && it.system.grantLabelRaw && !isPage) notes.push(`[${it.system.grantLabelRaw}]`);
       if (it.system.bulky) notes.push(`(${L("CAIRN.Bulky")})`);
       if ((it.system.quantity ?? 1) > 1) notes.push(`×${it.system.quantity}`);
-      // The OWNING actor's namespace, and Fatigue relabelled from the UI key —
-      // both matching the sheet (review #12: print hard-coded item.name, so a
-      // Spanish player's Fatigue printed "Fatigue" and a monster's statblock
-      // items would print English the moment their translation landed).
+      // Fatigue relabelled from the UI key, matching the sheet (review #12).
       const name = it.name === FATIGUE_NAME
         ? game.i18n.localize("CAIRN.Fatigue")
-        : t(nameNs, it.name);
+        : it.name;
       // A spellbook row carries the same "Spellbook — " / "Spellscroll — "
       // prefix the inventory shows (user report 2026-08-08: the printed sheet
       // dropped it, so a book and its spell read as loose gear). THROUGH the
@@ -2421,7 +2274,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     });
 
     const isChar = actor.type === "character";
-    const mainRows = rows(actor, actor.items.contents, this._itemNamespaces(actor).nameNs);
+    const mainRows = rows(actor, actor.items.contents);
     // The status line: critical, plus deprived/panicked as text on an NPC
     // page. A CHARACTER prints those two as ALWAYS-PRESENT mark boxes
     // instead (user ask 2026-08-10: the paper sheet needs somewhere to
@@ -2435,19 +2288,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const traitsProse = this._buildTraitSentence(sys.traits, sys.age);
 
     // The background's own prose and its rolled question/answer pairs (user
-    // additions 2026-08-08), routed exactly as the sheet routes them —
-    // bg.desc / bg.question / bg.optionDesc — so a Spanish player prints
-    // Spanish. Each Q&A stays its OWN pair of paragraphs: Kettlewright smushes
-    // them into one blob, and the ruling is exactly not that.
+    // additions 2026-08-08). Each Q&A stays its OWN pair of paragraphs:
+    // Kettlewright smushes them into one blob, and the ruling is exactly not that.
     const bg = isChar && sys.backgroundUuid ? await fromUuid(sys.backgroundUuid) : null;
     const backgroundDesc = bg?.system?.description
-      ? await enrich(t("bg.desc", bg.system.description))
+      ? await enrich(bg.system.description)
       : "";
     const questions = (sys.questions ?? [])
       .filter((q) => String(q?.answer ?? "").trim())
       .map((q) => ({
-        question: t("bg.question", q.question ?? ""),
-        answer: t("bg.optionDesc", q.answer ?? ""),
+        question: q.question ?? "",
+        answer: q.answer ?? "",
       }));
 
     // A Connections SECTION was built here from 2026-08-08 and REMOVED
@@ -2472,17 +2323,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const role = actor.npcRole ?? "hireling";
     const roleLabel = isChar ? "" : L(`CAIRN.Role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
     const jobField = role === "hireling" ? sys.profession : role === "npc" ? sys.background : "";
-    // The overlay NAMESPACE splits with the field: the sheet header shows a
-    // hireling's Career through `npc.career` and an NPC's Background through
-    // `table.result` (_prepareContext, professionDisplay/backgroundDisplay),
-    // and the printed line must ask the same one — all twelve careers are
-    // translated under npc.career and none under table.result, so one lookup
-    // for both printed "Blacksmith" under a sheet reading "Herrero"
-    // (review #17).
-    const career = isChar ? ""
-      : t(role === "hireling" ? "npc.career" : "table.result", String(jobField ?? "").trim());
+    const career = isChar ? "" : String(jobField ?? "").trim();
     const subtitle = isChar
-      ? t("bg.name", sys.background ?? "")
+      ? (sys.background ?? "")
       : career ? game.i18n.format("CAIRN.PrintRoleCareer", { role: roleLabel, career }) : roleLabel;
     // "Custom" is MEMBERSHIP, not a stored source (the recorded definition:
     // not in the Player's Guide, nothing more — a custom character still
@@ -2539,14 +2382,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       lang: game.i18n.lang,
       isChar,
       credits,
-      // THROUGH the overlay, like every other name on this page (review #15).
-      // It was the one that was not: the containers below, the item rows, the
-      // subtitle and the statblock prose all route, so a Spanish Warden printed
-      // a transport titled "Cart" over a cargo list in Spanish, while the sheet
-      // it was printed from said "Carreta". `actorDisplayName` is the one place
-      // the never-localize-a-PC gate lives (2026-08-04), which is exactly why
-      // the raw read had to become this call and not a bare `t()`.
-      name: actorDisplayName(actor),
+      name: actor.name ?? "",
       portrait: abs(actor.img),
       // The "Compatible with Cairn 2e" badge, top right of a character page
       // (user ask 2026-08-16 — the header's right side was empty). The SAME
@@ -2572,7 +2408,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // world setting, read live.
       failedCareer: isChar && sys.contentSource === "barebones"
         && game.settings.get(SETTINGS_NS, "barebones-failed-career")
-        ? t("bg.name", sys.failedCareer ?? "") : "",
+        ? (sys.failedCareer ?? "") : "",
       pronouns: sys.pronouns,
       stats: {
         str: sys.abilities.STR.value, strMax: sys.abilities.STR.max,
@@ -2621,18 +2457,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // 10 while the creature owns no slots at all — the probe's first run
       // caught exactly that.
       containers: actor.connectedActors().map((c) => ({
-        name: t("monster.name", c.name),
+        name: c.name,
         used: c.system.slotsUsed,
         max: c.system.slotsMax,
         showSlots: (c.system.slots ?? 0) > 0,
-        rows: rows(c, c.items.contents, this._itemNamespaces(c).nameNs),
+        rows: rows(c, c.items.contents),
       })).filter((s) => s.showSlots || s.rows.length),
-      // A character's description is the player's own prose; an NPC's is the
-      // statblock prose the overlay files under monster.desc.
-      description: await enrich(isChar ? sys.description : t("monster.desc", sys.description ?? "")),
-      // Bonds, the omen and scars are table text — through the overlay
-      // (table.result), the same routing the sheet gives them.
-      bonds: (sys.bonds ?? []).map((b) => t("table.result", String(b?.description ?? "").trim())).filter(Boolean),
+      description: await enrich(isChar ? sys.description : (sys.description ?? "")),
+      bonds: (sys.bonds ?? []).map((b) => String(b?.description ?? "").trim()).filter(Boolean),
       // The Warden's show-omens switch reaches the PAPER too (ruling
       // 2026-08-17: one switch, both surfaces — a field hidden on the sheet
       // must not reappear in print). No template change needed: the section is
@@ -2645,9 +2477,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // own sheet hides it (review #16). The sheet reads the same helper, which
       // is what stops the two answering differently again.
       omen: sys.omenEnabled && omenVisible(actor)
-        ? t("table.result", String(sys.omen ?? "").trim())
+        ? String(sys.omen ?? "").trim()
         : "",
-      scars: (sys.scars ?? []).map((s) => t("table.result", s)),
+      scars: [...(sys.scars ?? [])],
       notes: await enrich(sys.notes),
     };
 
@@ -3090,23 +2922,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const pageCount = pagesOfGrimoire(this.actor, grimoire).length;
     if (pageCount >= (grimoire.system.grimoirePages ?? 0)) {
       ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireFull",
-        { name: t("item.name", grimoire.name) }));
+        { name: grimoire.name }));
       return;
     }
     // Names go into dialog HTML and are user-authored text.
-    //
-    // Both are shipped Items — the Grimoire out of the Reliquary, the spell out
-    // of a spellbook pack — so both read through the content overlay, exactly as
-    // the page picker two files over does (grimoire.js). Without it a Spanish
-    // player clicks Transmute on a row reading "Cuerda" and is asked to bind
-    // "Rope": the same item wearing two names in one gesture. Translate first,
-    // escape second — the overlay is keyed on the authored English, and escaping
-    // first would hand it entity-mangled text that can never match.
     const esc = foundry.utils.escapeHTML;
     const proceed = await foundry.applications.api.DialogV2.confirm({
       content: game.i18n.format(
         item.system.scroll ? "CAIRN.GrimoireTransmuteScrollQ" : "CAIRN.GrimoireTransmuteQ",
-        { spell: esc(t("item.name", item.name)), book: esc(t("item.name", grimoire.name)) }),
+        { spell: esc(item.name), book: esc(grimoire.name) }),
       rejectClose: false,
       modal: true,
     });
@@ -3331,16 +3155,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return;
     }
     if (!this.actor.canKeepConnected) {
-      // Display name, not stored: the toast must agree with the sheet title it
-      // answers (the marketplace's rule for the same two keys — review #9).
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: actorDisplayName(this.actor) }));
+      ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: this.actor.name ?? "" }));
       return;
     }
     // Refuse at the ceiling BEFORE the picker, not after a choice: the dialog's
     // whole contract is that everything it offers can actually be connected.
     if (atConnectionLimit(this.actor)) {
       ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionLimit", {
-        name: actorDisplayName(this.actor),
+        name: this.actor.name ?? "",
         max: maxConnections(),
       }));
       return;
@@ -3354,16 +3176,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         && !a.system?.connectedTo
         && !this.actor.wouldCreateConnectionCycle(a)
         && a.canUserModify(game.user, "update"))
-      // Sort AND label by the DISPLAYED name (review #9): sorting on stored
-      // English then translating rendered the picker shuffled in any other
-      // language — the sort key must be the string the eye reads.
-      .sort((a, b) => actorDisplayName(a).localeCompare(actorDisplayName(b), game.i18n.lang));
+      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
     if (!candidates.length) {
       ui.notifications.info(game.i18n.localize("CAIRN.Notify.NoConnectables"));
       return;
     }
     const options = candidates
-      .map((a) => `<option value="${a.uuid}">${foundry.utils.escapeHTML(actorDisplayName(a))}</option>`)
+      .map((a) => `<option value="${a.uuid}">${foundry.utils.escapeHTML(a.name)}</option>`)
       .join("");
     const content = `<div class="form-group">
         <label>${game.i18n.localize("CAIRN.ConnectionPick")}</label>
@@ -3414,7 +3233,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // and unlike a filter that quietly returns an empty list, this says why.
     // It covers the monster and unlinked-token cases in the same breath.
     if (!child.canBeConnected) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.CannotConnect", { name: actorDisplayName(child) }));
+      ui.notifications.warn(game.i18n.format("CAIRN.Notify.CannotConnect", { name: child.name ?? "" }));
       return;
     }
     const keepers = game.actors
@@ -3430,16 +3249,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         // connectActor will: if the chain above k passes through child, the
         // link would loop.
         && !k.wouldCreateConnectionCycle(child))
-      // Same display-name sort + label as Add Connection's picker. Keepers are
-      // mostly CHARACTERS, whose names never localize — actorDisplayName is
-      // the gate, so a PC sharing a creature's name cannot be renamed here.
-      .sort((a, b) => actorDisplayName(a).localeCompare(actorDisplayName(b), game.i18n.lang));
+      // Same name sort + label as Add Connection's picker.
+      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
     if (!keepers.length) {
       ui.notifications.info(game.i18n.localize("CAIRN.Notify.NoKeepers"));
       return;
     }
     const options = keepers
-      .map((k) => `<option value="${k.uuid}">${foundry.utils.escapeHTML(actorDisplayName(k))}</option>`)
+      .map((k) => `<option value="${k.uuid}">${foundry.utils.escapeHTML(k.name)}</option>`)
       .join("");
     const content = `<div class="form-group">
         <label>${game.i18n.localize("CAIRN.ConnectionPick")}</label>
@@ -3501,12 +3318,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       window: { title: game.i18n.localize("CAIRN.UnlinkContainerTitle") },
       content: `<div class="cairn-confirm"><p class="cairn-confirm-q">${
         game.i18n.format("CAIRN.UnlinkContainerQ", {
-          // The child is a THING (a sack, a mule), never a character, so this is
-          // monster.name territory — and `actorDisplayName` is what says so in
-          // one place. Parked UI today (connections-ui-enabled), which is
-          // precisely why it is fixed now: the flag flip must not restore a
-          // dialog that disagrees with the sheet behind it.
-          name: foundry.utils.escapeHTML(actorDisplayName(child)),
+          name: foundry.utils.escapeHTML(child.name ?? ""),
         })}</p></div>`,
       rejectClose: false,
       modal: true,
@@ -4056,83 +3868,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       foundry.utils.deleteProperty(data, "system.hp.value");
     }
 
-    // The submit half of the two display/value splits on free-text inputs
-    // (2026-08-02). Career and Kind SHOW a localized label (professionDisplay /
-    // kindDisplay in _prepareContext) but must STORE canonical English — career
-    // because randomCareer's repeat-exclusion and _preUpdate's day-rate autofill
-    // both match the stored string against npc-careers-2e.json, Kind because the
-    // stored value is the CONTAINER_CLASSES key that brings art and capacity.
-    // Both maps are identity in an English world (overlay null / label == key
-    // already handled), so the submit is byte-identical there.
-    // ANCHOR FIRST, reverse lookup only on a miss (2026-08-04 review). Career
-    // differs from the name fields on purpose: typing a KNOWN career's Spanish
-    // label should still land the English key, or the day-rate autofill never
-    // fires — so sourceOf stays. But it must not run on an UNTOUCHED field:
-    // the overlay is many-to-one in general, and the moment a translator ships
-    // an npc.career table with two careers sharing a label, an unrelated edit
-    // on the second career's sheet would store the first one's English and
-    // fill the wrong day rate. Anchor closes that case; sourceOf keeps the
-    // typed-label feature for genuine edits.
-    const prof = foundry.utils.getProperty(data, "system.profession");
-    if (prof !== undefined) {
-      const anchored = prof === t("npc.career", this.actor.system.profession)
-        ? this.actor.system.profession
-        : sourceOf("npc.career", prof);
-      foundry.utils.setProperty(data, "system.profession", anchored);
-    }
-
-    // The NPC role's Background, on the same split (2026-08-20). Its namespace
-    // is `table.result` — it comes off a RollTable, not the careers catalogue —
-    // and it is NOT a match key: nothing looks a Background up, so this exists
-    // purely so an untouched submit on a translated sheet does not quietly
-    // store the Spanish over the English. ANCHOR ONLY, no `sourceOf` fallback:
-    // the reverse lookup earns its keep for career because typing a known
-    // career's Spanish label must still fire the day-rate autofill, and there
-    // is no autofill here to be worth the many-to-one risk. A Warden who types
-    // their own word gets their own word stored, which is the right answer for
-    // a field nothing matches against.
-    const bg = foundry.utils.getProperty(data, "system.background");
-    if (bg !== undefined && bg === t("table.result", this.actor.system.background)) {
-      foundry.utils.setProperty(data, "system.background", this.actor.system.background);
-    }
-
-    // The name's submit half (2026-08-04, corrected the same day by review),
-    // and the third split on this sheet. The field shows t("monster.name", …)
-    // for a non-character, so an untouched submit has to round back to the
-    // stored English or submitOnChange stores the Spanish — and an actor name
-    // is a match key too: the mount-clone branch, generation's name prefill
-    // and the marketplace's transport rows all resolve against it.
-    //
-    // AN ANCHOR, NOT sourceOf. The first version reverse-SEARCHED the
-    // namespace, and the review showed why that is the wrong question: the
-    // overlay is many-to-one, so a search answers "is this string some
-    // translation?" when the question is "was this field edited?". Under it a
-    // Warden typing "Caballo" for their own mule was handed `Horse`, and — the
-    // half the item sheet cannot exhibit — the Create Mount clone BAKES the
-    // display language into the actor name on purpose (actor.js, the recorded
-    // exception), which the reverse search then un-baked to English on the
-    // first HP edit. The anchor keeps a baked "Destrero pesado" exactly
-    // because it is the stored name: display equals stored, submit matches,
-    // nothing moves.
-    //
-    // Still gated on type: a character's name is the player's own, never
-    // localized out, never rewritten in.
-    if (this.actor.type !== "character" && data.name !== undefined
-        && data.name === t("monster.name", this.actor.name)) {
-      data.name = this.actor.name;
-    }
-
-    // The omen's submit half (2026-08-06, the fourth split). The textarea shows
-    // t("table.result", …) — see _prepareContext — so an untouched submit must
-    // round back to the stored English key, or the first submitOnChange after a
-    // roll persists the Spanish (ANY field's change serializes the whole form,
-    // textarea included). ANCHOR ONLY, no sourceOf fallback: unlike career
-    // there is no typed-label feature to keep — a player writing their own
-    // omen keeps it verbatim, in whatever language they wrote it.
-    const omen = foundry.utils.getProperty(data, "system.omen");
-    if (omen !== undefined && omen === t("table.result", this.actor.system.omen)) {
-      foundry.utils.setProperty(data, "system.omen", this.actor.system.omen);
-    }
     const kind = foundry.utils.getProperty(data, "system.containerClass");
     if (kind !== undefined && kind !== "" && !CONTAINER_CLASSES[kind]) {
       // Not already a key: accept the label in the ACTIVE language OR in
@@ -4267,9 +4002,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this.actor.isThing) {
       if ((this.actor.system.slotsUsed ?? 0) + need > (this.actor.system.slotsMax ?? 0)) {
         ui.notifications.warn(
-          // The ITEM being refused, which is nearly always pack gear — the row
-          // the player just dragged shows its translated name.
-          game.i18n.format("CAIRN.Notify.ContainerFull", { name: t("item.name", originalItem.name) })
+          game.i18n.format("CAIRN.Notify.ContainerFull", { name: originalItem.name })
         );
         return null;
       }

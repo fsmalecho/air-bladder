@@ -15,7 +15,6 @@
  */
 import { FATIGUE_NAME } from "./item/item.js";
 import { findTableByName } from "./compendium.js";
-import { t, tokenDisplayName, actorDisplayName } from "./i18n-content.js";
 import { formatCount } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
 
@@ -136,14 +135,9 @@ export const ensureGrimoireKey = async (book) => {
  *   so the card marks it as dice-made rather than authored prose, the original
  *   expression a hover away.
  *
- * Runs on whatever text it is handed, and both callers matter now: the STORED
- * card resolves the English source, while the rendered one resolves the
- * viewer's overlay copy — so a Spanish client reads a Spanish sentence
- * carrying the same numbers. Translating BEFORE substituting is the only order
- * that works: the overlay is keyed on the authored English, which `[sum*10]`
- * stops being the moment a rolled 12 has been written into it.
+ * Runs on whatever text it is handed.
  *
- * @param {string} text   the displayed (localized) spell description, HTML
+ * @param {string} text   the spell description, HTML
  * @param {number} dice   Magic Dice invested
  * @param {number} sum    their total
  * @returns {string}
@@ -203,9 +197,8 @@ const magicDice = (actor) =>
   Math.min(4, Math.max(0, (actor.system.slotsMax ?? 0) - (actor.system.slotsUsed ?? 0)));
 
 /**
- * Where the public cast card keeps its ENGLISH source. Read by
- * `localizeGlogCastCard` on every render; see the card's own comment for why
- * the stored HTML is not the authority.
+ * Where the public cast card records its source name/description and the dice
+ * that produced it, alongside the rendered HTML.
  */
 const GLOG_CAST_FLAG = "glogCast";
 
@@ -217,21 +210,13 @@ const GLOG_CAST_FLAG = "glogCast";
  * treatment in its own colour). A future GLOG card must carry the tag too;
  * today these two messages are the only ones.
  *
- * The NAME is whatever the caller resolved. At COMPOSE time that is the raw
- * speaker alias — the stored card is English, like every stored card here.
- * At RENDER time (`localizeGlogCastCard`) it is the same display name the
- * card header now carries: since review #19 `cairn.js` translates
- * `.message-sender` per viewer, so a flavor left raw would put two names on
- * one header, the reverse of the reason this comment used to give for
- * leaving it alone. A character's name never localizes either way.
+ * The NAME is whatever the caller resolved — the speaker alias.
  */
 const glogCastFlavor = (key, name) =>
   `<span class="glog-flavor-tag">GLOG</span> — ${game.i18n.format(key, { name: esc(name) })}`;
 
 /**
- * The public card's body, from a display-ready name and description. ONE
- * builder, so the copy STORED (English) and the copy RENDERED (the viewer's
- * language) cannot drift into two different cards.
+ * The public card's body, from a name and description.
  */
 const glogCastBody = (name, desc, dice, sum) => [
   `<div class="grimoire-cast-card">`,
@@ -265,21 +250,8 @@ const reportCast = async (actor, spell, dice) => {
   // sees happen. The description is pack/Warden-authored HTML and renders as
   // HTML the same way the inventory's description dropdowns render it.
   //
-  // STORED IN ENGLISH and translated per VIEWER at render — the damage card's
-  // rule, and this is the case it was written for. A ChatMessage is composed
-  // once, on the CASTER's client, and then read in everyone's log, so a name
-  // or a sentence localized on the way IN freezes the caster's language onto
-  // every other reader's screen for good: nothing re-renders stored HTML into
-  // another language. This card localized both, so a Spanish table watching an
-  // English player cast read an English spell name and an English effect, and
-  // an English table watching a Spanish player read Spanish (review #16).
-  //
-  // The flag carries the English source plus the dice — everything a viewer
-  // needs to rebuild the card — and the stored HTML is the English fallback
-  // for the moment before the hook runs, or if it never does. Cards cast
-  // before this shipped carry no flag and keep what they were written with;
-  // there is nothing to migrate on a chat log, and no way to tell what
-  // language an old card's HTML is in.
+  // The flag carries the source name/description plus the dice — everything
+  // needed to reconstruct what the card reported.
   const speaker = ChatMessage.getSpeaker({ actor });
   const alias = speaker.alias ?? actor.name;
   const publicCard = await ChatMessage.create({
@@ -332,7 +304,7 @@ const reportCast = async (actor, spell, dice) => {
       // a locked pack copy is safe.
       const { results } = await table.roll();
       for (const r of results) {
-        lines.push(`<div class="grimoire-mishap-text">${t("table.result", r.description ?? "")}</div>`);
+        lines.push(`<div class="grimoire-mishap-text">${r.description ?? ""}</div>`);
       }
     } else {
       lines.push(`<p>${game.i18n.format("CAIRN.GrimoireMishapNoTable",
@@ -381,11 +353,8 @@ export const castFromGrimoire = async (actor) => {
   // moved.
   const pages = pagesOfGrimoire(actor, book);
   if (!pages.length) {
-    // Through the overlay, like the page names in the picker below — this
-    // refusal and that list name the same book. The two dice refusals under it
-    // name the CASTER and stay raw: a character's name is never localized.
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoPages",
-      { name: t("item.name", book.name) }));
+      { name: book.name }));
     return null;
   }
   const maxDice = magicDice(actor);
@@ -395,14 +364,14 @@ export const castFromGrimoire = async (actor) => {
   }
 
   const L = (k) => game.i18n.localize(k);
-  // Display names through the overlay; the VALUE stays the item id.
+  // The VALUE stays the item id.
   const pageOptions = pages.map((p) =>
-    `<option value="${esc(p.id)}">${esc(t("item.name", p.name))}</option>`).join("");
+    `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
   const powerOptions = Array.from({ length: maxDice }, (_, i) =>
     `<option value="${i + 1}">${i + 1}</option>`).join("");
   const picked = await foundry.applications.api.DialogV2.wait({
     window: {
-      title: game.i18n.format("CAIRN.GrimoireCastFrom", { book: t("item.name", book.name) }),
+      title: game.i18n.format("CAIRN.GrimoireCastFrom", { book: book.name }),
       icon: "fas fa-hand-sparkles",
     },
     position: { width: 400 },
@@ -479,7 +448,7 @@ export const castScroll = async (actor, scroll) => {
     `<option value="${i + 1}">${i + 1}</option>`).join("");
   const picked = await foundry.applications.api.DialogV2.wait({
     window: {
-      title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: t("item.name", scroll.name) }),
+      title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: scroll.name }),
       icon: "fas fa-hand-sparkles",
     },
     position: { width: 400 },
@@ -545,52 +514,4 @@ export const bindGrimoireFatigueButton = (message, html) => {
     await actor.createOwnedItem({ name: FATIGUE_NAME, type: "item" }, { ignoreCapacity: true, count });
     await message.setFlag("mondolme", "fatigueApplied", true);
   };
-};
-
-/**
- * Rebuild a public GLOG cast card in the VIEWER's language. Called from the
- * renderChatMessageHTML hook in cairn.js, beside the fatigue button.
- *
- * Display-only, like every other content-overlay surface: the message document
- * is never written, so this runs on a player's client with no permission at
- * all, and re-runs idempotently on every re-render because it rebuilds from
- * the flag rather than editing what is on screen.
- *
- * BOTH halves, or the card contradicts itself: the flavor is the caster's
- * interface language and the body is the content overlay, and a reader handed
- * one without the other gets a header and an effect that disagree.
- * @param {ChatMessage} message
- * @param {HTMLElement} html
- */
-export const localizeGlogCastCard = (message, html) => {
-  const f = message.getFlag("mondolme", GLOG_CAST_FLAG);
-  if (!f) return;
-  const card = html.querySelector(".grimoire-cast-card");
-  if (card) {
-    card.outerHTML = glogCastBody(
-      t("item.name", f.name), t("item.desc", f.desc), f.dice, f.sum);
-  }
-  // The flavor is the message HEADER, outside `.message-content`
-  // (`templates/sidebar/chat-message.hbs:23-25`), so it is not reached by the
-  // rebuild above and needs its own write.
-  const flavor = html.querySelector(".flavor-text");
-  if (flavor) flavor.innerHTML = glogCastFlavor("CAIRN.GrimoireCastFlavor", castDisplayName(message, f.alias));
-};
-
-/**
- * The caster's name as THIS viewer's card header shows it (cairn.js
- * `localizeSpeakerName`, review #19): the token's where the cast was spoken
- * as one, the world actor's otherwise, and the stored alias when nothing
- * resolves or the alias was not the actor's own name.
- * @param {ChatMessage} message
- * @param {String} alias  the alias the card was composed with
- * @return {String}
- */
-const castDisplayName = (message, alias) => {
-  const speaker = message.speaker ?? {};
-  const token = speaker.scene && speaker.token ? game.scenes?.get(speaker.scene)?.tokens?.get(speaker.token) : null;
-  if (token) return tokenDisplayName(token) || alias;
-  const actor = speaker.actor ? game.actors?.get(speaker.actor) : null;
-  if (!actor || actor.name !== alias) return alias;
-  return actorDisplayName(actor) || alias;
 };

@@ -1,0 +1,117 @@
+MONDOLME — Fase 2: español como idioma principal
+===================================================
+
+Sobre la fase 1 ya aplicada.
+21 archivos modificados, 24 eliminados. Ninguno nuevo.
+
+
+CÓMO APLICARLO (4 pasos)
+------------------------
+
+Esta vez SÍ hay que borrar antes, porque la fase elimina archivos y
+descomprimir encima no borra nada.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. En tu carpeta del repositorio, borra estas TRES carpetas completas:
+
+     module
+     tools
+     lang
+
+   (Solo esas tres. No toques art/, css/, docs/, fonts/, icons/, logo/,
+   site/, src/, templates/, .github/ ni los archivos sueltos.)
+
+3. Descomprime este ZIP dentro de la carpeta del repositorio. Recreará
+   module/, tools/ y lang/, y sobrescribirá system.json y package.json.
+   Cuando Windows pregunte por esos dos archivos, marca "Hacer esto para
+   todos los elementos actuales" y elige "Reemplazar".
+
+4. Vuelve a GitHub Desktop, comprueba los cambios, escribe un mensaje
+   de commit, por ejemplo:
+
+     Fase 2: español como idioma principal, fuera la traducción automática
+
+   Pulsa "Commit to mondolme" y luego "Push origin".
+
+
+QUÉ CAMBIÓ
+----------
+
+1. EL ESPAÑOL ES AHORA EL IDIOMA BASE.
+   Se han eliminado en.json, da.json, de.json, fr.json, pl.json y pt-BR.json.
+   Solo queda lang/es.json.
+
+   system.json declara ese mismo archivo dos veces, como "es" y como "en".
+   No es un error: Foundry siempre carga la entrada "en" como base de
+   respaldo, así que apuntándola al español un cliente configurado en
+   CUALQUIER idioma ve el sistema en español, en vez de ver los nombres
+   internos de las claves.
+
+2. SE HAN TRADUCIDO 54 TEXTOS QUE FALTABAN.
+   Al español le faltaban 54 claves que sí existían en inglés. Si hubiera
+   borrado el inglés sin más, esos textos habrían aparecido en Foundry como
+   código crudo, del tipo "CAIRN.PickBackground". Ahora están traducidos,
+   siguiendo tu propia terminología: Guardián, Trasfondo, Seguidor, Presagio,
+   Vínculo, Peculiaridad, Profesión, Espacios.
+
+   Entre ellos: los tres botones de "Elegir trasfondo / profesión / facción",
+   la fórmula de edad y su explicación, los cuatro botones de las ventanas de
+   configuración, los presagios, los rasgos (Objetivo, Peculiaridad, Defecto,
+   Virtud) y las descripciones en tercera persona de los PNJ.
+
+   También se han quitado 15 traducciones huérfanas, de textos que ya no
+   existen en el sistema.
+
+3. FUERA LA TRADUCCIÓN AUTOMÁTICA DE CONTENIDO.
+   Eliminado module/i18n-content.js y lang/content/es.json, junto con sus
+   ~135 puntos de uso repartidos por 16 archivos. Era el mecanismo que
+   mostraba en español el contenido escrito en inglés. Escribiendo
+   directamente en español ya no hace falta.
+
+   Ojo: NO era el módulo Babele. Era un equivalente propio que el autor
+   escribió a medida, porque un sistema de Foundry no puede exigir un módulo.
+
+4. FUERA EL FLUJO DE TRABAJO DE TRADUCCIÓN.
+   tools/i18n/ contenía la maquinaria para traducir del inglés a otros
+   idiomas (exportar a hojas de cálculo, importar, comparar versiones...).
+   Con un solo idioma no tiene sentido, y además se habría roto al borrar
+   el inglés. Se han eliminado 11 archivos y sus 7 comandos.
+
+   Se ha conservado y adaptado al español "source-check", que comprueba que
+   toda clave usada por el código exista en el archivo de idioma. Sigue
+   siendo útil, y de hecho es lo que se usó para verificar esta fase.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Cobertura del idioma: 648 claves usadas por el código, TODAS presentes en
+  el español. Cero textos que fueran a salir sin traducir.
+- Paridad previa: 769 claves en inglés, 769 en español antes de borrar.
+- Los 164 archivos de código pasan la comprobación de sintaxis.
+- system.json, package.json y lang/es.json son JSON válido.
+- Ningún comando de package.json apunta a un archivo eliminado.
+- Cero referencias al mecanismo de traducción eliminado en module/ y tools/.
+
+
+DECISIONES QUE CONVIENE QUE REVISES
+-----------------------------------
+
+- El pie de las hojas impresas decía "Generado e impreso con
+  http://airbladder.xyz para Foundry VTT". Como es la web del autor y esto
+  es tu fork, lo he dejado en "Generado e impreso con Mondolme para Foundry
+  VTT". Dime si prefieres otra cosa.
+
+- La explicación de la fórmula de edad remitía al diario "Documentos del
+  sistema" y a airbladder.xyz. He quitado la referencia a la web. La
+  referencia al diario sigue ahí, pero ese diario desaparece en la fase 3,
+  cuando quitemos los compendios: habrá que reescribir esa frase entonces.
+
+- README, LICENSE, CLAUDE.md y docs/ siguen en inglés y siguen nombrando a
+  Air Bladder. Foundry no los carga. Dime si quieres traducirlos y cuándo.
+
+
+SIGUIENTE: Fase 3 — quitar todos los compendios del sistema y crear los
+ajustes configurables que los sustituyen. Para eso necesito tu lista
+definitiva de campos de configuración.

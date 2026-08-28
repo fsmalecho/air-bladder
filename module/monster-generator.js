@@ -2,8 +2,6 @@ import { CairnActor } from "./actor/actor.js";
 import { Cairn } from "./config.js";
 import { compendiumInfoFromString, findCompendiumItem, resultText } from "./compendium.js";
 import { getGameIconManifest, customPoolFor } from "./character-generator.js";
-// Aliased: the tier config is locally `t` throughout generateMonster.
-import { t as tr } from "./i18n-content.js";
 
 /* -------------------------------------------------------------------------- */
 /*  Monster generation — SRD "Creating Monsters" (Warden's Guide, CC BY-SA)    */
@@ -152,20 +150,11 @@ export const generateMonster = async (tierChoice) => {
 
   // The rolled strings are table.result rows and go through the overlay for
   // everything DISPLAYED-and-stored: this path already bakes the localized
-  // CAIRN.MonsterGen.* frames onto the document (generated monsters are WORLD
-  // content authored in the session's language — unlike pack content, which
-  // stays English for the display-only overlay), and half-baking gave a
-  // Spanish Warden "Criatura Emaciated Trunk". The RAW rolls stay in scope
-  // because two things match on the English source: ARMORED_FEATURES below,
-  // and the drawn-state bookkeeping in the tables themselves. In an English
-  // world every d() is the identity.
-  const d = (s) => tr("table.result", s);
-
   // The SRD's step 5 ("Thunder Snail") is creative interpretation and cannot be
   // automated; the appearance rolls at least land every monster in the
   // directory distinguishable. The Warden renames when inspiration strikes.
   const name = (physique || feature)
-    ? game.i18n.format("CAIRN.MonsterGen.Name", { physique: d(physique), feature: d(feature) }).replace(/\s+/g, " ").trim()
+    ? game.i18n.format("CAIRN.MonsterGen.Name", { physique, feature }).replace(/\s+/g, " ").trim()
     : game.i18n.localize("CAIRN.RoleMonster");
 
   const items = [];
@@ -177,7 +166,7 @@ export const generateMonster = async (tierChoice) => {
   // damage bullet is always written.
   items.push({
     name: attackType
-      ? game.i18n.format("CAIRN.MonsterGen.AttackName", { type: d(attackType) })
+      ? game.i18n.format("CAIRN.MonsterGen.AttackName", { type: attackType })
       : game.i18n.localize("CAIRN.RoleMonster"),
     type: "item",
     system: { damageFormula: t.die, equipped: true, quantity: 1, slots: 0, armor: 0 },
@@ -188,10 +177,8 @@ export const generateMonster = async (tierChoice) => {
   // null). Named after the rolled Feature when the feature is the armor.
   if (Math.random() < t.armorChance) {
     items.push({
-      // The MEMBERSHIP test is on the raw English roll; only the display copy
-      // that becomes the item's name is translated.
       name: ARMORED_FEATURES.includes(feature)
-        ? d(feature)
+        ? feature
         : game.i18n.localize("CAIRN.MonsterGen.ArmorName"),
       type: "item",
       system: { armor: pickWeighted(t.armorWeights), equipped: true, quantity: 1, slots: 0 },
@@ -214,10 +201,10 @@ export const generateMonster = async (tierChoice) => {
   // LOWERCASED payload — a table row is a fragment ("Emaciated trunk"), not a
   // sentence, and it reads as one mid-bullet. Lowercasing happens INLINE at the
   // format call and never to the variables: `ARMORED_FEATURES.includes(feature)`
-  // above matches the raw English roll. The appearance bullet keeps its leading
+  // above matches the raw roll. The appearance bullet keeps its leading
   // capital because only the INSERTED results are folded.
   const esc = foundry.utils.escapeHTML;
-  const lc = (s) => d(s).toLocaleLowerCase(game.i18n.lang);
+  const lc = (s) => String(s).toLocaleLowerCase(game.i18n.lang);
   const bullets = [];
   if (physique && feature) {
     bullets.push(game.i18n.format("CAIRN.MonsterGen.DescAppearance", { physique: esc(lc(physique)), feature: esc(lc(feature)) }));

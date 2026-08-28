@@ -29,6 +29,9 @@
   "CAIRN.BgAuthor.AddGear": "Añadir equipo por nombre",
   "CAIRN.BgAuthor.AddName": "Añadir un nombre",
   "CAIRN.BgAuthor.Archetype": "Arquetipo",
+  "CAIRN.BgAuthor.Attribution": "Línea de créditos",
+  "CAIRN.BgAuthor.AttributionHint": "Quién escribió este trasfondo y bajo qué licencia. Lo que escribas aquí se imprime en el pie de cada hoja de personaje creada a partir de él, así que déjalo en una sola línea: un título, un nombre y la licencia. Déjalo vacío para tu trabajo propio no compartido: el crédito de Cairn se imprime en todas las hojas de todos modos. Si has adaptado el trasfondo de otra persona, su crédito ya está aquí — consérvalo mientras quede algo de lo que escribió, y sustitúyelo por el tuyo cuando ya no quede nada.",
+  "CAIRN.BgAuthor.AttributionPlaceholder": "Título — Autor · CC BY-SA 4.0",
   "CAIRN.BgAuthor.BondsTable": "Tabla de Vínculos",
   "CAIRN.BgAuthor.BondsTableHint": "Especifica una tabla de tiradas propia de la que extraer los vínculos de este trasfondo: crea una en la sección «Tablas» o en un compendio, y escribe aquí su nombre. Déjalo en blanco si quieres utilizar los vínculos de Cairn 2.ª edición. Tus propias filas solo muestran su texto: el editor de tablas de Foundry no puede registrar el oro inicial ni el equipo que incluyen las filas de la 2.ª edición, así que incluye cualquier dato mecánico en el texto de la fila y deja que el jugador lo aplique.",
   "CAIRN.BgAuthor.BondsTablePlaceholder": "Vínculos",
@@ -38,7 +41,9 @@
   "CAIRN.BgAuthor.DropItemHint": "Arrastra un objeto hasta aquí",
   "CAIRN.BgAuthor.Duplicate": "Duplicar en Trasfondos personalizados",
   "CAIRN.BgAuthor.DuplicateHint": "Copia esto en tu compendio de mundo «Trasfondos personalizados», que es editable, como punto de partida.",
+  "CAIRN.BgAuthor.DuplicateOnDetails": "Este trasfondo viene con el sistema y está bloqueado. Abre la pestaña «Detalles» y usa «Duplicar en Trasfondos personalizados» para hacer una copia que puedas editar.",
   "CAIRN.BgAuthor.Duplicated": "Copiado en Trasfondos personalizados como \"{name}\".",
+  "CAIRN.BgAuthor.EditOnDetails": "Abre la pestaña «Detalles» para editar este trasfondo: su equipo inicial, sus tablas de preguntas y su línea de créditos.",
   "CAIRN.BgAuthor.EmptyOption": "(opción vacía: un dado de seis caras (d6) puede seguir sacando este resultado)",
   "CAIRN.BgAuthor.GearPlaceholder": "Nombre del objeto (p. ej., raciones)",
   "CAIRN.BgAuthor.GoldSpread": "Oro extra por las elecciones realizadas: promedio {avg} (rango {min}–{max}) sobre 10 tiradas.",
@@ -75,18 +80,28 @@
   "CAIRN.BgPickFootQuestion": "¿Quieres crear tus propios trasfondos?",
   "CAIRN.BgTagline.Carried": "{name} (+{slots})",
   "CAIRN.Bio.Age": "Tienes {value} años.",
+  "CAIRN.Bio.AgeNpc": "Tiene {value} años.",
   "CAIRN.Bio.Clothing": "Tu vestimenta es {value}.",
+  "CAIRN.Bio.ClothingNpc": "Su vestimenta es {value}.",
   "CAIRN.Bio.Face": "tu rostro es {value}",
+  "CAIRN.Bio.FaceNpc": "su rostro es {value}",
   "CAIRN.Bio.FaceSpeech": "{list}.",
+  "CAIRN.Bio.Goal": "Buscas {value}.",
+  "CAIRN.Bio.GoalNpc": "Busca {value}.",
   "CAIRN.Bio.Hair": "el cabello {value}",
   "CAIRN.Bio.ListMore": "{init} y {last}",
   "CAIRN.Bio.ListSep": ", ",
   "CAIRN.Bio.ListTwo": "{first} y {second}",
   "CAIRN.Bio.Physical": "Tienes {list}.",
+  "CAIRN.Bio.PhysicalNpc": "Tiene {list}.",
   "CAIRN.Bio.Physique": "un físico {value}",
+  "CAIRN.Bio.Quirk": "Tu peculiaridad es {value}.",
+  "CAIRN.Bio.QuirkNpc": "Su peculiaridad es {value}.",
   "CAIRN.Bio.Skin": "piel {value}",
   "CAIRN.Bio.Speech": "tu voz {value}",
+  "CAIRN.Bio.SpeechNpc": "su voz {value}",
   "CAIRN.Bio.ViceVirtue": "Eres {list}.",
+  "CAIRN.Bio.ViceVirtueNpc": "Es {list}.",
   "CAIRN.Blast": "Estallido",
   "CAIRN.BoldMeanEquipped": "(negrita significa equipado)",
   "CAIRN.Bond": "Vínculo",
@@ -159,11 +174,12 @@
   "CAIRN.Cost": "Coste",
   "CAIRN.CreateActorPick": "¿Qué estás creando?",
   "CAIRN.CreateActorTitle": "Crear actor",
+  "CAIRN.CreateCompanion": "Crear compañero",
   "CAIRN.CreateContainer": "Crear contenedor",
   "CAIRN.CreateFaction": "Crear facción",
+  "CAIRN.CreateHireling": "Crear seguidor",
   "CAIRN.CreateItem": "Create objeto",
   "CAIRN.CreateMonster": "Crear monstruo",
-  "CAIRN.CreateCompanion": "Crear compañero",
   "CAIRN.CreateNpc": "Crear pnj",
   "CAIRN.CreateTransport": "Crear transporte",
   "CAIRN.CriticalDamage": "Daño crítico",
@@ -172,6 +188,10 @@
   "CAIRN.CriticalDamageToggle": "Daño crítico (FUE): marcar o desmarcar. Un PJ herido de gravedad solo puede arrastrarse por el suelo hasta que sea estabilizado.",
   "CAIRN.Current": "Actual",
   "CAIRN.CustomBackgroundsPack": "Trasfondos caseros",
+  "CAIRN.CustomPortraitCategory.Companion": "Compañeros",
+  "CAIRN.CustomPortraitCategory.Monster": "Monstruos",
+  "CAIRN.CustomPortraitCategory.Npc": "PNJ",
+  "CAIRN.CustomPortraitCategory.Pc": "Personajes jugadores",
   "CAIRN.CustomPortraitsEmpty": "No se han encontrado retratos personalizados. Arrastra las imágenes a la carpeta de retratos personalizados y, a continuación, actualiza la página.",
   "CAIRN.Damage": "Daño",
   "CAIRN.DamageApplied": "Daño infligido: {list}",
@@ -210,6 +230,7 @@
   "CAIRN.DeprivedTip": "Un personaje que se ve privado de una necesidad fundamental (como la comida o el descanso) se considera <strong>exhausto</strong>. Cualquier personaje que este <strong>exhausto</strong> más de un día añade <strong>fatiga</strong> a su inventario, una por día. Un personaje <strong>exhausto</strong> no puede recuperar PG, características ni eliminar <strong>fatiga</strong>.",
   "CAIRN.DeprivedTipNpc": "Un personaje que se ve privado de una necesidad fundamental (como la comida o el descanso) se considera <strong>exhausto</strong>. Cualquier personaje que este <strong>exhausto</strong> más de un día añade <strong>fatiga</strong> a su inventario, una por día. Un personaje <strong>exhausto</strong> no puede recuperar PG, características ni eliminar <strong>fatiga</strong>.",
   "CAIRN.Description": "Descripción",
+  "CAIRN.DescriptionPlaceholder": "Haz clic aquí para añadir una descripción.",
   "CAIRN.DexTip": "La <strong>destreza</strong> se usa para salvaciones que requieren aplomo, velocidad, reflejos, esquivar, escalar, infiltrarse, mantener el equilibrio, etc.",
   "CAIRN.DieOfFate": "Dado del destino",
   "CAIRN.DieOfFateTip": "A petición del Guardián, tira 1d6 siempre que el resultado de un suceso sea incierto o para simular un elemento de aleatoriedad y azar.",
@@ -330,7 +351,6 @@
   "CAIRN.ItemRemoveQuantity": "Quitar",
   "CAIRN.ItemUnequip": "Desequipar",
   "CAIRN.Items": "Equipo",
-  "CAIRN.KWImport.AgeRaised": "Edad a partir de {from} a {to}, la edad minima del guardián.",
   "CAIRN.KWImport.BadJson": "Ese archivo no es un JSON válido; elige una exportación de personajes de Kettlewright.",
   "CAIRN.KWImport.BadShape": "Ese JSON no parece una exportación de personajes de Kettlewright.",
   "CAIRN.KWImport.BgMatched": "Trasfondo coincidente: {name}.",
@@ -355,7 +375,7 @@
   "CAIRN.KWImport.TraitsUnparsed": "Los rasgos no se podían leer como una frase normal, por lo que se conservaron como texto en «Notas».",
   "CAIRN.Kind": "Tipo",
   "CAIRN.KindHint": "tus propias palabras",
-  "CAIRN.KindNamedMounts": "Monturas con nombre",
+  "CAIRN.KindNamedCompanions": "Compañeros con nombre",
   "CAIRN.KindOther": "Otro...",
   "CAIRN.LydiaCredit": "Ilustración de <a href=\"https://linktr.ee/lydiadidmyink\" target=\"_blank\" rel=\"noopener\">Lydia Comer</a> · © Lydia Comer, all rights reserved · licensed to Air Bladder, not Creative Commons",
   "CAIRN.Macro.NoActor": "El actor de esta macro ya no existe.",
@@ -408,18 +428,11 @@
     "ApplyDamageWardenOnly": "Solo el Guardián puede aplicar el daño.",
     "BackgroundNotCharacter": "Solo el personaje jugador tiene trasfondo.",
     "BackgroundWrongSource": "Este es un trasfondo de {backgroundEdition} y este es un personaje de {characterEdition}. Un personaje no cambia de edición.",
+    "BadAgeFormula": "La fórmula de edad («{formula}») no es una tirada de dados válida — se ha usado la predeterminada en su lugar.",
     "Bought": "{name} comprado por {cost} mo.",
+    "CannotConnect": "{name} no se puede conectar: los monstruos nunca se unen a las conexiones de un grupo.",
     "ChangeLogOff": "El registro de cambios está desactivado.",
     "ChangeLogOn": "El registro de cambios está activado.",
-    "EmptySpellSource": "{pack} no tiene hechizos — la tabla quedó tal y como estaba.",
-    "GlogConverted": "Magia GLOG: {count} hechizos convertidos a pergaminos GLOG.",
-    "GlogConverted_one": "Magia GLOG: {count} hechizo convertido a pergamino GLOG",
-    "GlogConversionFailed": "Magia GLOG: la conversión del mundo no se ha completado; es posible que algunos hechizos no se hayan convertido. Consulta la consola para obtener más detalles.",
-    "GrimoireFull": "{name} no le quedan paginas vacias",
-    "GrimoireNoDice": "a {name} no le quedan espacios libres — no puede lanzar dados mágicos. Debe liberar espacio del inventario.",
-    "GrimoireNoPages": "{name} no tiene paginas — transformar primero un libro de hechizos o un pergamino en él.",
-    "GrimoireOnlyOne": "Un personaje puede llevar como máximo un grimorio.",
-    "CannotConnect": "{name} no se puede conectar: los monstruos nunca se unen a las conexiones de un grupo.",
     "CombatDragBucket": "Cambiar de bando supone volver a tirar la tirada de salvación de DES, no es una acción de arrastre: solo se puede cambiar el orden de un combatiente dentro de su propio grupo.",
     "ConfirmDeleteNamed": "¿Eliminar {name}?",
     "ConnectionCycle": "Si aquí conectas a {name} se crearía un bucle.",
@@ -433,9 +446,17 @@
     "DropFailed": "No se ha podido mover ese objeto; es posible que no tengas permiso para modificar la hoja destinataria.",
     "DropNoSource": "No puedes seleccionar ese objeto: no tienes permiso para modificar la hoja de la que procede.",
     "EffectsUnsupported": "Mondolme no utiliza efectos activos; no hay nada en la ficha que lo indique. La tirada se ha rechazado.",
+    "EmptySpellSource": "{pack} no tiene hechizos — la tabla quedó tal y como estaba.",
     "EncounterActorMissing": "El actor ({uuid}) de la fila del encuentro ya no se resuelve: fila omitida.",
     "EncounterPlaced": "Encuentro añadido a la {scene}: {what}.",
+    "GlogConversionFailed": "Magia GLOG: la conversión del mundo no se ha completado; es posible que algunos hechizos no se hayan convertido. Consulta la consola para obtener más detalles.",
+    "GlogConverted": "Magia GLOG: {count} hechizos convertidos a pergaminos GLOG.",
+    "GlogConverted_one": "Magia GLOG: {count} hechizo convertido a pergamino GLOG",
     "GrantFailedFor": "La asignación del trasfondo de {player} ha fallado; consulta la consola. Su personaje ha conservado todo lo demás.",
+    "GrimoireFull": "{name} no le quedan paginas vacias",
+    "GrimoireNoDice": "a {name} no le quedan espacios libres — no puede lanzar dados mágicos. Debe liberar espacio del inventario.",
+    "GrimoireNoPages": "{name} no tiene paginas — transformar primero un libro de hechizos o un pergamino en él.",
+    "GrimoireOnlyOne": "Un personaje puede llevar como máximo un grimorio.",
     "LastBackground": "Debe permanecer activado al menos un trasfondo.",
     "LastSource": "Debe permanecer activada al menos una fuente de trasfondos: se ha vuelto a activar Cairn 2e.",
     "LeftOverloaded": "Te has ido del mercado sobrecargado — la PG se reduce a 0 hasta que liberes un espacio.",
@@ -460,6 +481,7 @@
     "NotEnoughGold": "No hay suficiente oro para {name} ({cost}).",
     "Overloaded": "{name} añadido — ahora mismo has superado la capacidad máxima (PG 0 hasta que liberes un espacio).",
     "PackLocked": "{pack} está bloqueado: desbloquea el compendio para editar este documento.",
+    "PageBound": "Ese hechizo es una página vinculada a un grimorio. — las páginas nunca salen del libro. En su lugar, mueve el libro.",
     "PcGenCancelled": "Tu personaje no se ha creado: el Guardián lo ha cancelado..",
     "PcGenDisabled": "El Guardián ha desactivado la creación de personajes.",
     "PcGenFailed": "No se ha podido crear tu personaje: pregunta al Guardián y vuelve a intentarlo.",
@@ -473,7 +495,6 @@
     "PlayerMarketOn": "El mercado vuelve a estar abierto para los jugadores.",
     "PlayerRandomizationOff": "La aleatorización ahora es exclusiva del Guardián.",
     "PlayerRandomizationOn": "Los jugadores pueden volver a utilizar la función «Aleatorización» en sus fichas.",
-    "PageBound": "Ese hechizo es una página vinculada a un grimorio. — las páginas nunca salen del libro. En su lugar, mueve el libro.",
     "PortraitFolderScanned": "Carpeta de retratos personalizados escaneada — {count} imágenes encontradas.",
     "PortraitFolderScanned_one": "Carpeta de retratos personalizados escaneada — {count} imagen encontrada.",
     "PrintBlocked": "El navegador ha bloqueado la ventana de impresión: permite las ventanas emergentes para este sitio e inténtalo de nuevo.",
@@ -488,6 +509,8 @@
   "CAIRN.Npc": "PNJ",
   "CAIRN.NpcRegeneratorConfirm": "¿Estás seguro de que quieres volver a generar este PNJ?</p><p>Se eliminará todo lo que lleve consigo, y se sustituirán sus características, su PG, su carrera y su tarifa diaria. Esta acción no se puede deshacer.",
   "CAIRN.NpcRegeneratorTitle": "¿Volver a tirar los dados para este PNJ?",
+  "CAIRN.NpcRoleRegeneratorConfirm": "¿Estás seguro de que quieres volver a tirar los dados para este PNJ?</p><p>Se sustituirán su trasfondo, sus características, sus PG, sus rasgos y su edad, junto con el equipo que le otorgó su trasfondo, y se borrarán sus pronombres, sus monedas y sus marcas de estado. Se conservan su nombre, su retrato, sus notas y todo lo demás que lleve consigo. Esto no se puede deshacer.",
+  "CAIRN.NpcRoleRegeneratorTitle": "¿Volver a tirar los dados para este PNJ?",
   "CAIRN.Omen": "Presagio",
   "CAIRN.OmenPlaceholder": "Si eres el miembro más joven del grupo, marca la casilla «Presagio» y pulsa el botón «Tirar» para recibir un presagio.",
   "CAIRN.OmenTableMissing": "No se encuentra la tabla de presagios (mondolme.tables-2e).",
@@ -504,6 +527,7 @@
     "journals-2e": "Reglas de Cairn 2e",
     "journals-docs": "Documentos del sistema",
     "journals-glog": "Diarios GLOG",
+    "journals-vald": "Vald",
     "macros": "Macros del Guardián",
     "market-goods": "Bienes del mercado",
     "marketplace": "Mercado",
@@ -531,6 +555,9 @@
   "CAIRN.PanickedTip": "<p>Un personaje que se encuentre rodeado de enemigos, en completa oscuridad o enfrentándose a sus mayores miedos puede sufrir <em>pánico</em>. En estas situaciones, una tirada fallida de <strong>VOL</strong> provoca pánico.</p><p>Un personaje en <em>pánico</em> tiene 0 <strong>PG</strong>, no actúa en la primera ronda de combate y todos sus ataques se dan con <em>desventaja</em>.</p><p>Un personaje en <em>pánico</em> debe tirar una <strong>salvación de VOL</strong> para superar su estado como una <strong>acción</strong> en su <strong>turno</strong>.</p>",
   "CAIRN.Paralyzed": "Paralizado",
   "CAIRN.ParalyzedBanner": "La DES ha llegado a 0 — el personaje está paralizado.",
+  "CAIRN.PickBackground": "Elegir un trasfondo concreto",
+  "CAIRN.PickCareer": "Elegir una profesión concreta (adopta sus características y su equipo)",
+  "CAIRN.PickFaction": "Elegir una facción concreta",
   "CAIRN.PopOut": "Ventana emergente",
   "CAIRN.PortraitCredit": "Retratos de <a href=\"https://jonaspeheim.itch.io/\" target=\"_blank\" rel=\"noopener\">Jon Aspeheim</a> · <a href=\"https://creativecommons.org/licenses/by/4.0/\" target=\"_blank\" rel=\"noopener\">CC BY 4.0</a>",
   "CAIRN.PortraitTabCustom": "Personalizado",
@@ -541,16 +568,18 @@
   "CAIRN.PortraitUrlPlaceholder": "Pega la URL de una imagen…",
   "CAIRN.PortraitUrlSet": "Establecer",
   "CAIRN.Print": "Imprimir",
+  "CAIRN.PrintArmorPoints": "{armor} de armadura",
   "CAIRN.PrintBonds": "Vínculos",
   "CAIRN.PrintCreditAspeheim": "Retrato de Jon Aspeheim, con licencia CC BY 4.0.",
   "CAIRN.PrintCreditGameIcons": "Retrato de game-icons.net, con licencia CC BY 3.0; los autores de los iconos aparecen en art/game-icons/CREDITS.md.",
+  "CAIRN.PrintCreditGenerated": "Generado e impreso con Mondolme para Foundry VTT.",
   "CAIRN.PrintCreditLydiaComer": "Retrato de Lydia Comer, todos los derechos reservados, utilizado con el permiso de la artista.",
   "CAIRN.PrintCreditText": "Cairn es una obra de Yochai Gal; el texto está bajo licencia CC BY-SA 4.0.",
   "CAIRN.PrintCreditTlomdev": "Retrato de Tlomdev, con licencia CC BY-SA 4.0, modificado (recodificado a WebP).",
   "CAIRN.PrintFailedCareer": "Carrera fallida:",
-  "CAIRN.PrintMain": "Inicio",
   "CAIRN.PrintQuestions": "Preguntas",
   "CAIRN.PrintRoleCareer": "{role} — {career}",
+  "CAIRN.PrintSlotsUsed": "Espacios utilizados",
   "CAIRN.PrintSourceCustom": "Cairn 2e casero",
   "CAIRN.PrintStats": "Características",
   "CAIRN.Pronouns": "Pronombres",
@@ -587,10 +616,11 @@
   "CAIRN.Role": "Rol",
   "CAIRN.RoleCompanion": "Compañero",
   "CAIRN.RoleContainer": "Contenedor",
+  "CAIRN.RoleHireling": "Seguidor",
   "CAIRN.RoleMonster": "Monstruo",
   "CAIRN.RoleNpc": "PNJ",
   "CAIRN.RoleTransport": "Transporte",
-  "CAIRN.RollAge": "Tirar edad (2d20 + 10)",
+  "CAIRN.RollAgeTitle": "Tirar edad ({formula})",
   "CAIRN.RollBackground": "Generar un trasfondo aleatorio",
   "CAIRN.RollDamage": "Tirar daño",
   "CAIRN.RollFaction": "Facción aleatoria (una tabla del mundo llamada \"Warden: NPC - Faction\" tiene prioridad)",
@@ -616,12 +646,11 @@
   "CAIRN.ScrollTip": "Un pergamino de hechizo es ese hechizo escrito una sola vez en un papel: es insignificante, de un solo uso y desaparece al leerlo. Al marcarlo, se conservan todas esas características y aparece como un pergamino en el inventario.",
   "CAIRN.SetLimit": "Establecer limite",
   "CAIRN.Settings": {
-    "BarebonesFailedCareer": {
-      "hint": "A los personajes «Barebones» se les puede asignar un segundo nombre de trasfondo a modo de detalle: la profesión que no salió bien. No otorga ningún objeto ni mecánica.",
-      "label": "Dale a los personajes «barebones» una carrera fallida (como en Knave 2.ª edición)"
+    "AgeFormula": {
+      "hint": "Los dados que se tiran para la edad de cada persona generada, y también con el dado de edad de las fichas. Por defecto 2d20 + 10, la tirada del libro. ¿Quieres un mínimo? {2d20 + 10, 21}kh tira 2d20 + 10 pero nunca baja de 21. ¿Quieres un rango? 2d6 + 18 da edades de 20 a 30. Déjalo vacío para usar la predeterminada. Con la notación de dados de Cairn activada, d20 + d20 se queda con el dado más alto; 2d20 + 10 suma.",
+      "label": "Fórmula de edad para los personajes generados"
     },
     "AllowPlayerGenerate": {
-      "hint": "Ofrece a los jugadores el botón «Crear personaje» en la barra lateral de «Actores». Desactívalo para ocultarlo a todos los jugadores durante la sesión; la macro predeterminada «Toggle Player Generate PC» lo activa y desactiva. El botón del Guardián nunca se oculta.",
       "label": "Permite a los jugadores crear personajes"
     },
     "AllowPlayerMarketplace": {
@@ -629,19 +658,21 @@
       "label": "Permite a los jugadores comprar y llevarse objetos del mercado"
     },
     "AllowPlayerRandomization": {
-      "hint": "Ofrece a los jugadores la opción de activar o desactivar la aleatorización en las fichas de las que son propietarios, junto con el botón «Tirar» y todos los dados de repetición que hay detrás. Desactívala para ocultar toda la superficie de aleatorización a todos los jugadores en mitad de la sesión; la macro «Activar/Desactivar aleatorización del jugador» incluida en el paquete permite cambiar esto. El Guardián lo conserva todo.",
       "label": "Permite a los jugadores utilizar la función «Aleatorización» en sus fichas"
     },
     "AutoRecordScars": {
       "hint": "Cuando el personaje de un jugador reciba un golpe que lo deje exactamente con 0 PG y se le marque una cicatriz, comprueba también esa cicatriz en la lista de cicatrices de su ficha. A los PNJ y a los monstruos solo se les entrega la tarjeta de diálogo en cualquier caso, y las instrucciones de la cicatriz siguen correspondiendo al jugador, que deberá representarlas.",
       "label": "Anota las cicatrices causadas por los dados en las fichas de los personajes"
     },
+    "BarebonesFailedCareer": {
+      "hint": "A los personajes «Barebones» se les puede asignar un segundo nombre de trasfondo a modo de detalle: la profesión que no salió bien. No otorga ningún objeto ni mecánica.",
+      "label": "Dale a los personajes «barebones» una carrera fallida (como en Knave 2.ª edición)"
+    },
     "ChangeLog": {
       "hint": "Envía un mensaje privado a los propietarios del personaje, a los observadores y al Guardián cada vez que alguien modifique manualmente las características, el oro, los rasgos, los estados de pánico o exhausto, las cicatrices, las hazañas o el inventario. Los cambios generados por tiradas de dados, el daño y otros cambios automáticos nunca se registran. La macro «Mostrar/ocultar el registro de cambios» incluida en el juego activa o desactiva esta función.",
       "label": "Registrar los cambios manuales en el chat"
     },
     "CharacterInventoryLimit": {
-      "hint": "El límite de equipo se define por personaje, en lugar de ser un valor global..",
       "label": "Establece el límite de equipo por personaje en lugar de de forma global"
     },
     "ContentSource2e": {
@@ -664,23 +695,22 @@
       "hint": "El hack oficial de Magia GLOG. Al activar esta opción, se transforma todo el mundo: todos los libros de hechizos canónicos, estén donde estén, se convierten en pergaminos de hechizos de un solo uso que contienen la descripción GLOG de su hechizo, y la generación solo otorga hechizos GLOG y personalizados. Al desactivarla, NO se revierte ningún cambio.",
       "label": "Usar Magia GLOG (¡convierte todos los hechizos!)"
     },
-    "EnableInventoryReorder": {
-      "hint": "Cuando está activada, el jugador puede arrastrar una fila del inventario para cambiarla de posición; se mantiene el orden manual..",
-      "label": "Permitir a los jugadores arrastrar los objetos del inventario para reordenarlos"
-    },
     "GroupGeneral": "Configuración general",
+    "GroupGeneralButton": "Configurar ajustes generales",
+    "GroupGeneralHint": "Pánico, notación de dados, iconos de objeto, etiquetas de origen, presagios, el título de Guardián, el registro de cambios y las cicatrices.",
     "GroupGeneration": "Creación de personajes",
+    "GroupGenerationButton": "Configurar creación de personajes",
+    "GroupGenerationHint": "Qué fuentes de contenido se ofrecen, qué pueden generar o aleatorizar los jugadores, la carpeta de retratos y la fórmula de edad.",
+    "GroupHacks": "GLOG y otras variantes",
+    "GroupHacksButton": "Configurar variantes",
+    "GroupHacksHint": "Variantes de reglas opcionales: la magia de GLOG y una carrera fallida al estilo de Knave para los personajes Barebones.",
     "GroupInventory": "Inventario y carga",
+    "GroupInventoryButton": "Configurar inventario",
+    "GroupInventoryHint": "El límite de espacios, el tope de inventario, el mercado y las monedas por espacio.",
     "MaxEquipSlots": {
-      "hint": "Número máximo de espacios de inventario para los personajes de los jugadores, que se utiliza para controlar la carga.",
       "label": "Número máximo de espacios de inventario por personaje"
     },
-    "MinAge": {
-      "hint": "Un límite mínimo para la edad de cada personaje generado, que se aplica a todas las fichas de personaje. Ni la generación ni la repetición de la tirada de edad de la ficha dan como resultado una edad inferior a este valor. El valor por defecto es 21; fíjalo por debajo de 12 (el valor más bajo que puede dar una tirada de 2d20 + 10) para desactivar el límite mínimo.",
-      "label": "Edad mínima del personaje (límite mínimo para la tirada de 2d20 + 10)"
-    },
     "ShowGenerateHeader": {
-      "hint": "Mostrar el botón «Regenerar» en el encabezado de la ficha del personaje",
       "label": "Mostrar el botón «Regenerar» en el encabezado de la ficha de personaje"
     },
     "ShowGenerationRolls": {
@@ -688,11 +718,16 @@
       "label": "Mostrar los resultados de la creación de personajes en el chat"
     },
     "ShowGrantTags": {
-      "hint": "Mostrar una etiqueta de «Trasfondo», «Vínculo» o «Pregunta» en los objetos que se hayan otorgado al crear el personaje.",
       "label": "Mostrar las etiquetas de origen de los objetos (Trasfondo / Vínculo / Pregunta)"
     },
+    "ShowGrantTagsPrint": {
+      "label": "Mostrar las etiquetas de origen de los objetos en las hojas impresas"
+    },
+    "ShowOmens": {
+      "hint": "Cairn 2e otorga un presagio al miembro más joven del grupo. Desactívalo para una partida que no los use: la casilla y el campo de «Presagio» desaparecen de todas las hojas de personaje, y las hojas impresas pierden su apartado de presagios. Cualquier presagio ya escrito se conserva en el personaje y reaparece si vuelves a activarlo.",
+      "label": "Mostrar los presagios en las hojas de personaje"
+    },
     "UseCairnDiceNotation": {
-      "hint": "Interpreta la notación de los dados de Cairn, como «d6+d6», tal y como se describe en las reglas.",
       "label": "Utiliza la notación de dados de Cairn: «d6+d6» (queda el resultado más alto)."
     },
     "UseGoldThreshold": {
@@ -700,19 +735,19 @@
       "label": "Oro que ocupa un espacio del inventario (0 = insignificante)"
     },
     "UseItemIcons": {
-      "hint": "Mostrar iconos para algunos objetos del inventario para reconocer rápidamente su tipo.",
       "label": "Mostrar los iconos de tipo de objeto (arma, armadura, fatiga) junto al inventario"
     },
     "UsePanic": {
-      "hint": "Utiliza la regla de pánico de 2e para los personajes jugadores.",
       "label": "Usar la condición de 2e \"Pánico\" para todos los personajes jugadores"
     },
     "UseWardenTitle": {
+      "hint": "Cambia el nombre del rol de Game Master por «Guardián» allí donde Foundry lo muestre, y renombra la cuenta de Game Master predeterminada para que coincida. Al desactivarlo se restaura el nombre original de la cuenta. Surte efecto tras recargar.",
       "label": "Llamar al GM \"Guardián\""
     }
   },
   "CAIRN.Slots": "Espacios",
   "CAIRN.Source": "Fuente:",
+  "CAIRN.SpellPagePrefix": "Hechizo — ",
   "CAIRN.SpellbookPrefix": "Hechizo — ",
   "CAIRN.Spellscroll": "Pergamino",
   "CAIRN.SpellscrollPrefix": "Pergamino — ",
@@ -744,6 +779,10 @@
   "CAIRN.TlomdevCredit": "Dibujos de <a href=\"https://tlomdev.itch.io/tlomdevs-tokens\" target=\"_blank\" rel=\"noopener\">tlomdev</a> · <a href=\"https://creativecommons.org/licenses/by-sa/4.0/\" target=\"_blank\" rel=\"noopener\">CC BY-SA 4.0</a>",
   "CAIRN.ToggleScars": "Expandir o contraer la lista de cicatrices",
   "CAIRN.ToggleTraits": "Expandir o contraer las listas de selección de rasgos",
+  "CAIRN.Trait.Goal": "Objetivo",
+  "CAIRN.Trait.Quirk": "Peculiaridad",
+  "CAIRN.Trait.Vice": "Defecto",
+  "CAIRN.Trait.Virtue": "Virtud",
   "CAIRN.Traits": "Rasgos",
   "CAIRN.TransportCapacity": "Espacios que puede albergar",
   "CAIRN.TransportKind": "Tipo",

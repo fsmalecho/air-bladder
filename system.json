@@ -239,28 +239,44 @@
       "label": "CAIRN.Pack.warden-encounters",
       "type": "RollTable",
       "system": "mondolme",
-      "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     },
     {
       "name": "warden-travel",
       "label": "CAIRN.Pack.warden-travel",
       "type": "RollTable",
       "system": "mondolme",
-      "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     },
     {
       "name": "warden-npcs",
       "label": "CAIRN.Pack.warden-npcs",
       "type": "RollTable",
       "system": "mondolme",
-      "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     },
     {
       "name": "warden-monsters",
       "label": "CAIRN.Pack.warden-monsters",
       "type": "RollTable",
       "system": "mondolme",
-      "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     },
     {
       "name": "tables-glog",
@@ -297,7 +313,11 @@
       "label": "CAIRN.Pack.macros",
       "type": "Macro",
       "system": "mondolme",
-      "ownership": { "PLAYER": "NONE", "TRUSTED": "NONE", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "NONE",
+        "TRUSTED": "NONE",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "packFolders": [
@@ -377,37 +397,12 @@
   "scripts": [],
   "languages": [
     {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    },
-    {
-      "lang": "da",
-      "name": "Dansk",
-      "path": "lang/da.json"
-    },
-    {
-      "lang": "fr",
-      "name": "Français",
-      "path": "lang/fr.json"
-    },
-    {
-      "lang": "pt-BR",
-      "name": "Português brasileiro",
-      "path": "lang/pt-BR.json"
-    },
-    {
-      "lang": "de",
-      "name": "Deutsch",
-      "path": "lang/de.json"
-    },
-    {
-      "lang": "pl",
-      "name": "polski",
-      "path": "lang/pl.json"
-    },
-    {
       "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json"
+    },
+    {
+      "lang": "en",
       "name": "Español",
       "path": "lang/es.json"
     }

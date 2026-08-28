@@ -1,6 +1,5 @@
 import { evaluateFormula, getInfoFromDropData, askDamageQuality, damageFormulaFor, damageQualityLabel } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
-import { t, actorDisplayName } from "./i18n-content.js";
 
 /**
  * @param {Object} data
@@ -67,19 +66,10 @@ export const rollItemMacro = async (actorId, itemId) => {
   }
   const item = actor.items.get(itemId);
   if (!item) {
-    // The actor's DISPLAY name, the same gate the sheet header uses (a PC's
-    // name stays, a creature's translates) — nine lines above a weapon name
-    // that was already routed (review #19).
-    return ui.notifications.warn(game.i18n.format("CAIRN.Macro.NoItem", { name: actorDisplayName(actor) }));
+    return ui.notifications.warn(game.i18n.format("CAIRN.Macro.NoItem", { name: actor.name ?? "" }));
   }
 
-  // Show the weapon's name through the content overlay, exactly as the sheet's
-  // damage control does (localizeNameDesc over _itemNamespaces): a Spanish
-  // player's hotbar macro must not print the English name the sheet already
-  // localizes — the "one sheet, two answers" tell. Monster-owned items file
-  // under a different namespace than a character's; a character's npcRole is
-  // undefined, so it falls to item.name.
-  const weaponName = t(actor.npcRole === "monster" ? "monster.itemName" : "item.name", item.name);
+  const weaponName = item.name;
 
   const usePanic = game.settings.get(SETTINGS_NS, "use-panic");
   const panicked = usePanic && actor.system.panicked;
@@ -92,7 +82,7 @@ export const rollItemMacro = async (actorId, itemId) => {
   let quality;
   if (panicked) quality = "impaired";
   else {
-    // Same title as the sheet's control gets — the localized weapon name.
+    // Same title as the sheet's damage control gets.
     quality = await askDamageQuality(item.system.damageFormula, weaponName);
     if (quality === null) return; // dismissed: roll nothing
   }

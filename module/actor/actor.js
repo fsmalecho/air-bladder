@@ -5,7 +5,6 @@ import {
   atConnectionLimit, maxConnections, connectionsUiEnabled,
   connectedOwnershipShape, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG,
 } from "../connections.js";
-import { actorDisplayName, t } from "../i18n-content.js";
 import { concealmentWhisper, formatCount } from "../utils.js";
 import { FATIGUE_NAME } from "../item/item.js";
 
@@ -151,17 +150,16 @@ for (const k of ["STR", "DEX", "WIL"]) {
   AUDIT_LABELS[`system.abilities.${k}.value`] = () => game.i18n.localize(k);
   AUDIT_LABELS[`system.abilities.${k}.max`] = () => game.i18n.format("CAIRN.ChangeLog.MaxOf", { label: game.i18n.localize(k) });
 }
-/** Trait paths need display translation (t) where numbers pass through. A SET
- *  rather than a startsWith on the path string, which doubles as keeping any
- *  quoted `system.…` literal out of this file that the field audit would read
- *  as a persisted write. */
+/** Trait paths render as text where numbers pass through. A SET rather than a
+ *  startsWith on the path string, which doubles as keeping any quoted
+ *  `system.…` literal out of this file that the field audit would read as a
+ *  persisted write. */
 const AUDIT_TRAIT_PATHS = new Set();
 for (const k of ["physique", "skin", "hair", "face", "speech", "clothing", "virtue", "vice"]) {
   // The trait-category label IS a tables-2e table name (the sheet's pick-list
-  // labels them the same way), so the capitalized key localizes through the
-  // same table.name namespace and the audit line agrees with the sheet.
+  // labels them the same way), so the audit line agrees with the sheet.
   const p = `system.traits.${k}`;
-  AUDIT_LABELS[p] = () => t("table.name", k[0].toUpperCase() + k.slice(1));
+  AUDIT_LABELS[p] = () => k[0].toUpperCase() + k.slice(1);
   AUDIT_TRAIT_PATHS.add(p);
 }
 
@@ -340,13 +338,9 @@ export class CairnActor extends Actor {
       const docs = await game.packs.get("mondolme.mounts-transports")?.getDocuments() ?? [];
       namedDocs = docs
         .filter((d) => d.system?.role === role && !kindKeys.has(d.name.toLowerCase()))
-        // Sort on the DISPLAYED (overlay-translated) name, in the reader's
-        // language, not on stored English — otherwise the list renders shuffled
-        // in every non-English locale, sorted by names nobody sees (the review
-        // #9 sort-vs-display class, the same fix as _sortItemsForDisplay). The
-        // option value stays the uuid sentinel below; only the order changes.
-        .sort((a, b) =>
-          t("monster.name", a.name).localeCompare(t("monster.name", b.name), game.i18n.lang));
+        // Sorted by the displayed name; the option value stays the uuid
+        // sentinel below, only the order changes.
+        .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
       if (namedDocs.length) {
         const group = document.createElement("optgroup");
         // KindNamedCompanions, since the mount->companion rename — review #11
@@ -360,12 +354,8 @@ export class CairnActor extends Actor {
           // `doc:<uuid>` is a SENTINEL (the sheet Type-select discipline): it
           // can never reach a document field — the branch below clones instead.
           o.value = `doc:${d.uuid}`;
-          // Through the overlay, like every kind label three lines up. Without
-          // it a Spanish Warden read six English horse names sitting under a
-          // translated group heading between translated kinds — and these six
-          // ARE translated, under `monster.name` since the mounts moved from
-          // Items to Actors. Display only: the option's value is the sentinel.
-          o.textContent = t("monster.name", d.name);
+          // Display only: the option's value is the sentinel.
+          o.textContent = d.name;
           group.append(o);
         }
         kindSelect.append(group);
@@ -408,12 +398,7 @@ export class CairnActor extends Actor {
           if (sel.value.startsWith("doc:")) {
             const doc = namedDocs.find((d) => `doc:${d.uuid}` === sel.value);
             if (doc && (!name.value || name.dataset.prefilled === "1")) {
-              // The name the Warden just READ, not the English behind it —
-              // picking "Destrero pesado" and being handed "Heavy Destrier" is
-              // a bug report waiting to happen. This bakes the display language
-              // into world content, the same recorded exception monster
-              // generation takes, and the field stays editable.
-              name.value = t("monster.name", doc.name);
+              name.value = doc.name;
               name.dataset.prefilled = "1";
             }
           } else if (name.dataset.prefilled === "1") {
@@ -456,7 +441,7 @@ export class CairnActor extends Actor {
       // What core's fromCompendium stamps (world-collection.mjs:115) and this
       // hand-rolled clone never did: where the statblock came from.
       foundry.utils.setProperty(data, "_stats.compendiumSource", src.uuid);
-      data.name = result.name || t("monster.name", src.name);
+      data.name = result.name || src.name;
       data.folder = folder ?? null;
       return (await this.create(data)) ?? null;
     }
@@ -1028,13 +1013,12 @@ export class CairnActor extends Actor {
   async deleteOwnedItem(itemId) {
     const item = this.items.get(itemId);
     if (item) {
-      // Ask about the name on the row (review #9): the inventory renders the
-      // translation (role-keyed namespace, Fatigue via its UI label), and a
-      // destructive confirm must not name a document the user cannot see.
-      const ns = this.npcRole === "monster" ? "monster.itemName" : "item.name";
+      // Ask about the name on the row (review #9): Fatigue reads through its
+      // UI label, and a destructive confirm must not name a document the user
+      // cannot see.
       const shown = item.name === FATIGUE_NAME
         ? game.i18n.localize("CAIRN.Fatigue")
-        : t(ns, item.name);
+        : item.name;
       const proceed = await confirmDelete(shown);
       if (!proceed) return;
       await item.delete();
@@ -1062,7 +1046,7 @@ export class CairnActor extends Actor {
   async deleteOwnedContainer(itemId) {
     const container = this.getOwnedContainer(itemId);
     if (!container) return;
-    const proceed = await confirmDelete(actorDisplayName(container));
+    const proceed = await confirmDelete(container.name ?? "");
     if (!proceed) return;
     const actor = game.actors.find((a) => a.uuid == itemId);
     await actor?.delete();
@@ -1100,7 +1084,7 @@ export class CairnActor extends Actor {
       window: { title: game.i18n.localize("CAIRN.UnlinkContainerTitle") },
       content: `<div class="cairn-confirm"><p class="cairn-confirm-q">${
         game.i18n.format("CAIRN.UnlinkContainerQ", {
-          name: foundry.utils.escapeHTML(actorDisplayName(container)),
+          name: foundry.utils.escapeHTML(container.name ?? ""),
         })}</p></div>`,
       rejectClose: false,
       modal: true,
@@ -1313,14 +1297,13 @@ export class CairnActor extends Actor {
       return false;
     }
     if (!this.canKeepConnected) {
-      // Display names in every refusal (review #9): the toast must agree with
-      // the sheet titles around it. actorDisplayName gates by type, so a PC's
-      // player-authored name passes through untouched.
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: actorDisplayName(this) }));
+      // Names in every refusal (review #9): the toast must agree with the
+      // sheet titles around it.
+      ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: this.name ?? "" }));
       return false;
     }
     if (!target.canBeConnected) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.CannotConnect", { name: actorDisplayName(target) }));
+      ui.notifications.warn(game.i18n.format("CAIRN.Notify.CannotConnect", { name: target.name ?? "" }));
       return false;
     }
     // The pair rule that used to sit here — "an NPC never keeps a PC" — is
@@ -1344,18 +1327,18 @@ export class CairnActor extends Actor {
     // method a DROP goes through, and a drop never saw a filtered list.
     if (atConnectionLimit(this)) {
       ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionLimit", {
-        name: actorDisplayName(this),
+        name: this.name ?? "",
         max: maxConnections(),
       }));
       return false;
     }
     if (this.wouldCreateConnectionCycle(target)) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionCycle", { name: actorDisplayName(target) }));
+      ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionCycle", { name: target.name ?? "" }));
       return false;
     }
     if (!target.canUserModify(game.user, "update")) {
       ui.notifications.warn(
-        game.i18n.format("CAIRN.Notify.ContainerNoPermission", { name: actorDisplayName(target) })
+        game.i18n.format("CAIRN.Notify.ContainerNoPermission", { name: target.name ?? "" })
       );
       return false;
     }
@@ -1726,10 +1709,8 @@ export class CairnActor extends Actor {
       if (!(p in before)) continue;
       const now = foundry.utils.getProperty(src, p);
       if (now === before[p]) continue;
-      // Trait values are stored English and displayed through the overlay, so
-      // the ledger shows what the pick-list shows; numbers pass through.
       const disp = AUDIT_TRAIT_PATHS.has(p)
-        ? (v) => (v ? t("table.result", String(v)) : "—")
+        ? (v) => (v ? String(v) : "—")
         : (v) => (v === "" || v === undefined || v === null ? "—" : String(v));
       lines.push(game.i18n.format("CAIRN.ChangeLog.Field", { label: label(), from: disp(before[p]), to: disp(now) }));
     }
@@ -1771,12 +1752,11 @@ export class CairnActor extends Actor {
     if (userId !== game.user.id) return;
     if (options.abNoStatusCard) return;
     if (!game.settings.get(SETTINGS_NS, "change-log")) return;
-    const ns = this.npcRole === "monster" ? "monster.itemName" : "item.name";
     const lines = documents.map((d) => {
       if (d.name === FATIGUE_NAME) {
         return game.i18n.localize(added ? "CAIRN.ChangeLog.FatigueAdded" : "CAIRN.ChangeLog.FatigueRemoved");
       }
-      return game.i18n.format(added ? "CAIRN.ChangeLog.ItemAdded" : "CAIRN.ChangeLog.ItemRemoved", { name: t(ns, d.name) });
+      return game.i18n.format(added ? "CAIRN.ChangeLog.ItemAdded" : "CAIRN.ChangeLog.ItemRemoved", { name: d.name });
     });
     if (lines.length) this.#postChangeLogCard(lines, userId);
   }
@@ -1786,7 +1766,7 @@ export class CairnActor extends Actor {
    * ticks (review #13 #21, user ruling — a torch marked down a tick belongs on
    * the ledger like a torch dropped). ONLY those two: equipped, renames and
    * description edits stay off by the same ruling. Quantity rides the shared
-   * Field line with the item's overlay name as the label; uses get their own
+   * Field line with the item's name as the label; uses get their own
    * whole-line key. Old values come from the per-id stash
    * _preUpdateDescendantDocuments wrote — by the time this runs the document
    * already holds the new state. Same gates as the add/remove half.
@@ -1796,13 +1776,12 @@ export class CairnActor extends Actor {
     if (userId !== game.user.id) return;
     if (options.abNoStatusCard) return;
     if (!game.settings.get(SETTINGS_NS, "change-log")) return;
-    const ns = this.npcRole === "monster" ? "monster.itemName" : "item.name";
     const lines = [];
     for (const d of documents) {
       const before = options.airBladder?.[d.id]?.itemAudit;
       if (!before) continue;
       const src = d.toObject();
-      const name = t(ns, d.name);
+      const name = d.name;
       if (before.quantity !== undefined) {
         const now = src.system.quantity ?? 1;
         if (now !== before.quantity) {

@@ -1,5 +1,4 @@
 import { SETTINGS_NS } from "./settings.js";
-import { tokenDisplayName } from "./i18n-content.js";
 /**
  * @param {String} formula
  * @param {Object} [data]
@@ -345,7 +344,7 @@ export const nameableTokens = (ids, scene) => {
     // test above — `hidden` is "the Warden took it off the board", SECRET is
     // "this one is not for the players", and a Warden may use either.
     if (tok.isSecret) continue;
-    out.push({ id, name: tokenDisplayName(tok) });
+    out.push({ id, name: tok.name ?? "" });
   }
   return out;
 };

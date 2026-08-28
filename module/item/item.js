@@ -9,9 +9,8 @@ import { glogEnabled, glogConversionDiff, glogTextCached } from "../glog.js";
  * every other language: a Spanish player's "Fatiga" did not match the English GM's
  * remove filter, and the − button silently did nothing for them both ways round.
  *
- * Storing it in English also keeps the system's own rule (i18n-content.js): stored
- * documents stay English and translation happens at display. The sheet localizes
- * the label it shows, so nobody actually reads this string.
+ * The sheet localizes the label it shows from a UI key, so nobody actually
+ * reads this string.
  */
 export const FATIGUE_NAME = "Fatigue";
 

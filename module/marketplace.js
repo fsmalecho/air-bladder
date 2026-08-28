@@ -1,7 +1,6 @@
 import { findTableItems } from "./compendium.js";
 import { iconForTransport, TRANSPORT_KINDS } from "./icons.js";
 import { atConnectionLimit, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
-import { actorDisplayName, localizeNameDesc, t } from "./i18n-content.js";
 import { formatCount } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
 
@@ -99,13 +98,9 @@ export const getMarketplaceCatalog = async () => {
     const i = CATEGORY_ORDER.indexOf(stripPrefix(name));
     return i === -1 ? CATEGORY_ORDER.length : i;
   };
-  // The heading's translation key is the table's FULL document name ("Market:
-  // Weapons") — that is what the content extractor emits under table.name, so
-  // stripping first would leave a translator holding a key ("Weapons") the overlay
-  // never produces. Translate, then strip. The strip is generic because a
-  // translated prefix is not "Market:" ("Mercado:", …); a translation carrying no
-  // prefix at all is left whole, and a miss degrades to the English behaviour.
-  const displayName = (fullName) => t("table.name", fullName).replace(/^[^:]+:\s*/, "").trim();
+  // The heading strips the table's "Market: " prefix. The strip is generic
+  // because a name carrying no prefix at all is left whole.
+  const displayName = (fullName) => String(fullName).replace(/^[^:]+:\s*/, "").trim();
   tables.sort((a, b) => orderOf(a.name) - orderOf(b.name) || a.name.localeCompare(b.name));
 
   const categories = [];
@@ -219,11 +214,7 @@ const acquire = async (actor, data, pay) => {
     return false;
   }
   const cost = data.system.cost ?? 0;
-  // Every message below names the item through t(): the row the player clicked
-  // showed the localized name, and the toast answering the click read the
-  // English payload — "Has comprado Rope". The PAYLOAD stays English (it is
-  // what gets created); only the messages translate.
-  const shown = t("item.name", data.name);
+  const shown = data.name;
   if (pay && (actor.system.gold ?? 0) < cost) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughGold", { name: shown, cost }));
     return false;
@@ -294,9 +285,7 @@ export const acquireTransport = async (actor, doc, pay) => {
     return false;
   }
   const cost = doc.system.cost ?? 0;
-  // A transport is an Actor doc → monster.name, not item.name (see the row
-  // build). Messages only; the payload keeps the English name.
-  const shown = t("monster.name", doc.name);
+  const shown = doc.name;
   if (pay && (actor.system.gold ?? 0) < cost) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughGold", { name: shown, cost }));
     return false;
@@ -305,13 +294,7 @@ export const acquireTransport = async (actor, doc, pay) => {
   // any more: an npc mule IS a container, and its own sheet carries the shop
   // link this guard exists for (review #5). canKeepConnected holds the rule.
   if (!actor.canKeepConnected) {
-    // actorDisplayName, not a bare t(). This guard mostly refuses a THING (a
-    // Mule, a Backpack) whose name IS in monster.name, and the toast must agree
-    // with the sheet title it answers — but canKeepConnected also refuses an
-    // unlinked TOKEN, and a token can be a player character, whose name is
-    // NEVER localized (the 2026-08-04 gate). One helper holds that gate so no
-    // call site re-decides it; it is what actor.js uses for this same message.
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: actorDisplayName(actor) }));
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: actor.name ?? "" }));
     return false;
   }
   // The connection ceiling, refused at the till like the two walls above it —
@@ -319,13 +302,7 @@ export const acquireTransport = async (actor, doc, pay) => {
   // in its creation data and never calls `connectActor`, so the cap wall there
   // never sees it.
   if (atConnectionLimit(actor)) {
-    // Past the guard above, so the buyer is a CHARACTER and nothing else can
-    // reach this line — the name is ALWAYS player-authored here. It used to go
-    // through monster.name on the reasoning quoted above, which is true of that
-    // guard and false of this one: a PC named Horse or Mule was renamed to
-    // whatever the Spanish pack calls the creature, in a toast addressed to
-    // their own player. Review #16.
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionLimit", { name: actorDisplayName(actor), max: maxConnections() }));
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionLimit", { name: actor.name ?? "", max: maxConnections() }));
     return false;
   }
   // Give it a real portrait AND a matching map token; fall back to the class icon
@@ -468,16 +445,7 @@ export const openMarketplace = async (actor, opts = {}) => {
   const built = [];
   const sections = categories.map((cat) => {
     const rows = cat.items.map((data) => {
-      // Display-only translation: the row SHOWS the localized name/description, but
-      // `built` keeps the English payload so Buy/Take creates the canonical item
-      // (which then displays translated via the inventory surface).
-      // Namespace by ROW KIND: a carrier row is an Actor doc from Mounts &
-      // Transports, which the extractor files under monster.* — the default
-      // item.* lookup could only ever miss for those, so every transport row
-      // read English while the gear beside it read Spanish.
-      const d = localizeNameDesc(data, isCarrier(data)
-        ? { nameNs: "monster.name", descNs: "monster.desc" }
-        : undefined);
+      const d = data;
       if (isCarrier(data)) {
         const idx = built.push(data) - 1;
         const cap = data.system.slots ?? 0;

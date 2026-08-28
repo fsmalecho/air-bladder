@@ -19,9 +19,8 @@ import { registerWardenDamageControl } from "./warden-damage.js";
 import { registerSettings, SETTINGS_NS, SETTING_GROUPS, migrateSettingsNamespace } from "./settings.js";
 import { ACTOR_DATA_MODELS, ITEM_DATA_MODELS, deriveNpcRole } from "./data-models.js";
 import { connectionHeadroom, connectedOwnershipShape, syncPendingOwnership, OWNERSHIP_SYNC_FLAG } from "./connections.js";
-import { loadContentOverlay, t, translationOf, contentLocalized, tokenDisplayName, actorDisplayName, LOCALIZED_DIRECTORIES } from "./i18n-content.js";
 import { injectEncounterButton } from "./encounters.js";
-import { bindGrimoireFatigueButton, localizeGlogCastCard } from "./grimoire.js";
+import { bindGrimoireFatigueButton } from "./grimoire.js";
 import { nameableTokens } from "./utils.js";
 
 Hooks.once("init", async function () {
@@ -154,550 +153,6 @@ Hooks.once("ready", () => {
       console.error("Mondolme | settings namespace migration failed (continuing):", err);
     }
   })();
-});
-
-// Load the content-localization overlay (compendium names/descriptions) for the
-// active language, as soon as i18n is up and before sheets render. An English
-// world — or a language with no overlay shipped — gets none, and every content
-// string stays English (module/i18n-content.js).
-Hooks.once("i18nInit", loadContentOverlay);
-
-/**
- * Rewrite the visible `.entry-name` of every row in a directory-shaped list.
- * `displayOf` maps one entry (a pack index record, or a world document) to what
- * the eye should read; returning the input unchanged leaves the row alone.
- *
- * Shared by the compendium browser and the world sidebar because core builds
- * both from the same partial (`templates/sidebar/partials/document-partial.hbs`:
- * `li.directory-item[data-entry-id] > a.entry-name`). Display-only — nothing
- * stored moves — and idempotent, since each render rebuilds the row from the
- * collection.
- */
-const localizeDirectoryNames = (root, collection, displayOf) => {
-  // `collection.index` for a compendium, the collection itself for a world one:
-  // a pack's DOCUMENTS are not loaded until something fetches them, so `.get()`
-  // on the pack returns nothing for a row that is merely listed. The index
-  // record carries `name`, `type` and `folder`, which is everything read here.
-  const source = collection?.index ?? collection;
-  for (const el of root?.querySelectorAll?.(".entry-name") ?? []) {
-    if (el.children.length) continue; // don't clobber an icon/child, only plain-text names
-    const entry = source?.get?.(el.closest("[data-entry-id]")?.dataset.entryId);
-    if (!entry) continue;
-    const display = displayOf(entry);
-    if (display && display !== el.textContent.trim()) el.textContent = display;
-  }
-};
-
-/**
- * Make SEARCH match what the eye reads, for any directory whose names this
- * system rewrote above.
- *
- * Core's `_matchSearchEntries` tests the query against the COLLECTION's names —
- * never the DOM — so a rewritten list answers only to the English string that is
- * no longer on screen: typing the Spanish empties the list (review #9, on the
- * compendium browser; the same trap on the world sidebar as of 2026-08-14).
- *
- * Wrapped PER INSTANCE and ADDITIVE: core's English pass runs first and
- * untouched, then entries whose translated name matches are added, with their
- * folder marked matched and auto-expanded the way core's own name pass does. A
- * query can therefore never LOSE an English match by this, so someone typing
- * English into a Spanish world keeps both routes.
- *
- * Forwarding by `…args` is deliberate: `_matchSearchEntries` is @private and
- * Foundry may change its signature in a stable release. Core keeps working
- * verbatim through any such change, and our pass — which reads the first four
- * positionally — is wrapped so a shape change degrades to "translated search
- * stops matching" rather than throwing inside a render hook on every open.
- */
-const wrapTranslatedSearch = (app, displayOf) => {
-  if (app._abSearchWrapped || typeof app._matchSearchEntries !== "function") return;
-  app._abSearchWrapped = true;
-  const coreMatch = app._matchSearchEntries.bind(app);
-  app._matchSearchEntries = (...args) => {
-    coreMatch(...args);
-    try {
-      const [query, entryIds, folderIds, autoExpandIds] = args;
-      if (!contentLocalized() || !query) return;
-      const clean = foundry.applications.ux.SearchFilter.cleanQuery;
-      const entries = app.collection.index ?? app.collection.contents;
-      for (const e of entries) {
-        const id = e._id ?? e.id;
-        if (entryIds.has(id)) continue;
-        const display = displayOf(e);
-        if (!display || display === e.name || !query.test(clean(display))) continue;
-        entryIds.add(id);
-        const fid = e.folder?.id ?? e.folder?._id ?? e.folder;
-        if (fid) {
-          folderIds.add(fid);
-          autoExpandIds.add(fid);
-        }
-      }
-    } catch (err) {
-      console.warn("Mondolme | translated directory-search pass failed; English search is unaffected", err);
-    }
-  };
-};
-
-/**
- * What one WORLD document's row should read.
- *
- * Per DOCUMENT rather than per collection, unlike the compendium browser below:
- * a world Actor directory holds player characters, and a PC's name is NEVER
- * localized (ruled 2026-08-04 — `actorDisplayName` is the one place that gate
- * lives, and a PC named "Horse" is exactly what it was written for). A world
- * Item directory mixes backgrounds with gear for the same reason.
- *
- * Macros return their own name unchanged: there is no macro overlay namespace,
- * deliberately, and the extractor skips them for the same reason.
- */
-const worldDisplayName = (doc) => {
-  switch (doc?.documentName) {
-    case "Actor": return actorDisplayName(doc);
-    case "Item": return t(doc.type === "background" ? "bg.name" : "item.name", doc.name);
-    case "RollTable": return t("table.name", doc.name);
-    case "JournalEntry": return t("journal.name", doc.name);
-    default: return doc?.name;
-  }
-};
-
-/**
- * The WORLD sidebar (2026-08-14, review #14 finding 14 — user ruling: both this
- * and the combat tracker translate).
- *
- * Until now exactly ONE `.entry-name` sweep existed in this system, on the
- * compendium browser. So a Spanish Warden dragged a Goblin out of a pack and
- * into the world, and from then on the sidebar said "Goblin", the sheet header
- * said "Trasgo", the tracker said "Goblin", and the damage card beneath said
- * "ataca a Trasgo" — one creature, one screen, two names. That is the project's
- * own "one surface, two answers" tell, on the surfaces six overlay rounds had
- * missed.
- *
- * Registered per directory rather than once, because each is a separate
- * Application whose render hook is named after it.
- */
-// The list lives in i18n-content.js beside the late-load refresh that must
-// re-render exactly these — see LOCALIZED_DIRECTORIES for why it is one list.
-for (const { hook } of LOCALIZED_DIRECTORIES) {
-  Hooks.on(`render${hook}`, (app, html) => {
-    if (!contentLocalized()) return;
-    localizeDirectoryNames(html, app.collection, worldDisplayName);
-    wrapTranslatedSearch(app, worldDisplayName);
-  });
-}
-
-// Compendium browser: translate the visible entry names into the active language.
-// Display-only — the pack index and documents stay English; each render rebuilds
-// names from the index, so re-translating every render is idempotent. Drag is
-// safe (it uses data-entry-id, not text); SEARCH is not, which is why the
-// matcher wrap exists — see wrapTranslatedSearch above.
-/**
- * Which overlay namespace a PACK's entry names live under, from its metadata.
- *
- * A pack is single-type, so the namespace is a property of the PACK — unlike the
- * world sidebar above, which must decide per DOCUMENT because its Actor list
- * mixes player characters (never localized) with everything else. A compendium
- * Actor pack holds monsters and mounts and no PCs, which is what lets this skip
- * the `actorDisplayName` gate.
- *
- * Named document types come FIRST, and the `item.name` fallthrough is the last
- * resort rather than the catch-all it used to be. Deriving by elimination put
- * JournalEntry and Macro rows through `item.name` — latent (no name collides
- * today) but wrong in the same way the extractor's fallthrough was, and it
- * quietly contradicted the macro skip's stated reason for existing ("macro names
- * have no overlay surface" is only true if nothing looks them up here). A Macro
- * pack resolves to no namespace at all and is left alone.
- *
- * ONE copy, read by the compendium browser and by the sidebar's document search
- * below. A second copy of a mapping is how the Macro fallthrough got written in
- * the first place.
- */
-const packNameNamespace = (meta) =>
-  meta?.type === "Actor" ? "monster.name" :
-  meta?.type === "RollTable" ? "table.name" :
-  meta?.type === "JournalEntry" ? "journal.name" :
-  meta?.type === "Macro" ? null :
-  (meta?.name ?? "").startsWith("backgrounds") ? "bg.name" :
-  "item.name";
-
-Hooks.on("renderCompendium", (app, html) => {
-  if (!contentLocalized()) return;
-  const ns = packNameNamespace(app.collection?.metadata);
-  if (ns === null) return;
-  const displayOf = (e) => t(ns, e.name ?? "");
-  localizeDirectoryNames(html, app.collection, displayOf);
-  wrapTranslatedSearch(app, displayOf);
-});
-
-/**
- * The compendium SIDEBAR's DOCUMENT search (2026-08-19, review #16).
- *
- * Typing in the compendium tab does two things: it filters the pack rows — whose
- * labels core already localizes per viewer — and, beneath them, it lists matching
- * DOCUMENTS drawn from every pack's index. That second list is the one surface of
- * the search story nobody had counted. Measured before anything was touched, with
- * one monster translated: typing the English listed it and the row read the
- * English, and typing the translation listed nothing at all. So in the one place a
- * Warden goes to find a thing BY NAME, the name they can see everywhere else is
- * both unsearchable and unreadable.
- *
- * Neither half is reachable from a render hook, which is why this wraps the app
- * instead of sweeping the DOM: the rows are built inside `_onSearchFilter`, on
- * every keystroke, long after `renderCompendiumDirectory` has fired. Both wraps
- * are ADDITIVE and per instance, exactly like `wrapTranslatedSearch` above — core
- * runs first and untouched, so an English query can never lose a match to this,
- * and a signature change upstream degrades to "translated search stops matching"
- * rather than throwing on every keystroke.
- */
-const wrapCompendiumDocumentSearch = (app) => {
-  if (app._abDocSearchWrapped) return;
-  app._abDocSearchWrapped = true;
-
-  // Core's word-tree semantics, reproduced: a name matches when EVERY term of the
-  // query prefix-matches some word of it (helpers/document-index.mjs, "Result must
-  // prefix-match all terms"). `DocumentIndex`'s own cleaner is a private method, so
-  // this is a re-implementation and is allowed to drift from it — what drift costs
-  // is a translated query that stops matching, never a wrong English result.
-  const words = (s) => foundry.applications.ux.SearchFilter.cleanQuery(s ?? "")
-    .toLocaleLowerCase(game.i18n.lang)
-    .replace(/['`\u2019]/g, "")
-    .replaceAll("-", " ")
-    .split(/[^\p{Alphabetic}\p{Mark}\p{Decimal_Number}\p{Join_Control}]+/u)
-    .filter(Boolean);
-
-  if (typeof app._matchSearchDocuments === "function") {
-    const coreMatch = app._matchSearchDocuments.bind(app);
-    app._matchSearchDocuments = (query, documents, ...rest) => {
-      coreMatch(query, documents, ...rest);
-      try {
-        if (!contentLocalized() || !query) return;
-        const stop = CONFIG.i18n?.searchStopWords;
-        const terms = words(query).filter((w) => w.length > 1 && !stop?.has?.(w));
-        if (!terms.length) return;
-        // The same guards core's own lookup applies, for the same reasons: the
-        // type-filter chips, pack VISIBILITY (the Warden packs are ownership NONE
-        // and must not surface for a player), and a cap — core takes 25 per type,
-        // and an unbounded pass on a two-letter query would bury the English
-        // results this is supposed to be adding to.
-        const filters = app.activeFilters ?? new Set();
-        const seen = new Set([...documents].map((d) => d?.uuid));
-        let added = 0;
-        for (const pack of game.packs) {
-          if (added >= 25) break;
-          if (!pack.visible) continue;
-          if (filters.size && !filters.has(pack.documentName)) continue;
-          const ns = packNameNamespace(pack.metadata);
-          if (ns === null) continue;
-          for (const entry of pack.index) {
-            if (added >= 25) break;
-            if (seen.has(entry.uuid)) continue;
-            const display = t(ns, entry.name ?? "");
-            if (!display || display === entry.name) continue;
-            const have = words(display);
-            if (!terms.every((term) => have.some((w) => w.startsWith(term)))) continue;
-            documents.add(entry);
-            seen.add(entry.uuid);
-            added++;
-          }
-        }
-      } catch (err) {
-        console.warn("Mondolme | translated compendium document-search pass failed; English search is unaffected", err);
-      }
-    };
-  }
-
-  if (typeof app._onMatchSearchDocuments === "function") {
-    const coreRender = app._onMatchSearchDocuments.bind(app);
-    app._onMatchSearchDocuments = (entries, listEl, ...rest) => {
-      coreRender(entries, listEl, ...rest);
-      try {
-        if (!contentLocalized()) return;
-        // Keyed on the text core has just written, which is the stored English —
-        // the overlay's key. Core removes and rebuilds these rows on every
-        // keystroke, so there is no half-translated state to be idempotent about;
-        // a second pass over a translated row would miss and leave it alone anyway.
-        for (const li of listEl?.querySelectorAll?.("li[data-document-match]") ?? []) {
-          const el = li.querySelector("a[data-name]");
-          if (!el || el.children.length) continue;
-          const ns = packNameNamespace(foundry.utils.parseUuid(li.dataset.uuid)?.collection?.metadata);
-          if (ns === null) continue;
-          const english = el.textContent.trim();
-          const display = t(ns, english);
-          if (display && display !== english) el.textContent = display;
-        }
-      } catch (err) {
-        console.warn("Mondolme | translated compendium document-search render failed; names stay English", err);
-      }
-    };
-  }
-};
-
-Hooks.on("renderCompendiumDirectory", (app) => {
-  if (!contentLocalized()) return;
-  wrapCompendiumDocumentSearch(app);
-});
-
-// Table draws to chat: localize the drawn result text into the active language.
-//
-// RENDER-TIME, NOT CREATE-TIME. This rewrites the already-rendered DOM of one
-// client's chat card and never touches the ChatMessage document. That is the whole
-// point: the stored message stays English, so a reader sees the draw in THEIR
-// language (Foundry's language setting is client-scoped, so mixed-language tables
-// are normal), the log re-localizes for free if a world switches language, and
-// messages this system did not author — core's own RollTable#draw cards, other
-// modules' draws — are only ever restyled locally, never permanently modified.
-// Doing this in preCreateChatMessage instead (via updateSource) baked the roller's
-// language into the stored document, breaking the display-only invariant that
-// i18n-content.js:10-11 states.
-//
-// Table-agnostic: it matches each rendered result cell against the table.result
-// overlay with English fallback, so it covers EVERY draw path (world tables,
-// compendium tables, our own draws in damage.js, and a Warden rolling a pack table
-// by hand) without resolving the source table. An enriched result (e.g. an @UUID
-// link) whose rendered HTML no longer equals its raw key simply misses and stays
-// English — the same graceful degradation as the rest of the overlay. The
-// .table-results markup is unique to RollTable draw cards, so non-draw messages
-// (damage, saves) are never touched. See i18n-content.js.
-const swapResultNode = (node, html) => {
-  // Read the whole cell (text-type results land in .description, sometimes .name),
-  // look it up as a table.result, and write the translation back if there is one.
-  const en = (html ? node.innerHTML : node.textContent).trim();
-  if (!en) return;
-  // translationOf (not t) returns overlay-or-undefined, never the English source,
-  // so the value written below is provably from our trusted overlay JSON — DOM text
-  // can't round-trip back out as markup (js/xss-through-dom).
-  const es = translationOf("table.result", en);
-  if (es === undefined || es === en) return;
-  if (html) node.innerHTML = es; else node.textContent = es;
-};
-
-// One rendered result's details. The SAME partial (result-details.hbs:
-// strong.name for a named row, .description for a text row) serves the chat
-// card's <li>s and the RollTable sheet's td.details, so the two hooks share this.
-const localizeResultCells = (cells) => {
-  for (const cell of cells) {
-    const nameEl = cell.querySelector("strong.name, .name");
-    if (nameEl && !nameEl.querySelector("a")) swapResultNode(nameEl, false); // skip @UUID document links
-    const descEl = cell.querySelector(".description");
-    if (descEl) swapResultNode(descEl, true);
-  }
-};
-
-const localizeTableResults = (root) => {
-  if (!contentLocalized()) return;
-  const cells = root?.querySelectorAll?.(".table-results li");
-  if (!cells?.length) return;
-  // The table's own description heads the draw card (14.365 table-result.hbs
-  // renders it above the roll) — `table.desc`, emitted by the extractor since
-  // 2026-08-06. Guarded by the cells check above, so non-draw messages that
-  // happen to carry the class are never touched.
-  const tableDesc = root.querySelector(".table-description");
-  if (tableDesc) {
-    const es = translationOf("table.desc", tableDesc.innerHTML.trim());
-    if (es !== undefined) tableDesc.innerHTML = es;
-  }
-  localizeResultCells(cells);
-};
-
-// The RollTable sheet's VIEW mode (14.365: the sticky default for any table
-// with rows, and the ONLY mode a locked pack table can render). It is not a
-// form — nothing in it submits to the document — so display-only translation
-// is safe for world and pack tables alike. EDIT mode is deliberately left
-// alone even though its details cells reuse the same partial: the editor
-// edits the stored English source, the same read/edit split every overlay
-// surface keeps, and a row's text is edited through TableResultConfig, whose
-// input must show the stored string.
-Hooks.on("renderRollTableSheet", (app) => {
-  if (!contentLocalized() || app.mode !== "view") return;
-  const root = app.element;
-  if (!root) return;
-  localizeResultCells(root.querySelectorAll("table[data-results] td.details"));
-  // The name, twice: the sheet-body <h1> and the window title. Display only —
-  // a world table the Warden renamed simply misses and stays as written.
-  const esName = translationOf("table.name", app.document.name ?? "");
-  if (esName !== undefined) {
-    const h1 = root.querySelector(".sheet-header h1");
-    if (h1) h1.textContent = esName;
-    const title = root.querySelector(".window-title");
-    if (title) title.textContent = esName;
-  }
-  // The table DESCRIPTION is deliberately not handled here, because on 14.365
-  // it never renders in view mode at all: view.hbs emits it as an UNWRAPPED
-  // {{{descriptionHTML}}}, and a root part keeps only ELEMENT children
-  // (handlebars-application.mjs:213, replaceChildren(...htmlElement.children)),
-  // so a plain-text description — every shipped one — is dropped by core
-  // before it reaches the DOM. Its real surface is the DRAW CARD, translated
-  // above. Code here that "translated" it would be coverage theatre.
-});
-
-/* -------------------------------------------- */
-/*  Journals — the player-facing rules handouts */
-/* -------------------------------------------- */
-
-/**
- * Block-level tags a journal page is translated at, ONE lookup per element.
- * MUST stay identical to BLOCK_TAGS in tools/i18n/content-strings.mjs: the
- * extractor emits `node.innerHTML` for exactly these and the overlay is keyed on
- * it, so a tag in one list and not the other is a key nothing ever asks for.
- * `npm run dev:journal-i18n` is what holds the two honest — it collects the real
- * rendered DOM's keys and checks the extractor emits every one.
- */
-const JOURNAL_BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, figcaption";
-
-/**
- * Translate a rendered page's prose, paragraph by paragraph.
- *
- * PARAGRAPH-level, ruled 2026-08-14: a page here is one `text.content` string of
- * up to 14,000 characters, so keying the overlay on the whole page would hand a
- * translator a rulebook page in one cell and orphan all of it on any English
- * edit. Split this way an edit costs only the sentences it touched.
- *
- * Nested blocks are skipped so only the INNERMOST block owns its text — a `<li>`
- * wrapping a nested list yields the inner items, never the outer's concatenation
- * of them, which would otherwise be keyed on a string that is also its own
- * children and fight them at render.
- *
- * `translationOf`, never `t`: the value written to innerHTML is then provably
- * from our own overlay JSON and DOM text can never round-trip back out as
- * markup — the same rule swapResultNode above is written to.
- */
-const localizeJournalBlocks = (root) => {
-  if (!root) return;
-  for (const node of root.querySelectorAll(JOURNAL_BLOCKS)) {
-    if (node.querySelector(JOURNAL_BLOCKS)) continue;
-    const en = node.innerHTML.trim();
-    if (!en) continue;
-    const es = translationOf("journal.block", en);
-    if (es !== undefined && es !== en) node.innerHTML = es;
-  }
-};
-
-/**
- * Every page sheet, whether it is drawn inside its entry's sheet or opened on
- * its own — the entry sheet renders each page through the page's OWN sheet
- * (`_renderPageView`, journal-entry-sheet.mjs:754-758), so this one hook covers
- * both and the entry-level hook below is left only the chrome.
- *
- * `renderJournalEntryPageSheet` rather than the concrete subclass name because
- * AppV2 fires the hook for every class in the chain, and a text page is served
- * by JournalEntryPageProseMirrorSheet in v14 — naming the subclass would tie
- * this to a class core is free to swap under us.
- *
- * VIEW MODE ONLY (`app.isView`, journal-entry-page-sheet.mjs:72-74). Edit mode
- * is an editor over the STORED English, the same read/edit split every overlay
- * surface keeps: translating there would show a Warden Spanish in a box whose
- * save writes English back, or worse, writes the Spanish.
- */
-Hooks.on("renderJournalEntryPageSheet", (app, element) => {
-  if (!contentLocalized() || !app.isView) return;
-  localizeJournalBlocks(element?.querySelector?.(".journal-page-content") ?? element);
-  // The page's own displayed title (title.show pages — the Vald book is the
-  // first translatable pack that has any): core renders it in a HEADER that
-  // is a SIBLING of .journal-page-content (templates/journal/pages/text/
-  // view.hbs), so the block sweep above never reaches it. Same namespace and
-  // same markup guard as the TOC page row in the entry-sheet hook below.
-  const heading = element?.querySelector?.(".journal-page-header :is(h1,h2,h3,h4,h5,h6)");
-  if (heading) {
-    const en = heading.textContent.trim();
-    const es = en && !en.includes("<") ? translationOf("journal.pageName", en) : undefined;
-    if (es !== undefined && es !== en && !es.includes("<")) heading.textContent = es;
-  }
-});
-
-/**
- * The entry sheet's chrome: the window title, and the table of contents down the
- * left. Both are built from text core captured before the hook above ran, so
- * without this a Spanish reader gets Spanish prose under an English title with an
- * English contents list beside it — the "one surface, two answers" tell, on one
- * screen.
- *
- * The TOC has TWO row shapes and they are not interchangeable, which is what the
- * first version of this got wrong (review #16). A HEADING inside a page is
- * `a.heading-link`. A PAGE is not a link at all: v14 draws it as
- * `div.page-heading > span.page-title`, with the name repeated in the
- * `data-tooltip-text` of the index bubble beside it. So a selector of `nav.toc a`
- * reaches the headings and nothing else, and the `journal.pageName` half of the
- * old single loop could never fire — a namespace the extractor fills for every
- * page of every translatable journal, asked for by nothing.
- *
- * Written through `textContent`, and only when NEITHER side carries markup: a
- * heading's overlay key is its innerHTML, so a marked-up heading's translation
- * contains tags that would render as literal text in a link. Those stay English,
- * which is the overlay's standing way of missing.
- */
-Hooks.on("renderJournalEntrySheet", (app, element) => {
-  if (!contentLocalized() || !element) return;
-  const esName = translationOf("journal.name", app.document?.name ?? "");
-  if (esName !== undefined) {
-    const title = element.querySelector(".window-title");
-    if (title) title.textContent = esName;
-  }
-
-  // Headings, which are the bulk of every shipped entry.
-  for (const link of element.querySelectorAll("nav.toc a.heading-link")) {
-    const en = link.textContent.trim();
-    if (!en || en.includes("<")) continue;
-    const es = translationOf("journal.block", en);
-    if (es !== undefined && es !== en && !es.includes("<")) link.textContent = es;
-  }
-
-  // The page rows they sit under. The tooltip on the index bubble is the same
-  // string a second time — leaving it behind gives the row an English name on
-  // hover and a Spanish one on screen, which is the same tell one element wide.
-  for (const title of element.querySelectorAll("nav.toc .page-title")) {
-    const en = title.textContent.trim();
-    if (!en || en.includes("<")) continue;
-    const es = translationOf("journal.pageName", en);
-    if (es === undefined || es === en || es.includes("<")) continue;
-    title.textContent = es;
-    const tip = title.closest(".page-heading")?.querySelector("[data-tooltip-text]");
-    if (tip?.dataset.tooltipText === en) tip.dataset.tooltipText = es;
-  }
-});
-
-/**
- * The entry sheet's page SEARCH, the half the hook above cannot reach: core
- * matches the query against the COLLECTION (`page.name`, the stored English —
- * journal-entry-sheet.mjs:1073-1088), never the DOM, so once the TOC shows
- * Spanish page names, typing one of them empties the list. Same defect the
- * directory and compendium wraps close (review #16), one more surface
- * (review #17); the Vald book's nine titled pages are what make it visible.
- *
- * A PROTOTYPE wrap, the one surface where the recorded per-instance shape
- * CANNOT work: the sheet constructs its SearchFilter once with `??=` and
- * captures `this._onSearchFilter.bind(this)` at that moment
- * (journal-entry-sheet.mjs:484-488) — during the first render, before any
- * render hook fires — so an instance patch would sit shadowed behind a bound
- * reference to the original for that sheet's whole life. Wrapped at init,
- * before any instance exists, so every bind captures the wrapped method.
- * Still ADDITIVE and still degrade-don't-throw: core runs first and
- * untouched, an English query can never lose a match to this, and a failure
- * in our pass logs and leaves English search working.
- *
- * DOM-only, a real limit accepted with eyes open: core also records matches
- * in a private #filteredPages set that a mid-query RE-RENDER consults
- * (journal-entry-sheet.mjs:520), which we cannot reach — so a
- * translated-only match re-hides on a re-render until the next keystroke.
- * Overlay degradation, not a wall.
- */
-Hooks.once("init", () => {
-  const proto = foundry.applications.sheets.journal.JournalEntrySheet?.prototype;
-  if (!proto || typeof proto._onSearchFilter !== "function" || proto._abPageSearchWrapped) return;
-  proto._abPageSearchWrapped = true;
-  const coreFilter = proto._onSearchFilter;
-  proto._onSearchFilter = function (event, query, rgx, html) {
-    coreFilter.call(this, event, query, rgx, html);
-    try {
-      if (!contentLocalized() || !query) return;
-      for (const el of html?.querySelectorAll?.("[data-page-id][hidden]") ?? []) {
-        const page = this.entry?.pages?.get?.(el.dataset.pageId);
-        const es = translationOf("journal.pageName", page?.name ?? "");
-        if (es === undefined) continue;
-        if (foundry.applications.ux.SearchFilter.testQuery(rgx, es)) el.hidden = false;
-      }
-    } catch (err) {
-      console.warn("Mondolme | translated journal page-search pass failed; English search is unaffected", err);
-    }
-  };
 });
 
 // Cairn calls the Game Master the "Warden". When the setting is on, override
@@ -2231,7 +1686,7 @@ Hooks.on("renderDialogV2", function abSpellscrollTypeOption(dialog, element) {
   // Two strings, deliberately: the option is READ, so it is localized; the name is
   // STORED, so it is English (SPELLSCROLL_NAME). They were one variable, which made
   // the type list's label leak into the document and broke the system's own
-  // English-storage invariant (item.js, i18n-content.js) on every non-English client.
+  // English-storage invariant (item.js) on every non-English client.
   const label = game.i18n.localize("CAIRN.Spellscroll");
   const option = document.createElement("option");
   option.value = "spellbook";
@@ -2476,9 +1931,8 @@ Hooks.on("renderActorDirectory", (app, html) => {
  * with Crossbow" and left the table to remember who that was aimed at.
  *
  * Resolved AT RENDER rather than at roll time, and all three reasons matter:
- * the names then localize per VIEWER (so the content overlay translates a
- * monster's name in a Spanish client and leaves a player-authored PC name
- * alone), BOTH producers are covered without touching either (`#onRollDamage`
+ * the names are read per VIEWER, BOTH producers are covered without touching
+ * either (`#onRollDamage`
  * and macros.js already ship the same `data-targets`), and every damage card
  * already in the log gains the line the next time it renders. Resolving at
  * creation would freeze the sentence in the roller's language and have to be
@@ -2556,9 +2010,7 @@ const offerUntargetedApply = (html) => {
  * since both produce a plausible name either way.
  *
  * The token is PREFERRED and the alias is only a fallback: a Warden who renamed
- * a token "Goblin A" means the card must say "Goblin A", and `tokenDisplayName`
- * is also what routes a monster's name through the content overlay while leaving
- * a player-authored PC name alone.
+ * a token "Goblin A" means the card must say "Goblin A".
  *
  * NOT gated on `nameableTokens`, unlike the TARGETS. The attacker is the speaker
  * of the roll card everybody can already see, so concealing the name here would
@@ -2571,44 +2023,7 @@ const offerUntargetedApply = (html) => {
  */
 const attackerDisplayName = (speaker, scene) => {
   const tok = scene?.tokens?.get(speaker?.token);
-  return tok ? tokenDisplayName(tok) : (speaker?.alias ?? "");
-};
-
-/**
- * The card HEADER — `.message-sender`, `templates/sidebar/chat-message.hbs:4`
- * — is the raw speaker alias. Core prints it, nothing here rewrote it, and the
- * attack line two lines beneath it went through the overlay: one creature, one
- * card, two names (review #19, observed as "Mule" over a sheet reading "Mula";
- * the 2026-08-14 ruling names exactly this). Display-only, like everything in
- * this hook: the message is never written.
- *
- * The same two rules the attack line follows. Spoken AS a token, the token's
- * name rules (`tokenDisplayName` — a Warden's "Goblin A" stays "Goblin A");
- * spoken as a world actor, that actor's (`actorDisplayName` — a player's
- * character never localizes). A speaker nothing resolves — a compendium
- * sheet's roll, a user speaking as themself, a Warden-typed alias that is not
- * the actor's name — keeps what core printed.
- *
- * @param {ChatMessage} message
- * @param {HTMLElement} html
- * @param {TokenDocument} [token]  the speaker's token on the scene it spoke in
- */
-const localizeSpeakerName = (message, html, token) => {
-  if (!contentLocalized()) return;
-  const header = html.querySelector(".message-sender");
-  if (!header) return;
-  const speaker = message.speaker ?? {};
-  const alias = speaker.alias ?? "";
-  if (!alias || header.textContent.trim() !== alias) return;
-  let display;
-  if (token) {
-    display = tokenDisplayName(token);
-  } else {
-    const actor = speaker.actor ? game.actors?.get(speaker.actor) : null;
-    if (!actor || actor.name !== alias) return;
-    display = actorDisplayName(actor);
-  }
-  if (display && display !== alias) header.textContent = display;
+  return tok ? (tok.name ?? "") : (speaker?.alias ?? "");
 };
 
 const nameDamageTargets = (message, html, scene) => {
@@ -2693,8 +2108,7 @@ const nameDamageTargets = (message, html, scene) => {
  *     renders in every player's log. The whole line is ONE text node, so nothing
  *     authored is ever parsed as markup — the strongest form of the rule, and
  *     available here because (unlike the attack line) nothing inside is bolded.
- *   - it localizes per VIEWER, so a monster attacker's name goes through the
- *     content overlay while a player-authored PC name does not;
+ *   - it resolves per VIEWER, off the token or actor as it stands then;
  *   - the naming rule stays in one place (`attackerDisplayName`).
  *
  * TOP of the card body, above "Damage:", so it reads in the order the eye
@@ -2822,9 +2236,6 @@ Hooks.on("renderRollTableDirectory", (app, html) => {
 });
 
 Hooks.on("renderChatMessageHTML", (message, html, data) => {
-  // Display-only content overlay for RollTable draw cards (see above).
-  localizeTableResults(html);
-
   // A table-draw card whose drawn rows PARSE as encounters grows the Warden's
   // "Add to scene" button (module/encounters.js). Injected per viewer, never
   // stored — a player's copy has nothing to trim. Async, and deliberately not
@@ -2836,11 +2247,6 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   // per render, spent-state read from the message flag, ownership re-checked
   // in the handler.
   bindGrimoireFatigueButton(message, html);
-
-  // The GLOG public cast card, rebuilt in THIS viewer's language out of the
-  // English it was stored with (module/grimoire.js). Display-only, no write —
-  // the same footing as the table-draw localization at the top of this hook.
-  localizeGlogCastCard(message, html);
 
   // The generation-rolls card, the same way (module/character-generator.js):
   // rebuilt from the numbers in its flag in THIS viewer's language — the stored
@@ -2860,10 +2266,6 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   const speaker = message.speaker ?? {};
   const scene = speaker.scene ? game.scenes?.get(speaker.scene) : canvas?.scene;
   const token = scene?.tokens?.get(speaker.token);
-
-  // The header, in this viewer's language, before the body rewrites below
-  // read it — see the docblock.
-  localizeSpeakerName(message, html, token);
 
   // All three before the player-trim at the bottom of this hook — see the
   // docblocks. And `offerUntargetedApply` before `showDamageApplied`, which greys
@@ -2985,8 +2387,7 @@ const configureHandleBar = () => {
   // Keeping this idempotent needs EVERY form tested, which is why it is a helper
   // rather than an {{#unless startsWith}} in the template:
   //
-  //   - the stored name is English, and the content overlay translates it only
-  //     where it has an entry — so `item.name` here may be either language;
+  //   - a stored name may already carry a prefix in either language;
   //   - the original guard compared that name against the TRANSLATED prefix
   //     alone, so on a Spanish client it never matched and every spellbook
   //     rendered "Hechizo — Spellbook — Detect Magic".
@@ -3001,11 +2402,9 @@ const configureHandleBar = () => {
   // The English list above carries both by hand; the LOCALIZED side used to carry
   // only the em-dash one, and that asymmetry was the bug. Five shipped 2e
   // backgrounds spell their grant "Spellbook (Detect Magic)" — Bonekeeper,
-  // Foundling, Half-Witch, Hexenbane, Mountebank — so the parenthesised shape is
-  // the one a content overlay is most likely to be translating, and a translated
-  // "Hechizo (Detectar Magia)" matched nothing and got a second "Hechizo — "
-  // bolted on. Observed, not reasoned: dev:i18n-render rendered
-  // "ZZ-hechizo — ZZ-hechizo (Aro de Cáñamo)".
+  // Foundling, Half-Witch, Hexenbane, Mountebank — so the parenthesised shape
+  // must be recognised too, or a name already carrying it gets a second
+  // prefix bolted on.
   //
   // Derived from the prefix rather than asking translators for a second key: a
   // language file that carries "CAIRN.SpellbookPrefix" alone stays complete, and

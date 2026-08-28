@@ -20,10 +20,8 @@
  * IS the detection: the shipped examples in `warden-encounters` light up the
  * same way a Warden's home-made table does, with zero setup.
  *
- * Parsing runs on the STORED description, never the rendered card — the card
- * is display-localized by the content overlay (the anchor rule,
- * `module/i18n-content.js`), so a Spanish client parses the same English the
- * table stores. The drawn rows are recovered from the MESSAGE document, not
+ * Parsing runs on the STORED description, never the rendered card. The drawn
+ * rows are recovered from the MESSAGE document, not
  * the DOM: core stamps `flags.core.RollTable` with the table id and rides the
  * Roll along (roll-table.mjs:60), so `getResultsForRoll(roll.total)` re-derives
  * exactly what was drawn. (The card's `data-result-id` attribute is EMPTY on
@@ -57,7 +55,6 @@
  */
 
 import { createNpc } from "./character-generator.js";
-import { t } from "./i18n-content.js";
 
 export const ENCOUNTER_SPAWNED_FLAG = "encounterSpawned";
 
@@ -125,15 +122,13 @@ export const encounterSpecsForMessage = async (message) => {
 /* -------------------------------------------- */
 
 /** "1d6 × Goblins and 1 × Mimic" — the button says what it will do before it is
- *  clicked. Labels route through the overlay (`monster.name`) so a Spanish
- *  Warden reads the name their own card shows, and the JOIN is localized too:
- *  the list is read inside a translated sentence, and a hardcoded ", " leaves
- *  the one English fragment in it. `Intl.ListFormat` via core's helper, as
- *  cairn.js:1869 and :1990 already do. */
+ *  clicked. The JOIN is localized: the list is read inside a translated
+ *  sentence, and a hardcoded ", " leaves one English fragment in it.
+ *  `Intl.ListFormat` via core's helper, as cairn.js already does. */
 const specList = (specs) => game.i18n.getListFormatter().format(specs.map((s) => {
   const name = s.npc
     ? game.i18n.localize("CAIRN.Encounter.RandomNpc")
-    : t("monster.name", s.label || game.i18n.localize("CAIRN.Encounter.UnknownActor"));
+    : (s.label || game.i18n.localize("CAIRN.Encounter.UnknownActor"));
   return `${s.qty} × ${name}`;
 }));
 
@@ -280,7 +275,7 @@ export const spawnEncounterFromMessage = async (message) => {
       const roll = await new Roll(spec.qty).evaluate();
       const name = spec.npc
         ? game.i18n.localize("CAIRN.Encounter.RandomNpc")
-        : t("monster.name", spec.label || "");
+        : (spec.label || "");
       await roll.toMessage({
         flavor: game.i18n.format("CAIRN.Encounter.QtyFlavor", { what: name }),
         speaker: { alias: game.user.name },
@@ -308,7 +303,7 @@ export const spawnEncounterFromMessage = async (message) => {
           continue;
         }
         placed += await spawnTokens(actor, count, placed);
-        placedNames.push(`${count} × ${t("monster.name", actor.name)}`);
+        placedNames.push(`${count} × ${actor.name}`);
       }
     }
 

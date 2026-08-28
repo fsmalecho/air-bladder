@@ -10,10 +10,6 @@
  * roll(), never draw(): these are the Warden's tables and a draw would dirty
  * their drawn state (the config.js invariant).
  *
- * The dossier is baked in the SESSION'S language via t("table.result") — the
- * ratified monster-generation exception: generated world content is authored
- * in the language it was generated in (identity in an English world).
- *
  * The loop closes by hand, deliberately: when a rolled faction earns a place
  * in the campaign, the Warden adds its name as a row in their world
  * "Warden: NPC - Faction" table — and the sheet die starts dealing it to NPCs
@@ -22,7 +18,6 @@
  */
 
 import { findTableByName, resultText } from "./compendium.js";
-import { t } from "./i18n-content.js";
 
 /** The suite, by shipped name. World copies of these names win by design. */
 const TABLES = {
@@ -36,13 +31,13 @@ const TABLES = {
   obstacle: "Warden: Faction - Obstacle",
 };
 
-/** One rolled cell, display-language baked; "" when the table is missing/empty. */
+/** One rolled cell; "" when the table is missing/empty. */
 const rollText = async (tableName) => {
   const table = await findTableByName(tableName);
   if (!table) return "";
   const { results } = await table.roll();
   const raw = resultText(results[0]).trim();
-  return raw ? t("table.result", raw) : "";
+  return raw;
 };
 
 /**

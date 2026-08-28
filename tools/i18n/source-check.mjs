@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * i18n SOURCE gate — compares the code to lang/en.json.
+ * i18n SOURCE gate — compares the code to lang/es.json.
  *
- * `i18n:check` compares language files *to each other*, which makes it
- * structurally blind to the one thing a translator can never fix: a string that
- * was never routed through `game.i18n` at all. Such a string is identical in
- * en.json and es.json — because it is in neither. That blindness is how
+ * The system now ships one language file, so nothing compares files to each
+ * other any more. What still needs catching is the one thing no language file
+ * can fix: a string that was never routed through `game.i18n` at all — it is
+ * absent from es.json because it is nowhere. That blindness is how
  * `title="Double click to change limit"` shipped, the only hint the
  * double-click-to-set-equipment-limit feature exists.
  *
  * Four classes, all checkable offline:
  *
  *   missing    a key referenced by module/, templates/ or the macros pack's
- *              command JS that en.json lacks. Foundry renders the raw key, so
+ *              command JS that es.json lacks. Foundry renders the raw key, so
  *              the user sees "CAIRN.Whatever".
- *   unused     a key in en.json that nothing references. Dead weight a
+ *   unused     a key in es.json that nothing references. Dead weight a
  *              translator is nonetheless asked to translate.
  *   hardcoded  user-visible English in module/ or templates/ that never passes
  *              through game.i18n. Untranslatable by construction.
@@ -73,7 +73,7 @@ const TPL_FILES = walk(path.join(ROOT, "templates"), /\.(html|hbs)$/);
  * pack round-trip produces (`|-` as committed, `>-` after an extract — folded
  * style wraps at spaces, and a localize("CAIRN.X") call carries none inside).
  * Deliberately ONLY the macros pack: the other packs hold prose for the
- * content overlay, where an en.json key would be a bug, not a reference.
+ * pack content, where an es.json key would be a bug, not a reference.
  * No existsSync guard on purpose — if the pack directory vanishes, its keys
  * genuinely are unreferenced, and the walk of a missing dir failing loudly
  * beats reporting green over a corpus that silently shrank.
@@ -94,7 +94,7 @@ const CORE_RESOLVED = [/^TYPES\./];
 
 /**
  * Keys our forked core templates reference that the CLIENT's own language
- * file supplies, so they are rightly absent from lang/en.json. The forked
+ * file supplies, so they are rightly absent from lang/es.json. The forked
  * combat tracker (templates/sidebar/combat-tracker.html is core 14.365's
  * tracker.hbs with the initiative block swapped) keeps core's own localize
  * calls — each verified present in
@@ -317,8 +317,8 @@ const scanJs = () => {
 // Report
 // ---------------------------------------------------------------------------
 
-const en = flattenKeys(JSON.parse(fs.readFileSync(path.join(ROOT, "lang/en.json"), "utf8")));
-const enSet = new Set(en);
+const langKeys = flattenKeys(JSON.parse(fs.readFileSync(path.join(ROOT, "lang/es.json"), "utf8")));
+const enSet = new Set(langKeys);
 const { used, prefixes, suffixes } = collectKeys();
 
 /** A `${key}Npc`-style variant of a key that IS referenced counts as referenced. */
@@ -388,7 +388,7 @@ const unlabelled = CATEGORY_LABELS.flatMap(({ manifest, prefix }) => {
  * (compendium-collection.mjs:46), so a CAIRN.* key in a pack's `label` is the
  * supported route, and the manifest is scanned in both directions: a
  * key-shaped label is a REFERENCE (fed into `used`, so `missing` catches a
- * key en.json lacks — which every client would render as the literal key —
+ * key es.json lacks — which every client would render as the literal key —
  * and `unused` stops calling the 24 CAIRN.Pack.* strings dead), and a
  * non-key label is hardcoded English on a user-visible surface, reported
  * beside scanJs's findings.
@@ -411,7 +411,7 @@ for (const p of manifest.packs ?? []) {
 }
 
 const missing = [...used.keys()].filter((k) => !enSet.has(k) && !CORE_SUPPLIED.has(k));
-const unused = en.filter(
+const unused = langKeys.filter(
   (k) =>
     !used.has(k) &&
     !CORE_RESOLVED.some((re) => re.test(k)) &&
@@ -451,9 +451,7 @@ for (const f of TPL_FILES) {
 /**
  * Every lang file, TEXT not parsed — including the translators', because a
  * duplicate there wastes exactly the work this project asks them for: two rows
- * translated, one of them dead. `lang/content/` is scanned too; it is keyed on
- * English source strings, so a repeat there means one of two translations of
- * the same sentence never renders.
+ * translated, one of them dead.
  */
 const langFiles = [
   ...walk(path.join(ROOT, "lang"), /\.json$/),
@@ -470,15 +468,15 @@ const list = (label, rows, fmt) => {
   for (const r of rows) console.log(`      ${fmt(r)}`);
 };
 
-console.log(`\nsource vs lang/en.json`);
+console.log(`\nsource vs lang/es.json`);
 console.log(`  scanned     : ${JS_FILES.length} js, ${TPL_FILES.length} templates, ${MACRO_FILES.length} macro yml`);
-console.log(`  en.json keys: ${en.length}   referenced: ${used.size}   dynamic prefixes: ${prefixes.size}   suffixes: ${suffixes.size}`);
+console.log(`  es.json keys: ${langKeys.length}   referenced: ${used.size}   dynamic prefixes: ${prefixes.size}   suffixes: ${suffixes.size}`);
 if (VERBOSE && prefixes.size) for (const [p, site] of prefixes) console.log(`      ${p}*  @ ${site}`);
 if (VERBOSE && suffixes.size) for (const [s, site] of suffixes) console.log(`      *${s}  @ ${site}`);
 console.log("");
 
-list("keys used but missing from en.json", missing, (k) => `${k}   @ ${used.get(k)}`);
-list("keys in en.json nothing references", unused, (k) => k);
+list("keys used but missing from es.json", missing, (k) => `${k}   @ ${used.get(k)}`);
+list("keys in es.json nothing references", unused, (k) => k);
 list("hardcoded user-visible strings", hardcoded, (h) => `${h.site}   ${h.what}`);
 list("manifest categories with no label key", unlabelled, (r) => `${r.key}   needs ${r.label}`);
 list("hardcoded pack labels in system.json", packLabels, (r) => `${r.site}   ${r.what}`);

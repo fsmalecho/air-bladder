@@ -11,7 +11,6 @@ import { connectionHeadroom, maxConnections, connectedOwnershipShape, OWNERSHIP_
 import { SETTINGS_NS } from "./settings.js";
 import { glogEnabled, GLOG_SPELL_PACKS } from "./glog.js";
 import { PERSON_ROLES } from "./data-models.js";
-import { t } from "./i18n-content.js";
 
 // Foundry validates a document flag's scope against real package ids, so flags
 // use the system id "mondolme" (NOT the internal "cairn" JS/settings namespace,
@@ -2257,11 +2256,7 @@ export const getBackgroundsByArchetype = async (source) => {
     backgrounds = await getBackgroundsFor(source);
     customIds = new Set();
   }
-  // Sort on the DISPLAYED name (review #9): the picker renders t("bg.name", …),
-  // so sorting on the stored English shuffled the list in any other language.
-  // The radio VALUES still carry the English name — only the ordering key moved.
-  const byName = (x, y) =>
-    t("bg.name", x.name).localeCompare(t("bg.name", y.name), game.i18n.lang);
+  const byName = (x, y) => x.name.localeCompare(y.name, game.i18n.lang);
   const custom = backgrounds.filter((b) => customIds.has(b.id)).sort(byName);
   const canon = backgrounds.filter((b) => !customIds.has(b.id));
 
@@ -2298,11 +2293,7 @@ export const getBackgroundsByArchetype = async (source) => {
  * @returns {String}
  */
 export const backgroundTagline = (bg) => {
-  // Display-only, so everything here goes through the overlay: the first sentence
-  // is taken from the TRANSLATED description (a first sentence sliced off English
-  // and then looked up would never match a key), and gear names use the same
-  // item.name namespace the inventory does.
-  const text = t("bg.desc", String(bg.system?.description ?? "")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const text = String(bg.system?.description ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   if (text) return (text.match(/^.*?[.!?](\s|$)/)?.[0] ?? text).trim();
   // This used to lowercase the "Slots" LABEL and concatenate "+N " onto it:
   // `toLowerCase()` is locale-unaware (German capitalises nouns and Turkish
@@ -2310,10 +2301,10 @@ export const backgroundTagline = (bg) => {
   // nobody could reorder. `CAIRN.NSlot` is the counted noun, already lowercase
   // and already the translator's, and formatCount picks its plural form —
   // "+1 slots" was the other half of the same bug.
-  const gear = (bg.system?.startingGear ?? []).map((g) => t("item.name", g.name));
+  const gear = (bg.system?.startingGear ?? []).map((g) => g.name);
   const carried = (bg.system?.containers ?? []).map((c) => game.i18n.format(
     "CAIRN.BgTagline.Carried",
-    { name: t("item.name", c.name), slots: formatCount("CAIRN.NSlot", c.slots) }
+    { name: c.name, slots: formatCount("CAIRN.NSlot", c.slots) }
   ));
   // Narrow conjunction: "A, B, C" in English, the locale's own form elsewhere.
   const list = new Intl.ListFormat(game.i18n.lang ?? "en", { style: "narrow", type: "conjunction" });
@@ -2372,9 +2363,7 @@ export const promptBackground = async (source, currentUuid = null) => {
   for (const g of groups) {
     if (g.archetype) list += `<div class="bg-pick-group">${bgEsc(archetypeLabel(g.archetype))}</div>`;
     for (const bg of g.backgrounds) {
-      // Display-only, exactly as the sheet renders the same two fields — the radio
-      // VALUE stays the uuid, so what gets chosen is unaffected by language.
-      descs[bg.uuid] = t("bg.desc", bg.system.description ?? "");
+      descs[bg.uuid] = bg.system.description ?? "";
       // A disabled row cannot be checked — including the pre-check on the
       // character's current background; "nothing checked reads as Random".
       const isOff = off.has(bg.uuid);
@@ -2385,7 +2374,7 @@ export const promptBackground = async (source, currentUuid = null) => {
         : "";
       list += `<label class="bg-pick-row${isOff ? " bg-pick-off" : ""}">
         <input type="radio" name="bg" value="${bg.uuid}"${bg.uuid === currentUuid && !isOff ? " checked" : ""}${isOff ? " disabled" : ""}>
-        <span class="bg-pick-name">${bgEsc(t("bg.name", bg.name))}</span>
+        <span class="bg-pick-name">${bgEsc(bg.name)}</span>
         <span class="bg-pick-tag">${bgEsc(backgroundTagline(bg))}</span>${eye}</label>`;
     }
   }
@@ -2485,19 +2474,17 @@ export const promptBackground = async (source, currentUuid = null) => {
 export const promptFailedCareer = async (currentName = null) => {
   const backgrounds = await getBarebonesBackgrounds();
   if (!backgrounds.length) return false;
-  // Same display-name sort as promptBackground's groups (review #9).
+  // Same name sort as promptBackground's groups (review #9).
   const sorted = [...backgrounds].sort((a, b) =>
-    t("bg.name", a.name).localeCompare(t("bg.name", b.name), game.i18n.lang));
+    a.name.localeCompare(b.name, game.i18n.lang));
 
   let list = `<label class="bg-pick-row"><input type="radio" name="bg" value="${BG_RANDOM}"${currentName ? "" : " checked"}>
     <span class="bg-pick-name"><i class="fas fa-dice"></i> ${game.i18n.localize("CAIRN.RandomBackground")}</span></label>`;
   for (const bg of sorted) {
     // Show the career's gear so the player can see what the keepsake item might be.
-    const gear = (bg.system?.startingGear ?? []).map((g) => bgEsc(t("item.name", g.name))).join(", ");
-    // Display-only: the radio VALUE keeps the English name (it is what gets stored
-    // as the failed career), only the visible label is localized.
+    const gear = (bg.system?.startingGear ?? []).map((g) => bgEsc(g.name)).join(", ");
     list += `<label class="bg-pick-row"><input type="radio" name="bg" value="${bgEsc(bg.name)}"${bg.name === currentName ? " checked" : ""}>
-      <span class="bg-pick-name">${bgEsc(t("bg.name", bg.name))}</span>${gear ? `<span class="bg-pick-tag">${gear}</span>` : ""}</label>`;
+      <span class="bg-pick-name">${bgEsc(bg.name)}</span>${gear ? `<span class="bg-pick-tag">${gear}</span>` : ""}</label>`;
   }
 
   return new Promise((resolve) => {
@@ -3363,12 +3350,7 @@ export const rerollNpcName = async (actor) => {
  * campaign's faction list survives a system update. roll(), never draw() —
  * the Warden's-tables invariant (module/config.js).
  *
- * The rolled text is baked through t("table.result") — the ratified
- * monster-generation exception: a rolled faction is WORLD content authored
- * in the session's language (identity in an English world, one-way once
- * baked). Safe here because, unlike career, faction is not a match key:
- * nothing re-reads it. A missing or empty table changes nothing — degrade,
- * never blank.
+ * A missing or empty table changes nothing — degrade, never blank.
  * @param {CairnActor} actor
  * @returns {Promise<CairnActor>}
  */
@@ -3378,7 +3360,7 @@ export const rerollNpcFaction = async (actor) => {
   if (!table) return actor;
   const { results } = await table.roll();
   const raw = resultText(results[0]).trim();
-  if (raw) await actor.update({ "system.faction": t("table.result", raw) });
+  if (raw) await actor.update({ "system.faction": raw });
   return actor;
 };
 
@@ -3850,13 +3832,13 @@ export const promptHirelingCareer = async (actor) => {
   if (!careers.length) return actor;
   const current = String(actor.system.profession ?? "").trim();
   const rows = [...careers]
-    .sort((a, b) => t("npc.career", a.name).localeCompare(t("npc.career", b.name), game.i18n.lang))
+    .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang))
     .map((c) => ({
       value: c.name,
-      label: t("npc.career", c.name),
+      label: c.name,
       // The rate and the loadout are what a Warden picks a career FOR.
       tag: bgEsc(`${c.rate ?? 0} ${game.i18n.localize("CAIRN.DayRateSuffix")} · `
-        + (c.gear ?? []).map((g) => t("item.name", g.name ?? g)).join(", ")),
+        + (c.gear ?? []).map((g) => g.name ?? g).join(", ")),
     }));
   const choice = await promptFromRows("CAIRN.PickCareer", rows, current);
   if (!choice) return actor;
@@ -3866,9 +3848,8 @@ export const promptHirelingCareer = async (actor) => {
 
 /**
  * Pick an NPC's Background from the Warden's Guide d20 table, or Random via
- * the die's own path. The VALUE is the raw English row text — the stored
- * string is the backgroundGear match key — while the label shows the
- * translation, exactly the read/stored split the sheet input already does.
+ * the die's own path. The VALUE is the raw row text — the stored string is
+ * the backgroundGear match key.
  * @param {CairnActor} actor @returns {Promise<CairnActor>}
  */
 export const promptNpcBackground = async (actor) => {
@@ -3878,7 +3859,7 @@ export const promptNpcBackground = async (actor) => {
   if (!table) return actor;
   const current = String(actor.system.background ?? "").trim();
   const rows = table.results.map((r) => String(resultText(r)).trim()).filter(Boolean)
-    .map((text) => ({ value: text, label: t("table.result", text) }))
+    .map((text) => ({ value: text, label: text }))
     .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
   const choice = await promptFromRows("CAIRN.PickBackground", rows, current);
   if (!choice) return actor;
@@ -3887,17 +3868,15 @@ export const promptNpcBackground = async (actor) => {
 };
 
 /**
- * Pick a faction off the same world-first table the Faction die rolls. The
- * stored value is the TRANSLATED text, matching rerollNpcFaction's ratified
- * bake — a faction is world content in the session's language, and unlike
- * career it is a match key for nothing. Random defers to the die.
+ * Pick a faction off the same world-first table the Faction die rolls.
+ * Random defers to the die.
  * @param {CairnActor} actor @returns {Promise<CairnActor>}
  */
 export const promptNpcFaction = async (actor) => {
   const tableName = CONFIG.Cairn?.npcGenerator?.faction;
   const table = tableName ? await findTableByName(tableName) : null;
   if (!table) return actor;
-  const rows = table.results.map((r) => t("table.result", String(resultText(r)).trim())).filter(Boolean)
+  const rows = table.results.map((r) => String(resultText(r)).trim()).filter(Boolean)
     .map((text) => ({ value: text, label: text }))
     .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
   const current = String(actor.system.faction ?? "").trim();

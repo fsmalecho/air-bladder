@@ -21,8 +21,6 @@
  * (tools/import/spell-tables.mjs) writes, so a reseeded world copy and the
  * shipped table agree row-for-row over identical content.
  */
-import { t } from "./i18n-content.js";
-
 /**
  * Rebuild `table`'s rows from `pack`'s index. Returns the number of rows
  * written, or 0 if the pack held no spellbooks (the table is left untouched).
@@ -62,11 +60,8 @@ export const reseedTableFromPack = async (table, pack) => {
   await table.createEmbeddedDocuments("TableResult", rows);
   if (old.length) await table.deleteEmbeddedDocuments("TableResult", old);
   await table.update({ formula: `1d${rows.length}` });
-  // The table's name through the content overlay, as the directory that
-  // opened this shows it (worldDisplayName in cairn.js) — the toast and the
-  // picker below read the stored English until review #18.
   ui.notifications.info(game.i18n.format("CAIRN.Notify.TableReseeded", {
-    name: t("table.name", table.name), count: rows.length, pack: pack.title,
+    name: table.name, count: rows.length, pack: pack.title,
   }));
   return rows.length;
 };
@@ -80,8 +75,8 @@ export const reseedTableFromPack = async (table, pack) => {
 export const reseedSpellTable = async () => {
   if (!game.user.isGM) return null;
   const L = (k) => game.i18n.localize(k);
-  // Listed and SORTED by the translated name, the one the directory shows.
-  const display = (tbl) => t("table.name", tbl.name);
+  // Listed and SORTED by name, the one the directory shows.
+  const display = (tbl) => tbl.name;
   const tables = [...game.tables].sort((a, b) => display(a).localeCompare(display(b)));
   if (!tables.length) {
     ui.notifications.warn(L("CAIRN.Notify.NoWorldTables"));

@@ -1,6 +1,5 @@
 import { resolveGearItem } from "../gear.js";
 import { previewBackground, duplicateBackgroundToWorld } from "../character-generator.js";
-import { t } from "../i18n-content.js";
 import { TRANSPORT_KINDS } from "../icons.js";
 import { bindEditorClickAwaySave, cleanDescription, formatCount, sourceLabel } from "../utils.js";
 import { pickArt } from "../art-picker.js";
@@ -177,79 +176,6 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /* -------------------------------------------- */
 
   /**
-   * The overlay namespace this item's NAME is keyed under. A background is
-   * extracted as `bg.*`, everything else as `item.*`.
-   *
-   * One accessor because three places need the same answer and they must never
-   * disagree: the window title, the name input's display half, and the submit
-   * that maps that display back to English. A title localized under one
-   * namespace and a submit reversed under another would silently store a
-   * Spanish name — the failure this whole split exists to prevent.
-   * @private
-   */
-  get #nameNs() {
-    return this.item.type === "background" ? "bg.name" : "item.name";
-  }
-
-  /**
-   * Window title with the item's DISPLAY name — the frame is pure display, and
-   * it was the one place still reading "Rope" while the compendium list, the
-   * inventory row and the description all read Spanish. Falls straight through
-   * to core whenever nothing translates, so an English world is byte-identical;
-   * the format below mirrors DocumentSheetV2#title (shipped client,
-   * api/document-sheet.mjs:99-103).
-   * @override
-   */
-  get title() {
-    const name = t(this.#nameNs, this.item.name);
-    if (!name || name === this.item.name) return super.title;
-    const cls = this.item.constructor;
-    const prefix = cls.hasTypeData && this.item.type !== "base"
-      ? CONFIG.Item.typeLabels[this.item.type]
-      : cls.metadata.label;
-    return `${game.i18n.localize(prefix)}: ${name}`;
-  }
-
-  /**
-   * The submit half of the name's display/value split (2026-08-04, corrected the
-   * same day by review).
-   *
-   * The input SHOWS `t(nameNs, name)` and must STORE canonical English. Without
-   * this, `submitOnChange` writes the Spanish label onto the document the first
-   * time any field on the sheet is touched — which is a WORSE failure than the
-   * one being fixed: a name silently rewritten breaks `resolveGearItem`, every
-   * background grant and every table match, and `check:refs` would start
-   * failing on a world nobody can regenerate.
-   *
-   * AN ANCHOR, NOT A REVERSE LOOKUP. The first version routed the value through
-   * `sourceOf(ns, …)`, and the review killed it with the shipped data: the
-   * overlay is many-to-one (`Lute` and `Lure` are both "Señuelo"; `Stylus`
-   * shows "Punzón", which is also `Awl`'s translation), so a reverse SEARCH
-   * answers "does this string appear as some translation?" when the question
-   * is "was this field edited?". Under it, ticking Bulky on a Lute renamed the
-   * document to Lure, invisibly — the re-render translated the wrong English
-   * to the same Spanish. And a Warden TYPING "Escudo" for their own homebrew
-   * was handed `Shield`.
-   *
-   * The anchor asks the right question directly: if the submitted value equals
-   * what this sheet DISPLAYS for the stored name, the field was not edited —
-   * keep the stored name. Anything else is a deliberate rename and stores
-   * VERBATIM, in whatever language the Warden typed it; a rename is theirs.
-   * Identity in an English world (no overlay → display equals stored).
-   *
-   * AppV1's hook was `_getSubmitData`; ApplicationV2's is `_processFormData`,
-   * which returns the already-expanded object.
-   * @override
-   */
-  _processFormData(event, form, formData) {
-    const data = super._processFormData(event, form, formData);
-    if (data.name !== undefined && data.name === t(this.#nameNs, this.item.name)) {
-      data.name = this.item.name;
-    }
-    return data;
-  }
-
-  /**
    * The background authoring form is a tall, multi-section editor; give it room.
    * Done here rather than in the constructor because `position` is derived from
    * the options during initialization.
@@ -322,40 +248,8 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // window as `rootId`, so this is now an alias rather than a hand-rolled one.
     context.idp = context.rootId;
 
-    // Content localization, on EVERY sheet including an editable one.
-    //
-    // This used to be gated on `!this.isEditable`, to stop a save writing the
-    // translated string back onto the document. The gate was unnecessary and it
-    // cost the whole feature: a player owns their own items, so an editable sheet
-    // is the ONLY sheet most players ever open, and it was English in every
-    // language. A toggled <prose-mirror> already separates the two halves for us
-    // (shipped client, applications/elements/prosemirror-editor.mjs):
-    //   :40-45  the `value` attribute becomes `_value` — the editable, submitted
-    //           source; the light-DOM child becomes `#enriched` — display only.
-    //   :165    while inactive it renders `#enriched`, i.e. this string.
-    //   :204    on activation it OVERWRITES the content with `_value`, and :217
-    //           seeds the editor from it.
-    // So the template keeps `value="{{system.description}}"` (English, always) and
-    // the Spanish exists only as inactive display: clicking the pencil replaces it
-    // with the English source before a single keystroke can land, and a submit
-    // carries `_value`. Same rule as the trait <select> on the actor sheet — the
-    // stored value is English, the visible label is not.
-    // The NAME INPUT's display half (2026-08-04, reported by fsmalecho: "item
-    // titles are still not changing"). The window title above it already ran
-    // through t() while the field below it rendered the raw stored English, so
-    // one sheet gave two answers — "Arma: Daga" over a box reading "DAGGER".
-    //
-    // Round 1 recorded that this field deliberately did NOT localize, "no
-    // display/value split". That reason expired when round 2 BUILT the split:
-    // sourceOf() is t()'s inverse and npc.career has used it since. So the
-    // input shows the translation and _processFormData maps it back.
-    //
-    // The stored value must stay English and that is not a preference: it is
-    // the key every gear lookup, background grant and table match resolves on,
-    // and check:refs asserts 394 gear names each resolve to exactly one pack.
-    context.nameDisplay = t(this.#nameNs, this.item.name);
-    const descNs = this.item.type === "background" ? "bg.desc" : "item.desc";
-    const descSrc = t(descNs, this.item.system.description);
+    context.nameDisplay = this.item.name;
+    const descSrc = this.item.system.description;
     // Every enriched field on this sheet reaches innerHTML via {{{ }}}, so it
     // goes through cleanDescription first — the sheet-XSS sink (cleanDescription
     // in utils.js): a player owns the browser that writes system.description, so
@@ -367,12 +261,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
         html ?? "", { relativeTo: this.item }));
     context.enrichedDescription = await enrich(descSrc);
     context.enrichedCriticalDamage = await enrich(this.item.system.criticalDamage);
-    // Recharge rides the overlay like the description above (issue #22 put it
-    // on the inventory panel, which made this tab the one recharge surface
-    // still English on a Spanish client). Display only — the prose-mirror's
-    // `value=` attribute still carries the stored English, so editing edits
-    // the source. criticalDamage stays raw: not extracted, nothing to show.
-    context.enrichedRecharge = await enrich(t("item.recharge", this.item.system.recharge));
+    context.enrichedRecharge = await enrich(this.item.system.recharge);
 
     // "Charges" and "Uses" are ONE counter. Across all 46 shipped relics the
     // distinction is exactly this: a relic that states a recharge condition has
@@ -392,7 +281,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       context.isGM = game.user.isGM;
       if (this.isEditable) await this._prepareBackgroundEditor(context);
       // Only reachable when the sheet is NOT editable, so the flag was always true.
-      else await this._prepareBackgroundReadOnly(context, true);
+      else await this._prepareBackgroundReadOnly(context);
     }
     return context;
   }
@@ -404,25 +293,22 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
    * from the frozen copy it carries. Unresolvable names still list, tagless.
    * @private
    */
-  async _prepareBackgroundReadOnly(context, localize) {
+  async _prepareBackgroundReadOnly(context) {
     context.startingGearRows = await Promise.all(
       (this.item.system.startingGear ?? []).map(async (g) => {
         if (g.itemData) {
-          return { name: localize ? t("item.name", g.name) : g.name, tags: gearTags(g.itemData.system, g.uses) };
+          return { name: g.name, tags: gearTags(g.itemData.system, g.uses) };
         }
         const doc = await resolveGearItem(g.name, { uses: g.uses });
         const tags = doc ? gearTags(doc.system, g.uses) : [];
-        return { name: localize ? t("item.name", g.name) : g.name, tags };
+        return { name: g.name, tags };
       })
     );
-    // The Details tab's questions and options, localized — the template used to
-    // iterate system.tables raw, which left the ONE sheet showing all 40
-    // bg.question and 240 bg.optionDesc strings (every one of them translated)
-    // displaying none of them, one tab from a Description that translated.
-    // Display copies only; the editor branch keeps its raw inputs.
+    // The Details tab's questions and options. Display copies only; the editor
+    // branch keeps its raw inputs.
     context.backgroundTables = (this.item.system.tables ?? []).map((tbl) => ({
-      question: t("bg.question", tbl.question ?? ""),
-      options: (tbl.options ?? []).map((o) => ({ description: t("bg.optionDesc", o.description ?? "") })),
+      question: tbl.question ?? "",
+      options: (tbl.options ?? []).map((o) => ({ description: o.description ?? "" })),
     }));
     // Same derived label the editor branch shows — the read-only header printed
     // the raw stored enum ("2e"), which sourceLabel exists to prevent drifting
@@ -650,7 +536,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     event.preventDefault();
     const report = await previewBackground(this.item, 10);
     new foundry.applications.api.DialogV2({
-      window: { title: game.i18n.format("CAIRN.BgAuthor.TestTitle", { name: t("bg.name", this.item.name) }), icon: "fas fa-flask" },
+      window: { title: game.i18n.format("CAIRN.BgAuthor.TestTitle", { name: this.item.name }), icon: "fas fa-flask" },
       position: { width: 560 },
       content: renderPreviewReport(report),
       buttons: [{ action: "close", label: game.i18n.localize("CAIRN.Close"), default: true }],
@@ -692,7 +578,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     event.preventDefault();
     const copy = await duplicateBackgroundToWorld(this.item);
     if (!copy) return;
-    ui.notifications.info(game.i18n.format("CAIRN.BgAuthor.Duplicated", { name: t("bg.name", copy.name) }));
+    ui.notifications.info(game.i18n.format("CAIRN.BgAuthor.Duplicated", { name: copy.name }));
     copy.sheet.render(true);
   }
 

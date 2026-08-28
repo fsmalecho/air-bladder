@@ -99,11 +99,8 @@ Cairn.npcGenerator = {
   // items each. So an NPC gets the gear of its nearest Barebones counterpart,
   // through the same resolveRefs path a Barebones PC and a 2e hireling use.
   //
-  // Keyed on the ENGLISH table text, and that is load-bearing: `drawTableText`
-  // returns the raw result, NOT the content overlay's translation, so
-  // `system.background` stores English in every language while the SHEET shows
-  // `backgroundDisplay`. A map keyed on what the Warden reads would miss on
-  // every non-English client. (The read/stored split, module/i18n-content.js.)
+  // Keyed on the raw ENGLISH table text `drawTableText` returns, which is what
+  // `system.background` stores.
   //
   // Eleven of the twenty are the same word in both lists. Seven need a
   // translation. LORD and POLITICIAN are deliberately absent and grant nothing:
