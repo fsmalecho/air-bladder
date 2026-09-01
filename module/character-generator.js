@@ -13,7 +13,6 @@ import {
 import { containerClass, iconForTransport } from "./icons.js";
 import { connectionHeadroom, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { SETTINGS_NS } from "./settings.js";
-import { glogEnabled } from "./glog.js";
 import { PERSON_ROLES } from "./data-models.js";
 
 // Foundry validates a document flag's scope against real package ids, so flags
@@ -1645,10 +1644,9 @@ const barebonesTable = async (name) => generatorTable(name);
  * — the Warden decides what a random spell can be, and can weight it — and its
  * rows point at spellbook Items exactly as the market tables point at goods.
  *
- * The GLOG fork went with it: which wording a random spell has is a property of
- * what the Warden put in the table, not of which pack it was read out of. Under
- * GLOG the draw still becomes a SCROLL — that is randomSpellbookItem's job, and
- * it is the half of the ruling that survives a single compendium.
+ * The mode fork went with it: which wording a random spell has is a property of
+ * what the Warden put in the table, not of which pack — or which setting — it
+ * was read out of.
  *
  * No cache, on purpose: a Warden's edit to the table must be drawable at once.
  * @returns {Promise<CairnItem|null>}
@@ -1664,26 +1662,26 @@ export const randomSpellbookDoc = async () => {
   // only — the Warden has a working table with one bad row, which is not the
   // same failure as having no table, and the notification for THAT already fired
   // above.
-  if (doc?.documentName !== "Item" || doc.type !== "spellbook") {
+  if (doc?.documentName !== "Item" || doc.type !== "spell") {
     console.warn(`Mondolme | the "${TABLES.spells}" row `
-      + `"${resultText(result)}" does not point at a spellbook item`);
+      + `"${resultText(result)}" does not point at a spell item`);
     return null;
   }
   return doc;
 };
 
-/** A random spellbook as an owned item, named for the spell it holds. The
- *  inventory list adds the "Spellbook — " prefix at display time
+/** A random spell as an owned item, named for the spell it holds. The
+ *  inventory list adds the "Hechizo — " prefix at display time
  *  (templates/parts/items-list.html), so the stored name stays the bare spell
  *  name — baking the prefix in here too would double it. */
 export const randomSpellbookItem = async () => {
   const b = await randomSpellbookDoc();
   if (!b) return null;
-  // Under GLOG every granted spell is a SCROLL, and this path is reachable then:
-  // the Barebones "Spellbook" / "Random Spellbook" instruction rows call it, and
-  // GLOG is a rules setting, not a content source — it does not turn Barebones
-  // off. Same rule as resolveGearItem's book grants (rulings 2 and 7, 2026-08-05).
-  if (glogEnabled()) return spellScrollItem(b);
+  // A setting used to turn this draw into a SCROLL and is gone with it: the
+  // Barebones "Spellbook" / "Random Spellbook" rows hand out the Hechizo the
+  // table drew, permanent and castable in its own right. `randomScrollItem`
+  // below is still how an instruction row asks for paper — the same split
+  // resolveGearItem makes between "Spellbook (X)" and "Scroll (X)".
   // toObject(), not deepClone — deepClone returns a TypeDataModel by reference,
   // so this would alias the compendium document. See gear.js resolveGearItem.
   return { name: b.name, type: b.type, img: b.img, system: b.system.toObject() };
@@ -1700,10 +1698,7 @@ export const randomScrollItem = async () => {
 /**
  * Turn one rolled table result into something a character can be given.
  * Three shapes, decided by what the result points at:
- *   - a carrier document    → a container spec (minted as a connected NPC later);
- *                             either a Mounts & Transports npc Actor or a legacy
- *                             `transport` Item — old worlds' tables still point
- *                             at the Item pack
+ *   - a carrier npc Actor   → a container spec (minted as a connected NPC later)
  *   - a nested ROLLTABLE    → roll that table and resolve its result instead
  *   - anything else         → the pool item of that name, or, for the SRD's two
  *                             instruction rows, a random spellbook or scroll
@@ -1731,9 +1726,12 @@ const resolveBarebonesResult = async (result) => {
     ? await fromUuid(result.documentUuid)
     : null;
 
-  if (doc?.documentName === "Item" && doc.type === "transport") {
-    return { container: { name: doc.name, slots: doc.system.slots ?? 0 }, name };
-  }
+  // The `doc.type === "transport"` branch stood here and went with that ITEM
+  // type: a row pointing at a legacy transport Item became a container spec.
+  // A carrier is an npc ACTOR now, which the branch below has always handled.
+  // A row still pointing at an Item falls through to the by-name gear lookup,
+  // which is the same answer any other Item row gets.
+  //
   // A row can point at a Mounts & Transports NPC now (the shipped Barebones
   // Cart/Wagon rows do, and a Warden's own table can too). Same shape out: a
   // container SPEC, not the document — grantContainers re-resolves by name, so
@@ -2797,7 +2795,7 @@ export const GENERATION_ROLLS_FLAG = "generationRolls";
  * language) and again on every render by `localizeGenerationCard` below — the
  * stored card is the composer's, and on the player-request relay the composer
  * is the Warden's client, so a player in another language read the Warden's
- * labels (review #18; the GLOG cast card's precedent from #16). A plain string
+ * labels (review #18; the cast card's precedent from #16). A plain string
  * build rather than the Handlebars template it replaces, so the render-time
  * rebuild is synchronous: the name is escaped, the numbers are numbers.
  * @param {{name: string, hp: number, str: number, dex: number, wil: number, gold: number}} r
@@ -2822,7 +2820,7 @@ export const generationRollsCard = ({ name, hp, str, dex, wil, gold }) => {
 
 /**
  * Rebuild a generation-rolls card in the VIEWER's language from its flag.
- * Called from the renderChatMessageHTML hook (cairn.js), beside the GLOG cast
+ * Called from the renderChatMessageHTML hook (cairn.js), beside the cast
  * card it copies. Display-only: the message is never written, so this runs on
  * a player's client with no permission at all, and re-runs idempotently on
  * every re-render because it rebuilds from the flag, not from what is shown.
@@ -3456,18 +3454,13 @@ const npcGrantedItemIds = (actor, sources = ["background"]) => actor.items
  * onto whatever it is handed, and writing it onto a live document would be a
  * mutation outside an update.
  *
- * BOUND GRIMOIRE PAGES are skipped, the same exception CairnItem.#appendSort
- * makes on the create side and for the same reason: groupPagesUnderBooks files
- * a page under its book, so its own position never shows and all that would
- * change is the order of a book's pages among themselves — from alphabetical
- * to whatever order actor.items happens to hold. This is an UPDATE, so it does
- * not pass through that seam and has to say so itself.
+ * The bound-page exception this used to carry went with pages: a Libro's three
+ * spells are fields on the book, so no row of the inventory belongs to another
+ * row any more and every item takes a number.
  * @param {CairnActor} actor
  */
 const reorderInventory = async (actor) => {
-  const shims = actor.items
-    .filter((i) => !i.system?.bound)
-    .map((i) => ({ _id: i.id, name: i.name, type: i.type }));
+  const shims = actor.items.map((i) => ({ _id: i.id, name: i.name, type: i.type }));
   const updates = orderGrantedItems(shims).map((i) => ({ _id: i._id, sort: i.sort }));
   if (updates.length) {
     await actor.updateEmbeddedDocuments("Item", updates, { render: false, abNoStatusCard: true });

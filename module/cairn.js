@@ -1,7 +1,7 @@
 // Import Modules
 import { CairnActor } from "./actor/actor.js";
 import { CairnActorSheet } from "./actor/actor-sheet.js";
-import { CairnItem, FATIGUE_NAME, SPELLSCROLL_NAME } from "./item/item.js";
+import { CairnItem, FATIGUE_NAME } from "./item/item.js";
 import { CairnItemSheet } from "./item/item-sheet.js";
 import { createCharacter, createNpc, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard } from "./character-generator.js";
 import * as characterGenerator from "./character-generator.js";
@@ -16,7 +16,7 @@ import { registerSettings, SETTINGS_NS, SETTING_GROUPS, migrateSettingsNamespace
 import { ACTOR_DATA_MODELS, ITEM_DATA_MODELS, deriveNpcRole } from "./data-models.js";
 import { connectionHeadroom, connectedOwnershipShape, syncPendingOwnership, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { injectEncounterButton } from "./encounters.js";
-import { bindGrimoireFatigueButton } from "./grimoire.js";
+import { bindGrimoireFatigueButton } from "./magic.js";
 import { nameableTokens } from "./utils.js";
 
 Hooks.once("init", async function () {
@@ -609,8 +609,6 @@ Hooks.once("ready", async () => {
 
   await phase("gallery art -> art/ path migration", migrateArtPaths);
 
-  await phase("spellscroll -> flagged spellbook migration", migrateScrollsToSpellbooks);
-
   await phase("npc role migration", migrateNpcRoles);
 
   await phase("mount -> companion restamp", migrateMountToCompanion);
@@ -621,8 +619,6 @@ Hooks.once("ready", async () => {
   // harmless too — but this way the two blind passes never see a value that
   // only exists because of this one.
   await phase("npc -> hireling split", migrateHirelingSplit);
-
-  await phase("grimoire page keys", migrateGrimoirePages);
 
   await phase("grant notes removal", removeGrantNotes);
 
@@ -938,119 +934,13 @@ const migrateArtPaths = async () => {
   await game.settings.set(SETTINGS_NS, "art-migration-generation", ART_MIGRATION_GENERATION);
 };
 
-/**
- * Spellscrolls were generated as `type: "item"` named "Spellscroll — X" until they
- * became spellbooks with `system.scroll` ticked. Convert the old shape so there is
- * ONE representation of a scroll: otherwise a character's existing scrolls are
- * invisible to everything that now keys off the flag (the sheet's Scroll box, the
- * display prefix, the not-equippable rule), and a Warden looking at two scrolls
- * side by side would find only one of them editable as such.
- *
- * A document's `type` is immutable in Foundry, so this is a create-then-delete, not
- * an update — the trap the hireling merge hit. Create first so a failure can never
- * lose a scroll; the transient duplicate costs nothing, since a scroll is petty at
- * both ends and no slot count moves.
- *
- * Carried across: the name (with the prefix stripped, since the inventory row adds
- * it back at display time), the spell text, cost, quantity, whether the use was
- * already spent, `sort` (so drag-ordered inventories keep their order), `folder`
- * and `ownership` (a world scroll stays where the Warden filed it and stays
- * visible to whoever could already see it) and ALL flags —
- * `flags.mondolme.grantSource` is how a bond or question re-roll finds the
- * items it granted, so dropping it would orphan them.
- *
- * Idempotent: a converted scroll is no longer `type: "item"`, so a re-run matches
- * nothing.
- */
-const STORED_SCROLL_PREFIXES = ["Spellscroll — ", "Spellscroll ("];
+/* `migrateScrollsToSpellbooks` stood here and is GONE. It converted a legacy
+   `type: "item"` named "Spellscroll — X" into a flagged spellbook, and it was a
+   world migration for a type that no longer exists — there are no worlds to
+   migrate and no `spellbook` to migrate them to. Its helpers
+   (STORED_SCROLL_PREFIXES, isLegacyScroll, bareScrollName, asFlaggedScroll)
+   went with it, and so did its phase in the ready hook. */
 
-/** True for a pre-flag scroll. The name prefix is the only marker the old shape
- *  had — which is the defect being fixed, and it also catches a Warden's
- *  hand-built "Spellscroll — X" generic item, the only authoring path there was. */
-const isLegacyScroll = (item) =>
-  item.type === "item" && STORED_SCROLL_PREFIXES.some((p) => item.name?.startsWith(p));
-
-/** "Spellscroll — Adhere" / "Spellscroll (Adhere)" -> "Adhere". */
-const bareScrollName = (name) => {
-  const s = String(name ?? "");
-  for (const p of STORED_SCROLL_PREFIXES) {
-    if (!s.startsWith(p)) continue;
-    const rest = s.slice(p.length);
-    return (p.endsWith("(") ? rest.replace(/\)\s*$/, "") : rest).trim();
-  }
-  return s;
-};
-
-const asFlaggedScroll = (old) => {
-  const o = old.toObject();
-  return {
-    name: bareScrollName(o.name),
-    type: "spellbook",
-    img: o.img,                       // already the scroll art, or a Warden's own
-    sort: o.sort ?? 0,
-    // Where it LIVES and who may see it, both of which are on the Item schema
-    // (common/documents/item.mjs:55,57) and were both being dropped. A world
-    // scroll filed under "Scrolls" came back at the sidebar root — `sort` was
-    // preserved, so it kept its position within a folder it was no longer in —
-    // and a scroll a Warden had shared with one player came back at the pack
-    // default. Embedded items ignore their own ownership (item.mjs:94) so this
-    // is inert for a character's scrolls and load-bearing for world ones; both
-    // are handled by the same `convert` below, so both must be carried.
-    ...(o.folder ? { folder: o.folder } : {}),
-    ...(o.ownership ? { ownership: o.ownership } : {}),
-    flags: o.flags ?? {},
-    system: {
-      description: o.system?.description ?? "",
-      cost: o.system?.cost ?? 0,
-      quantity: o.system?.quantity ?? 1,
-      scroll: true,
-      weightless: true,
-      equipped: false,
-      // A spent scroll stays spent. `max` is pinned at 1 by the invariant anyway.
-      uses: { value: Math.min(o.system?.uses?.value ?? 1, 1), max: 1 },
-    },
-  };
-};
-
-const migrateScrollsToSpellbooks = async () => {
-  let count = 0;
-  const ItemCls = getDocumentClass("Item");
-
-  /** @param {Document|null} parent  the owning Actor, or null for world items */
-  const convert = async (parent, items) => {
-    const legacy = items.filter(isLegacyScroll);
-    if (!legacy.length) return;
-    const payload = legacy.map(asFlaggedScroll);
-    const ids = legacy.map((i) => i.id);
-    if (parent) {
-      // abNoStatusCard: this is a MIGRATION — without it, a world upgrading
-      // through it would greet the Warden with one change-log card per actor
-      // that ever owned a scroll.
-      await parent.createEmbeddedDocuments("Item", payload, { abNoStatusCard: true });
-      await parent.deleteEmbeddedDocuments("Item", ids, { abNoStatusCard: true });
-    } else {
-      await ItemCls.createDocuments(payload);
-      await ItemCls.deleteDocuments(ids);
-    }
-    count += legacy.length;
-  };
-
-  await convert(null, [...game.items]);
-  for (const actor of game.actors) await convert(actor, [...actor.items]);
-
-  // An unlinked token keeps its own copy of the actor's items in its delta, so the
-  // world actor's inventory says nothing about it. Writing through the synthetic
-  // `token.actor` updates that delta. Linked tokens are skipped — they ARE the
-  // world actor already handled above, and converting twice would duplicate.
-  for (const scene of game.scenes) {
-    for (const token of scene.tokens) {
-      if (token.actorLink || !token.actor) continue;
-      await convert(token.actor, [...token.actor.items]);
-    }
-  }
-
-  if (count) console.log(`Mondolme | converted ${count} spellscroll(s) to flagged spellbooks`);
-};
 
 
 /**
@@ -1272,107 +1162,13 @@ const migrateMountToCompanion = async () => {
   await game.settings.set(SETTINGS_NS, "companion-restamped", true);
 };
 
-/**
- * Give every Grimoire an identity and every bound page its book's name
- * (issue #17, fsmalecho 2026-08-16).
- *
- * Before this, `bound` was a boolean and nothing recorded WHICH book a page was
- * in. That is the whole question on a character — the one-book wall means there
- * is only one answer — and unanswerable on a pile, so dragging one of two books
- * out of a crate took every page in it. The code now matches pages to books by
- * `boundTo`/`grimoireKey`; this stamps what already exists.
- *
- * Two cases, and the split is the point:
- *
- *   - **One book on the actor** — every unkeyed page is that book's, by
- *     construction. That is the whole of a character (the one-book wall) and
- *     of most piles, and no ordering is consulted: a page transmuted from a
- *     scroll the character already carried can sit anywhere in the inventory.
- *   - **Two or more** — the data does not say, so NOTHING is matched and the
- *     actor is named in the log. A first draft assigned each page to the
- *     nearest preceding book in the actor's item order, reasoning that the only
- *     route that puts pages on a multi-book actor is the travel bundle, which
- *     creates the book and then its pages. `dev:grimoire` refuted it flat:
- *     an embedded collection does NOT come back in creation order after a
- *     reload (a page planted first came back between two planted later), so the
- *     rule filed pages under whichever book the read order happened to reach —
- *     a guess wearing the clothes of evidence, and permanent once written.
- *     Left alone, those pages stay put when a book moves, which a Warden can
- *     see and undo.
- *
- * World items and unlinked-token deltas are covered too — a Grimoire in the
- * Items directory gets its key here rather than at first use.
- *
- * Marker-gated (`grimoire-keys-stamped`), set only after the writes land so a
- * failed run retries rather than recording itself done.
- */
-const migrateGrimoirePages = async () => {
-  if (game.settings.get(SETTINGS_NS, "grimoire-keys-stamped")) return;
-  let books = 0;
-  let pages = 0;
-  const unresolved = [];
+/* `migrateGrimoirePages` stood here and is GONE with the fields it stamped.
+   It gave every Grimoire a `grimoireKey` and matched every unkeyed bound page
+   to its book — a world migration for two fields that no longer exist, run
+   against worlds that do not exist. Its marker setting
+   (`grimoire-keys-stamped`) went with it, and so did its phase in the ready
+   hook. */
 
-  /** @param {Document|null} parent  the owning Actor, or null for world items */
-  const stamp = async (parent, items) => {
-    const updates = [];
-    const shelf = items.filter((i) => i.type === "item" && i.system?.grimoire);
-    if (!shelf.length) return;
-    // Key the books first: a page's assignment below reads the key back off the
-    // pending update, not off the document, which has not been written yet.
-    const keyOf = new Map();
-    for (const b of shelf) {
-      const key = b.system.grimoireKey || foundry.utils.randomID();
-      keyOf.set(b.id, key);
-      if (!b.system.grimoireKey) {
-        updates.push({ _id: b.id, "system.grimoireKey": key });
-        books++;
-      }
-    }
-    // Pages are matched to books only INSIDE AN INVENTORY, and only where the
-    // inventory holds ONE book. The Items directory is not an inventory: a
-    // loose book and a loose page sitting in the sidebar are not a library, so
-    // "there is only one book here" says nothing about them. World books still
-    // get their key above — that half is unconditional.
-    const sole = parent && shelf.length === 1 ? keyOf.get(shelf[0].id) : null;
-    const loose = parent
-      ? items.filter((i) => i.type === "spellbook" && i.system.bound && !i.system.boundTo)
-      : [];
-    for (const i of loose) {
-      if (!sole) continue;
-      updates.push({ _id: i.id, "system.boundTo": sole });
-      pages++;
-    }
-    if (!sole && loose.length) unresolved.push(`${parent.name} (${loose.length})`);
-    if (!updates.length) return;
-    // abNoStatusCard: a migration must not greet the Warden with a change-log
-    // card per book it touched (the spellscroll migration's precedent).
-    if (parent) await parent.updateEmbeddedDocuments("Item", updates, { abNoStatusCard: true });
-    else await getDocumentClass("Item").updateDocuments(updates, { abNoStatusCard: true });
-  };
-
-  await stamp(null, [...game.items]);
-  for (const actor of game.actors) await stamp(actor, [...actor.items]);
-  // An unlinked token carries its own item copies in its delta; the world
-  // actor's inventory says nothing about them. Linked tokens ARE the world
-  // actor already handled above.
-  for (const scene of game.scenes) {
-    for (const token of scene.tokens) {
-      if (token.actorLink || !token.actor) continue;
-      await stamp(token.actor, [...token.actor.items]);
-    }
-  }
-
-  if (books || pages) {
-    console.log(`Mondolme | grimoire keys: ${books} book(s) stamped, ${pages} page(s) matched to theirs`);
-  }
-  if (unresolved.length) {
-    console.warn(`Mondolme | bound pages sitting with SEVERAL Grimoires, where nothing in the`
-      + ` data says which book each belongs to: ${unresolved.join(", ")}. They are left as they`
-      + ` are — they stay put when a book moves, rather than travelling with the wrong one. Move`
-      + ` the books out one at a time: the last book on the shelf takes what is left.`);
-  }
-  await game.settings.set(SETTINGS_NS, "grimoire-keys-stamped", true);
-};
 
 /**
  * Take the grant bullets back off every character that has them (user ruling
@@ -1405,7 +1201,8 @@ const migrateGrimoirePages = async () => {
  * no marker to clear, no flag to select on, and a console line reporting
  * success. The accepted case above and the unrecoverable case were the same
  * case. So a record that missed is KEPT, and whatever is left over is NAMED —
- * the shape `migrateGrimoirePages` already uses for what it cannot resolve.
+ * the shape the retired grimoire-key migration used for what it could not
+ * resolve.
  *
  * KEEPING IT IN `grantNotes` HAD NO TERMINAL STATE (review #16). That fix left
  * the record where this migration SELECTS, and skipped the write entirely when
@@ -1482,7 +1279,7 @@ const removeGrantNotes = async () => {
 
   // UNLINKED TOKENS FIRST, and the order is the whole of this pass. An unlinked
   // token keeps its own copy of the actor in its delta, and the world actor says
-  // nothing about it — the same reason migrateGrimoirePages walks the scenes.
+  // nothing about it — the same reason every migration here walks the scenes.
   // But a delta is a SPARSE overlay merged onto the base actor
   // (`common/documents/actor-delta.mjs`, applyDelta -> mergeObject over a plain
   // ObjectField), so a token that diverged only in its notes still reads its
@@ -1634,79 +1431,12 @@ const flattenConnections = async () => {
 // if that is ever revisited, re-add BOTH hooks (AppV1 `renderDialog` and V2
 // `renderDialogV2`) alongside the CSS, not one without the other.
 
-/**
- * "Spellscroll" in the Create Item type list — without a spellscroll TYPE.
- *
- * Core builds that list from `Object.keys(game.model.Item)`, labelled through
- * `CONFIG.Item.typeLabels` (client-document.mjs `createDialog`), so as a TYPE only a
- * declared document type can ever appear there. Declaring one is the wrong shape for
- * the same reasons a `relic` type was: a scroll carries no data a spellbook does not,
- * and Foundry treats `type` as immutable — so a book could never be converted into a
- * scroll or back, which is the whole affordance the flag buys.
- *
- * The dialog's other seam does the job instead. Its OK handler runs
- * `FormDataExtended` over the WHOLE form and passes the result straight to
- * `cls.create()`, so a field added here reaches the new document, and
- * `CairnItem._preCreate` pins petty + one use from the flag. The extra option
- * deliberately carries `value="spellbook"`, the same as its neighbour: two options may
- * share a value, and `selectedOptions[0].dataset` is what tells them apart —
- * `select.value` cannot, and does not need to.
- *
- * The name is PRE-FILLED rather than left to the placeholder, and with the ENGLISH
- * `SPELLSCROLL_NAME` rather than the localized option label — see that constant for
- * both halves of why.
- *
- * Degrades quietly. If core reworks this dialog the option stops appearing, and the
- * worst case is a plain spellbook that the sheet's Scroll box still converts.
- *
- * Registered as a NAMED function expression so a probe can find it in
- * `Hooks.events.renderDialogV2` and switch it off in the live page — that is how
- * dev:spellscroll negative-controls this feature without editing source and
- * re-running (tools/dev/lib.mjs `withHookOff`). Renaming it breaks that probe.
- */
-Hooks.on("renderDialogV2", function abSpellscrollTypeOption(dialog, element) {
-  // Raw HTMLElement in v14 — the jQuery unwrap this once carried could never fire.
-  const root = element;
-  const select = root?.querySelector('select[name="type"]');
-  const form = select?.form;
-  if (!select || !form || select.querySelector("option[data-ab-scroll]")) return;
-
-  // Identify the ITEM create dialog specifically: this hook sees every DialogV2 in
-  // the world, including the system's own five and any other package's.
-  const bookOption = select.querySelector('option[value="spellbook"]');
-  const itemTypes = getDocumentClass("Item").TYPES;
-  if (!bookOption || [...select.options].some((o) => !itemTypes.includes(o.value))) return;
-
-  // Two strings, deliberately: the option is READ, so it is localized; the name is
-  // STORED, so it is English (SPELLSCROLL_NAME). They were one variable, which made
-  // the type list's label leak into the document and broke the system's own
-  // English-storage invariant (item.js) on every non-English client.
-  const label = game.i18n.localize("CAIRN.Spellscroll");
-  const option = document.createElement("option");
-  option.value = "spellbook";
-  option.dataset.abScroll = "1";
-  option.textContent = label;
-  bookOption.after(option);
-
-  // `data-dtype` is load-bearing: FormDataExtended casts the string "false" to false
-  // for a Boolean field, where a BooleanField handed that non-empty STRING would
-  // coerce it to true and every item created here would be a scroll.
-  const flag = document.createElement("input");
-  flag.type = "hidden";
-  flag.name = "system.scroll";
-  flag.value = "false";
-  flag.dataset.dtype = "Boolean";
-  form.append(flag);
-
-  const nameInput = form.querySelector('input[name="name"]');
-  select.addEventListener("change", () => {
-    const scroll = select.selectedOptions[0]?.dataset.abScroll === "1";
-    flag.value = scroll ? "true" : "false";
-    if (!nameInput) return;
-    if (scroll && !nameInput.value) nameInput.value = SPELLSCROLL_NAME;
-    else if (!scroll && nameInput.value === SPELLSCROLL_NAME) nameInput.value = "";
-  });
-});
+/* `abSpellscrollTypeOption` stood here and is GONE. It injected a second
+   "Spellscroll" <option> into the Create Item dialog, keyed on
+   `option[value="spellbook"]`, and rode a hidden `system.scroll` input into the
+   create so the new document arrived flagged. There is no `spellbook` value to
+   key on any more: a scroll is a `spell` whose own sheet carries the Pergamino
+   box, and the type list offers Hechizo outright. */
 
 /* `abHideHirelingType` stood here and is GONE (2026-08-02). It removed the
    retired `hireling` TYPE from core's Create Actor dialog by surgery on the
@@ -2231,7 +1961,7 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   // chain must not stall on it; the button lands when it lands.
   injectEncounterButton(message, html);
 
-  // The GLOG cast whisper's Add-N-Fatigue button (module/grimoire.js): wired
+  // The cast whisper's Add-N-Fatigue button (module/magic.js): wired
   // per render, spent-state read from the message flag, ownership re-checked
   // in the handler.
   bindGrimoireFatigueButton(message, html);
@@ -2370,70 +2100,85 @@ const configureHandleBar = () => {
     return val === FATIGUE_NAME;
   });
 
-  // The display prefix for a spellbook row — "Spellbook — " for a book,
-  // "Spellscroll — " for a scroll — or "" when the name already carries one.
+  // The display prefix for a magic row — "Libro — " for a Libro, "Hechizo — "
+  // for a Hechizo, "Pergamino — " for one with Pergamino ticked — or "" when the
+  // name already carries one.
+  //
   // Keeping this idempotent needs EVERY form tested, which is why it is a helper
   // rather than an {{#unless startsWith}} in the template:
   //
   //   - a stored name may already carry a prefix in either language;
   //   - the original guard compared that name against the TRANSLATED prefix
-  //     alone, so on a Spanish client it never matched and every spellbook
-  //     rendered "Hechizo — Spellbook — Detect Magic".
+  //     alone, so on a Spanish client it never matched and every row rendered
+  //     "Hechizo — Spellbook — Detect Magic".
   //
   // The English forms are stored-data constants, like FATIGUE_NAME — not UI
-  // strings. A scroll is checked against BOTH families, not just its own: scrolls
-  // were stored as "Spellscroll — X" before they became flagged spellbooks, the
-  // migration strips that, and a hand-typed name may carry either.
-  const STORED_SPELLBOOK_PREFIXES = ["Spellbook — ", "Spellbook (", "Spellscroll — ", "Spellscroll ("];
+  // strings. Content is Spanish-authored now, so these are the belt to the
+  // localized braces below: an item imported or hand-typed under an English
+  // name still gets one prefix rather than two. A row is checked against EVERY
+  // family, not just its own, because the three are interchangeable in practice
+  // — a Hechizo becomes a Pergamino with one tick, and its stored name does not
+  // change when it does.
+  const STORED_NAME_PREFIXES = [
+    "Book — ", "Book (",
+    "Spell — ", "Spell (",
+    "Scroll — ", "Scroll (",
+    "Spellbook — ", "Spellbook (",
+    "Spellscroll — ", "Spellscroll (",
+  ];
 
   // Both shapes a prefix takes in front of a name: "Kind — X" and "Kind (X)".
   // The English list above carries both by hand; the LOCALIZED side used to carry
-  // only the em-dash one, and that asymmetry was the bug. Five shipped 2e
+  // only the em-dash one, and that asymmetry was the bug. Several canon 2e
   // backgrounds spell their grant "Spellbook (Detect Magic)" — Bonekeeper,
   // Foundling, Half-Witch, Hexenbane, Mountebank — so the parenthesised shape
   // must be recognised too, or a name already carrying it gets a second
   // prefix bolted on.
   //
-  // Derived from the prefix rather than asking translators for a second key: a
-  // language file that carries "CAIRN.SpellbookPrefix" alone stays complete, and
+  // Derived from the prefix rather than asking for a second key per kind: a
+  // language file that carries "CAIRN.SpellPrefix" alone stays complete, and
   // there is no way for the two keys to drift apart.
   //
   // The trailing separator is stripped by what it is NOT — anything that is not a
   // letter or a digit — rather than by a list of the punctuation we happened to
   // think of. That list was `[\s—:(-]`, i.e. whitespace, EM dash, colon, paren,
-  // hyphen; it did not include the EN dash U+2013, which is visually near-identical
-  // to the em dash `en.json` ships and is the conventional dash in several of the
-  // languages this system has files for. A translator writing "Hechizo – " got
-  // bare "Hechizo –", so the parenthesised form came out "Hechizo – (" and never
-  // matched a translated "Hechizo (Detectar Magia)" — re-creating exactly the
-  // doubled prefix this helper exists to prevent, in the one shape five shipped
-  // backgrounds use. A comma had the same problem. Nothing told a translator: no
-  // doc mentions these keys, and a punctuation constraint nobody states is a
-  // constraint nobody keeps.
+  // hyphen; it did not include the EN dash U+2013, which is visually
+  // near-identical to the em dash and is the conventional dash in several
+  // languages. A prefix written "Hechizo – " reduced to bare "Hechizo –", so the
+  // parenthesised form came out "Hechizo – (" and never matched a "Hechizo
+  // (Detectar Magia)" — re-creating exactly the doubled prefix this helper
+  // exists to prevent. A comma had the same problem.
   const prefixForms = (prefix) => {
     const bare = String(prefix ?? "").replace(/[^\p{L}\p{N}]+$/u, "");
     return bare ? [prefix, `${bare} (`, `${bare}(`] : [];
   };
 
-  // A BOUND PAGE is a third kind, and it reads "Spell — " (user ruling
-  // 2026-08-16). A scroll written into a Grimoire stops being a scroll — the
-  // transmute clears the flag — so it fell through to the book wording and a
-  // page rendered "Spellbook — Animate Object", which names the object it is
-  // no longer and says nothing about the book it is now in. There is no
-  // spellbook on that row at all; there is a Grimoire, one line above it.
-  Handlebars.registerHelper("spellbookPrefix", function (name, scroll, bound) {
+  // THREE kinds now, keyed on the item's TYPE plus the one flag — where it used
+  // to be one type plus two flags. A Libro says what it is because a book of
+  // three spells is not one of them; a Pergamino says so because the row is
+  // otherwise indistinguishable from the Hechizo it was a tick ago.
+  //
+  // ONE helper for both surfaces, and that is the point: the inventory row and
+  // the printed sheet both call it (actor-sheet.js), so the two cannot drift —
+  // idempotence included.
+  //
+  // A type with no prefix answers "" rather than being guarded at the call
+  // site: the template then needs no `{{#if}}` around it, so a new type that
+  // should carry a prefix is added HERE and both surfaces get it at once.
+  Handlebars.registerHelper("spellNamePrefix", function (name, type, scroll) {
     const n = String(name ?? "");
-    const key = bound ? "CAIRN.SpellPagePrefix"
-      : scroll ? "CAIRN.SpellscrollPrefix" : "CAIRN.SpellbookPrefix";
+    if (type !== "book" && type !== "spell") return "";
+    const key = type === "book" ? "CAIRN.BookPrefix"
+      : scroll ? "CAIRN.SpellscrollPrefix" : "CAIRN.SpellPrefix";
     const localized = game.i18n.localize(key);
     const localizedForms = [
-      ...prefixForms(game.i18n.localize("CAIRN.SpellbookPrefix")),
+      ...prefixForms(game.i18n.localize("CAIRN.BookPrefix")),
+      ...prefixForms(game.i18n.localize("CAIRN.SpellPrefix")),
       ...prefixForms(game.i18n.localize("CAIRN.SpellscrollPrefix")),
-      ...prefixForms(game.i18n.localize("CAIRN.SpellPagePrefix")),
     ];
     // `p &&` is load-bearing: "".startsWith("") is true, so one language file
     // shipping an empty prefix would strip the prefix off every row in the game.
-    const carried = [...STORED_SPELLBOOK_PREFIXES, ...localizedForms].some((p) => p && n.startsWith(p));
+    const carried = [...STORED_NAME_PREFIXES, ...localizedForms].some((p) => p && n.startsWith(p));
     return carried ? "" : localized;
   });
 

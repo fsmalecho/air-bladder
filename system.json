@@ -90,23 +90,20 @@
           "recharge"
         ]
       },
-      "spellbook": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "object": {
-        "htmlFields": [
-          "description",
-          "recharge"
-        ]
-      },
       "background": {
         "htmlFields": [
           "description"
         ]
       },
-      "transport": {
+      "book": {
+        "htmlFields": [
+          "description",
+          "pages.one.text",
+          "pages.two.text",
+          "pages.three.text"
+        ]
+      },
+      "spell": {
         "htmlFields": [
           "description"
         ]

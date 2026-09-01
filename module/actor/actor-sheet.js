@@ -2,7 +2,7 @@ import { regenerateActor, canRegenerateContainers, drawBond, bondRecordFrom, wit
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
 import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
 import { resultText } from "../compendium.js";
-import { generatorTable, TABLES } from "../content-packs.js";
+import { generatorTable, languages, TABLES } from "../content-packs.js";
 import { SETTINGS_NS } from "../settings.js";
 import { CONTAINER_ART_CHOICES, CONTAINER_CLASSES } from "../icons.js";
 import { NPC_ROLES, PERSON_ROLES } from "../data-models.js";
@@ -37,9 +37,8 @@ const NPC_TRAIT_LABELS = {
   vice: "CAIRN.Trait.Vice",
 };
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
-import { FATIGUE_NAME } from "../item/item.js";
-import { castFromGrimoire, castScroll, grimoiresOn, pagesOfGrimoire, ensureGrimoireKey,
-  groupPagesUnderBooks } from "../grimoire.js";
+import { FATIGUE_NAME, bookPages } from "../item/item.js";
+import { castFromBook, castSpell, booksOn, canReadBook } from "../magic.js";
 import { pickArt } from "../art-picker.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -333,9 +332,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       itemToggleEquipped: owned(CairnActorSheet.#onItemToggleEquipped),
       itemAddUse: owned(CairnActorSheet.#onItemAddUse),
       itemRemoveUse: owned(CairnActorSheet.#onItemRemoveUse),
-      pageTransmute: owned(CairnActorSheet.#onPageTransmute),
-      grimoireCast: owned(CairnActorSheet.#onGrimoireCast),
-      scrollCast: owned(CairnActorSheet.#onScrollCast),
+      bookCast: owned(CairnActorSheet.#onBookCast),
+      spellCast: owned(CairnActorSheet.#onSpellCast),
       itemDescription: CairnActorSheet.#onItemDescription,
       addFatigue: owned(CairnActorSheet.#onAddFatigue),
       removeFatigue: owned(CairnActorSheet.#onRemoveFatigue),
@@ -357,6 +355,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rollOmen: owned(mayRandomize(CairnActorSheet.#onRollOmen)),
       toggleTraits: CairnActorSheet.#onToggleTraits,
       toggleScars: CairnActorSheet.#onToggleScars,
+      toggleLanguages: CairnActorSheet.#onToggleLanguages,
       // Background / failed career
       rollBackground: owned(mayRandomize(CairnActorSheet.#onRollBackground)),
       pickBackground: owned(mayRandomize(CairnActorSheet.#onPickBackground)),
@@ -989,50 +988,39 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const fatigueLabel = game.i18n.localize("CAIRN.Fatigue");
     context.items = items.map((i) => (i.name === FATIGUE_NAME ? { ...i, name: fatigueLabel } : i));
 
-    // The Grimoire's inventory affordances (GLOG Magic, rebuilt on an ITEM
-    // 2026-08-09). Character-only: the transmute and the cast belong to the
-    // book's carrier, and a pile holding a recovered book offers neither.
+    // The magic row affordances. Character-only: the cast belongs to the
+    // carrier, and a pile holding a recovered book offers it to nobody.
     // Everything here is display annotation on the context copies — the
-    // ENFORCEMENT lives in the handlers and CairnItem, which re-derive it.
-    if (this.actor.type === "character") {
-      // A SCROLL casts with no book at all — the hack's rule ("they work
-      // exactly the same as spells recorded in your Grimoire"), gated on the
-      // GLOG rules setting, spent scrolls and bound pages excluded. The
-      // control is the affordance; castScroll re-derives every guard.
-      if (game.settings.get(SETTINGS_NS, "enable-glog-magic")) {
-        context.items = context.items.map((i) =>
-          i.type === "spellbook" && i.system.scroll && !i.system.bound
-            && (i.system.uses?.value ?? 0) > 0
-            ? { ...i, system: { ...i.system, canCastScroll: true } } : i);
-      }
-      const grimoire = grimoiresOn(this.actor)[0];
-      if (grimoire) {
-        const pageCount = pagesOfGrimoire(this.actor, grimoire).length;
-        const hasRoom = pageCount < (grimoire.system.grimoirePages ?? 0);
-        context.items = context.items.map((i) => {
-          if (i.type === "spellbook" && !i.system.bound) {
-            return { ...i, system: { ...i.system, canTransmute: hasRoom } };
-          }
-          if (i._id === grimoire.id) {
-            return { ...i, system: { ...i.system, canCast: pageCount > 0 } };
-          }
-          return i;
-        });
-      }
-    }
-
-    // Pages render GROUPED UNDER THEIR OWN BOOK: pull each book's pages out of
-    // the alphabetical list and re-insert them (still alphabetical among
-    // themselves) right after that book's row. Display order only — the stored
-    // documents and their `sort` values are untouched.
+    // ENFORCEMENT lives in the handlers and module/magic.js, which re-derive it.
     //
-    // Runs for ANY actor, unlike the affordances above: the transmute and the
-    // cast belong to the book's carrier, but a pile holding two recovered
-    // libraries used to list six pages in one alphabetical run with nothing
-    // saying which book each was from (issue #17's display half). An UNCLAIMED
-    // page — legacy and unkeyed, on an actor holding more than one book — stays
-    // exactly where the sort put it rather than being filed under a guess.
-    context.items = groupPagesUnderBooks(this.actor, context.items, (i) => i._id);
+    /* The transmute affordance (`canTransmute`) stood here and went with the
+       bound-page machinery — there is no "write this scroll into the book"
+       gesture, because a Libro's three pages are its own fields, typed on its
+       own sheet. */
+    if (this.actor.type === "character") {
+      // EVERY Libro gets its own control, keyed on its own id — the `[0]` guess
+      // that offered the cast on the first book only is gone, and with it the
+      // question of which book "the" control meant. Two conditions, both
+      // re-derived in castFromBook: the book has at least one written page, and
+      // the carrier can READ it (module/magic.js `canReadBook` — a book in a
+      // language this character does not know is a closed book).
+      const castable = new Map(booksOn(this.actor).map((b) =>
+        [b.id, canReadBook(b, this.actor) && bookPages(b).length > 0]));
+      context.items = context.items.map((i) => {
+        // A HECHIZO casts itself, with no book at all; a PERGAMINO is the same
+        // cast with a confirmation in front and the paper destroyed after. A
+        // scroll generated already-spent is excluded — there is nothing left on
+        // the page to read.
+        if (i.type === "spell") {
+          const ok = !i.system.scroll || (i.system.uses?.value ?? 0) > 0;
+          return ok ? { ...i, system: { ...i.system, canCastSpell: true } } : i;
+        }
+        if (i.type === "book" && castable.get(i._id)) {
+          return { ...i, system: { ...i.system, canCast: true } };
+        }
+        return i;
+      });
+    }
 
     // The npc sheet's description editor is TOGGLED (npc-sheet.html), so this is
     // its light-DOM DISPLAY half: translated via monster.desc — the namespace the
@@ -1323,6 +1311,26 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       ? selectedScars.join(", ")
       : null;
     context.scarsCollapsed = this._scarsCollapsed ?? false;
+
+    // Languages the Warden defined, ticked per actor. Same shape as the scar
+    // list above and rendered by the same markup, because it is the same
+    // gesture: a flat list of names, none of them generated, ticked by hand.
+    // The source is the setting rather than a table — languages are a property
+    // of the SETTING, not something anyone rolls for.
+    const known = this.actor.system.languages ?? [];
+    const worldLanguages = languages();
+    context.languageOptions = worldLanguages.map((name) => ({
+      name,
+      selected: known.includes(name),
+    }));
+    // A language ticked before the Warden edited the setting out of the list
+    // still shows, rather than vanishing from the sheet with the actor still
+    // holding it — the actor keeps what it was given until someone unticks it.
+    for (const name of known) {
+      if (!worldLanguages.includes(name)) context.languageOptions.push({ name, selected: true, orphan: true });
+    }
+    context.languageDisplay = known.length ? known.join(", ") : null;
+    context.languagesCollapsed = this._languagesCollapsed ?? false;
   }
 
   /**
@@ -1720,6 +1728,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const scars = [...el.querySelectorAll(".scar-check:checked")].map((o) => o.value);
       await this.actor.update({ "system.scars": scars }, { render: false });
     });
+
+    on(".language-check", "change", async () => {
+      const langs = [...el.querySelectorAll(".language-check:checked")].map((o) => o.value);
+      await this.actor.update({ "system.languages": langs }, { render: false });
+    });
   }
 
   /* -------------------------------------------- */
@@ -1838,10 +1851,27 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const recharge = cleanDescription(rechargeText) !== ""
       ? `<div><i class="fa-regular fa-arrows-rotate"></i> <i>${cleanDescription(rechargeText)}</i></div>`
       : "";
+    // A LIBRO'S PAGES, one line each, in the shape "1. Nombre del hechizo:
+    // texto" — the Recharge line's treatment (icon plus italics), which is
+    // already how this panel says "here is another fact about this item".
+    // Empty pages are skipped by `bookPages`, so a one-spell book shows one
+    // line rather than two blanks.
+    //
+    // The spell's NAME goes through the same cleanDescription sink the two
+    // lines above use, and for the same reason: it is player-authored text
+    // reaching innerHTML. It is plain text in the schema, so cleaning it is
+    // belt-and-braces rather than the only wall — but this panel is the one
+    // place a book's page names are rendered, and the rule here is that
+    // nothing reaches innerHTML unwashed.
+    const pages = item.type === "book"
+      ? bookPages(item).map((p) =>
+        `<div><i class="fa-regular fa-bookmark"></i> <i>${p.n}. `
+        + `${cleanDescription(p.name)}: ${cleanDescription(p.text)}</i></div>`).join("")
+      : "";
     const div = document.createElement("div");
     div.className = "item-description";
     const desc = item.system.description;
-    div.innerHTML = `${cleanDescription(desc)}${crit}${recharge}`;
+    div.innerHTML = `${cleanDescription(desc)}${crit}${recharge}${pages}`;
     return div;
   }
 
@@ -2238,25 +2268,16 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // bulky and quantity. Notes are TEXT assembled here and escaped by the
     // template — item names are authored free text.
     // `owner` is the actor these items belong to, which is NOT always the one
-    // being printed: the connected sections below render a companion's gear,
-    // and grouping a page under a book asks about that companion's shelf.
-    const rows = (owner, items) => groupPagesUnderBooks(
-      owner, this._sortItemsForDisplay(items), (i) => i.id,
-    ).map((it) => {
+    // being printed: the connected sections below render a companion's gear.
+    // The page-grouping pass that used to wrap this went with bound pages — a
+    // Libro's three spells are fields on the book, so no printed row belongs
+    // under another printed row any more.
+    const rows = (owner, items) => this._sortItemsForDisplay(items).map((it) => {
       const notes = [];
-      // A bound page is the book's, not the carrier's, so it carries neither of
-      // the two annotations that describe how the CARRIER got it (user ruling
-      // 2026-08-16): not Petty — the page weighs nothing because the Grimoire
-      // holds it, which the grouping already says — and not the grant tag,
-      // because "Background" describes a spellscroll a background handed over,
-      // and that scroll stopped existing when it was written into the book.
-      // The inventory tab has suppressed Petty on a page since it shipped; this
-      // is the printed page catching up, and the grant tag going on both.
-      const isPage = it.type === "spellbook" && it.system.bound;
       // The translator's strings AS WRITTEN — no locale-less case transform
       // (review #11: the print page was the only surface lowercasing a
       // localized value, wrong for any language that capitalises the term).
-      if (it.system.weightless && !isPage) notes.push(`(${L("CAIRN.Weightless")})`);
+      if (it.system.weightless) notes.push(`(${L("CAIRN.Weightless")})`);
       const uses = it.system.uses?.value ?? 0;
       // formatCount, not a hand-rolled binary fork (review #11): the item
       // sheet and marketplace both learned this in review #9, and the fork
@@ -2274,24 +2295,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // UNGATED grantLabelRaw, deliberately: system.grantLabel is emptied
       // whenever the INVENTORY switch is off, and the two switches must not
       // couple (the probe's inv-off leg is the witness).
-      if (printGrantTags && it.system.grantLabelRaw && !isPage) notes.push(`[${it.system.grantLabelRaw}]`);
+      if (printGrantTags && it.system.grantLabelRaw) notes.push(`[${it.system.grantLabelRaw}]`);
       if (it.system.bulky) notes.push(`(${L("CAIRN.Bulky")})`);
       if ((it.system.quantity ?? 1) > 1) notes.push(`×${it.system.quantity}`);
       // Fatigue relabelled from the UI key, matching the sheet (review #12).
       const name = it.name === FATIGUE_NAME
         ? game.i18n.localize("CAIRN.Fatigue")
         : it.name;
-      // A spellbook row carries the same "Spellbook — " / "Spellscroll — "
-      // prefix the inventory shows (user report 2026-08-08: the printed sheet
-      // dropped it, so a book and its spell read as loose gear). THROUGH the
-      // registered helper, so the two surfaces cannot drift — idempotence
-      // included: a stored name already carrying a prefix gets no second one.
-      const prefix = it.type === "spellbook"
-        ? Handlebars.helpers.spellbookPrefix(it.name, it.system.scroll, it.system.bound)
-        : "";
-      // `page` indents the row under its book, the printed answer to the
-      // inventory's Page chip — a chip would be a badge on a paper sheet.
-      return { name: `${prefix}${name}`, notes: notes.join(" "), page: isPage };
+      // A Libro or Hechizo row carries the same "Libro — " / "Hechizo — " /
+      // "Pergamino — " prefix the inventory shows (user report 2026-08-08: the
+      // printed sheet dropped it, so a book and its spell read as loose gear).
+      // THROUGH the registered helper, so the two surfaces cannot drift —
+      // idempotence included: a stored name already carrying a prefix gets no
+      // second one.
+      const prefix = Handlebars.helpers.spellNamePrefix(it.name, it.type, it.system.scroll);
+      return { name: `${prefix}${name}`, notes: notes.join(" ") };
     });
 
     const isChar = actor.type === "character";
@@ -2926,72 +2944,43 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (item) await item.update({ "system.equipped": !item.system.equipped });
   }
 
+  /* `#onPageTransmute` stood here and is GONE with the bound-page machinery it
+     drove. It turned a spellbook or spellscroll into a page written into the
+     carried Grimoire — weightless, grouped under the book, no way back. There
+     is no "write this spell into that book" gesture in the system now: a
+     Libro's three spells are its own fields, typed on its own sheet. */
+
+
   /**
-   * Transmute a spellbook or spellscroll into the carried Grimoire: the item
-   * becomes a BOUND PAGE (weightless, grouped under the book, no way back —
-   * CairnItem holds the invariant). The row control is the affordance; every
-   * precondition is re-derived here because a sheet rendered before the book
-   * filled up, or before the book left, must not be a way through. The scroll's
-   * conversion is the hack's paid one — 50gp and 6 hours — and the cost STAYS
-   * PROSE in the confirm (no automation of mechanical text; trust players).
+   * The Cast control on a LIBRO's row. The row names WHICH book — that is the
+   * whole answer to "which of my two books did you mean" — and the picker then
+   * only has to ask which page. Everything real (the page picker, the language
+   * gate, the dice cap, the roll, both cards) lives in module/magic.js; every
+   * guard re-derives there, so a stale row control cannot cast from a book that
+   * has left, emptied, or become unreadable.
    * @this {CairnActorSheet}
    */
-  static async #onPageTransmute(event, target) {
+  static async #onBookCast(event, target) {
     event.preventDefault();
     const row = CairnActorSheet.#row(target);
     const item = this.actor.getOwnedItem(row?.dataset.itemId);
-    if (!item || item.type !== "spellbook" || item.system.bound) return;
-    if (this.actor.type !== "character") return;
-    const grimoire = grimoiresOn(this.actor)[0];
-    if (!grimoire) return;
-    const pageCount = pagesOfGrimoire(this.actor, grimoire).length;
-    if (pageCount >= (grimoire.system.grimoirePages ?? 0)) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireFull",
-        { name: grimoire.name }));
-      return;
-    }
-    // Names go into dialog HTML and are user-authored text.
-    const esc = foundry.utils.escapeHTML;
-    const proceed = await foundry.applications.api.DialogV2.confirm({
-      content: game.i18n.format(
-        item.system.scroll ? "CAIRN.GrimoireTransmuteScrollQ" : "CAIRN.GrimoireTransmuteQ",
-        { spell: esc(item.name), book: esc(grimoire.name) }),
-      rejectClose: false,
-      modal: true,
-    });
-    if (!proceed) return;
-    // The page names ITS book (issue #17). The key is minted here if the book
-    // predates the field, so a legacy Grimoire acquires an identity the first
-    // time a page needs to name it rather than waiting for the migration.
-    await item.update({
-      "system.bound": true,
-      "system.boundTo": await ensureGrimoireKey(grimoire),
-    });
+    // `?? null` rather than a bail: with no resolvable book, castFromBook falls
+    // back to offering every readable book's pages in one picker — which is the
+    // right answer for a row whose item has just gone, and never a silent pick.
+    await castFromBook(this.actor, item ?? null);
   }
 
   /**
-   * The Cast control on the Grimoire's row. Everything real — the page picker,
-   * the dice cap, the roll, both cards — lives in module/grimoire.js; the
-   * guards re-derive there, so a stale row control cannot cast from a book
-   * that has left or emptied.
+   * The Cast control on a HECHIZO's row — no book required, the spell is its
+   * own text. With Pergamino ticked it is the same cast, asked about first and
+   * destroyed after. All guards re-derive in module/magic.js.
    * @this {CairnActorSheet}
    */
-  static async #onGrimoireCast(event) {
-    event.preventDefault();
-    await castFromGrimoire(this.actor);
-  }
-
-  /**
-   * The Cast control on an unspent spellscroll's row — no Grimoire required
-   * (the hack: a scroll works exactly like a recorded spell, destroyed after
-   * its single use). All guards re-derive in module/grimoire.js.
-   * @this {CairnActorSheet}
-   */
-  static async #onScrollCast(event, target) {
+  static async #onSpellCast(event, target) {
     event.preventDefault();
     const row = CairnActorSheet.#row(target);
     const item = this.actor.getOwnedItem(row?.dataset.itemId);
-    if (item) await castScroll(this.actor, item);
+    if (item) await castSpell(this.actor, item);
   }
 
   /** Not exactly quantity, this is about uses. @this {CairnActorSheet} */
@@ -3092,12 +3081,37 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    *
    * Both sheets share `templates/parts/items-list.html`, so a Warden rolling a
    * monster's damage gets the same dialog a player does — one surface, not two.
+   *
+   * A RANGED WEAPON SPENDS AMMUNITION, and that is the one thing here that
+   * touches the item document. See the guard below for where in the sequence
+   * the spend happens and why.
    * @this {CairnActorSheet}
    */
   static async #onRollDamage(event, target) {
     event.preventDefault();
     const dataset = target.dataset;
     if (!dataset.roll) return;
+
+    // AMMUNITION. The row's own item, resolved here because this handler has
+    // never needed the document before — everything else it uses rides on the
+    // control's dataset.
+    //
+    // An empty quiver REFUSES: no dialog, no roll, no card. Firing a bow with
+    // nothing to fire is not an impaired roll, it is not a roll, and the
+    // warning is what tells the player which of the two just happened.
+    //
+    // A non-ranged weapon, and every other row that can roll damage (a
+    // monster's claws), is untouched — `usesAsNumbers` is false for all of
+    // them, so neither the refusal nor the spend can reach them.
+    const rangedItem = (() => {
+      const row = CairnActorSheet.#row(target);
+      const item = this.actor.items.get(row?.dataset.itemId ?? "");
+      return item?.system?.usesAsNumbers ? item : null;
+    })();
+    if (rangedItem && (rangedItem.system.uses?.value ?? 0) <= 0) {
+      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
+      return;
+    }
 
     const usePanic = game.settings.get(SETTINGS_NS, "use-panic");
     const panicked = usePanic && this.actor.system.panicked;
@@ -3123,6 +3137,25 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (quality === null) return; // dismissed: roll nothing
     }
     const formula = damageFormulaFor(quality, dataset.roll);
+
+    // THE SPEND, after the dialog and before the roll. After the dialog because
+    // dismissing it rolls nothing and must therefore cost nothing — the `return`
+    // above is the only exit between the refusal and here. Before the roll
+    // because the arrow leaves the bow whatever the die then says; a miss is
+    // still a shot.
+    //
+    // Re-read off the document rather than trusting the value the refusal saw:
+    // the dialog is an await, and a second client (or the +/- controls on the
+    // same row) can empty the quiver while it is open. Clamped at 0 so a racing
+    // pair of rolls cannot drive the counter negative.
+    if (rangedItem) {
+      const left = rangedItem.system.uses?.value ?? 0;
+      if (left <= 0) {
+        ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
+        return;
+      }
+      await rangedItem.update({ "system.uses.value": left - 1 });
+    }
 
     const roll = await evaluateFormula(formula, this.actor.getRollData());
     // Two whole-sentence keys, not fragments glued with `+`: word order is not
@@ -3549,6 +3582,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.render(false);
   }
 
+  /** Collapse or expand the languages list. Mirrors #onToggleScars. */
+  static #onToggleLanguages(event) {
+    event.preventDefault();
+    this._languagesCollapsed = !this._languagesCollapsed;
+    this.render(false);
+  }
+
   /* -------------------------------------------- */
   /*  Actions — background and failed career      */
   /* -------------------------------------------- */
@@ -3972,23 +4012,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return null;
     }
 
-    // A bound page never moves on its own — it travels with its Grimoire, in
-    // the bundle below, or not at all (2026-08-09 ruling: pages are bound, no
-    // way back, and they stay with the book). The bundle writes with
-    // createEmbeddedDocuments and never comes through here.
-    if (originalItem.type === "spellbook" && originalItem.system?.bound) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.PageBound"));
-      return null;
-    }
-
-    // The one-book wall's AFFORDANCE half — the toast a player actually sees.
-    // The enforcement is CairnItem._preCreate, which refuses the same create
-    // whatever UI produced it (two layers, the Fatigue precedent: removing
-    // either alone must not look like a landed change).
-    if (originalItem.type === "item" && originalItem.system?.grimoire
-        && this.actor.type === "character"
-        && this.actor.items.some((i) => i.type === "item" && i.system?.grimoire)) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.GrimoireOnlyOne"));
+    // A HECHIZO NEVER CHANGES HANDS: it can be cast and it can be deleted, and
+    // that is all. This is the AFFORDANCE half — the toast a player actually
+    // sees — and its enforcement is `CairnItem._preCreate`, which refuses the
+    // same create whatever UI produced it (two layers, the Fatigue precedent:
+    // removing either alone must not look like a landed change).
+    //
+    // Placed AFTER the same-actor branch above, exactly where the bound-page
+    // refusal it replaces sat: dragging a spell up and down its own owner's
+    // inventory is a sort, not a transfer, and stays legal.
+    if (originalItem.type === "spell") {
+      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.SpellNoTransfer"));
       return null;
     }
 
@@ -4042,19 +4076,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const foundItem = this.actor.items.find(
       (it) => it.name === originalItem.name && it.type === originalItem.type
         // A stack is only a stack when the flag-shaped discriminators agree:
-        // a spellbook and a spellscroll share name AND type (gear.js stores a
+        // a Hechizo and its Pergamino share name AND type (gear.js stores a
         // scroll under the bare spell name), so the name+type test merged a
-        // dropped book into a scroll stack — the book was never created, and
+        // dropped spell into a scroll stack — the spell was never created, and
         // a cross-actor drop deleted the source scroll while bumping the
-        // target's book (review #9). Any future flag-style splitter joins
-        // this test rather than growing a new merge.
+        // target's spell (review #9). Any future flag-style splitter joins this
+        // test rather than growing a new merge.
+        //
+        // Unreachable for a spell today — the refusal above turns every
+        // cross-actor spell drop away before this — and kept because the test
+        // is about the FLAG, not about which type happens to carry it, and
+        // because a stack that merges two different things is silent data loss.
         && !!it.system?.scroll === !!originalItem.system?.scroll
-        // A bound page and the loose book of the same spell are different
-        // things (the page is the book's), and a GRIMOIRE never stacks at all:
-        // each book carries its own pages, and quantity 2 on one document
-        // would make two libraries indistinguishable.
-        && !!it.system?.bound === !!originalItem.system?.bound
-        && !it.system?.grimoire && !originalItem.system?.grimoire
     );
     let created = foundItem ?? null;
     if (foundItem) {
@@ -4077,17 +4110,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       await created.update(patch, { abNoStatusCard: true });
     }
 
-    // WHICH pages travel is decided HERE, before the source loses the book —
-    // the removal below deletes it, and pagesOfGrimoire reads the source's
-    // shelf to resolve an unkeyed legacy page ("only one book, so only one
-    // answer"). Asked afterwards, a two-book shelf would look like a one-book
-    // shelf and hand over exactly the pages issue #17 was about, and a one-book
-    // shelf would look like none and hand over nothing.
-    const travellingPages = originalActor
-      && originalItem.type === "item" && originalItem.system?.grimoire
-      ? pagesOfGrimoire(originalActor, originalItem)
-      : [];
-
     // Target received it. Only a real transfer FROM another actor removes a unit
     // from the source. A drop from a compendium (no owning actor) is a COPY —
     // never write to the pack document, or the pool's master item gets its
@@ -4101,47 +4123,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
     }
 
-    // PAGES TRAVEL WITH THE BOOK (2026-08-09 ruling, #10's replacement): a
-    // Grimoire moving off an actor bundles ITS OWN bound pages in the same move
-    // — to another character, to an Item Pile, anywhere this handler can take
-    // it. A recovered book is the book WITH its spells. The pages are
-    // weightless, so they cannot fail a capacity check the book itself just
-    // passed, and they move via createEmbeddedDocuments — the same door
-    // generation uses — so the bound-page drop refusal above never sees them.
-    //
-    // ITS OWN, and that word is issue #17 (fsmalecho, 2026-08-16). This asked
-    // for every bound page on the source, which is the same set on a CHARACTER
-    // — the one-book wall guarantees it — and wrong on anything that can hold a
-    // library: dragging one of two books out of a pile took all six pages,
-    // three of them past the receiving book's own capacity, and left the other
-    // book standing there empty. pagesOfGrimoire matches by key, and says so
-    // for the unkeyed legacy case too — resolved above, while the book was
-    // still on its shelf.
-    if (travellingPages.length) {
-      // RE-STAMPED from the book that actually arrived, never from the copied
-      // value. `_preCreate` re-mints `grimoireKey` when the arriving book wears
-      // one a book on THIS actor already has (item.js), and the pages were
-      // resolved off the source before that happened — so a verbatim
-      // `toObject()` hands them over naming the old key, and the pre-existing
-      // book claims them. That is issue #17's exact symptom, produced by the
-      // code that closed it: a keyed book duplicated with its ACTOR (embedded
-      // items skip `_preCreate` entirely, client-backend.mjs:80-110) gives two
-      // books one key, and moving one onto the other put four pages under a
-      // cap-3 book while the arriving book stood empty.
-      //
-      // Only when the arrival HAS a key: an unkeyed legacy book leaves its
-      // pages unkeyed too, which is what `pagesOfGrimoire`'s one-book fallback
-      // still reads.
-      const arrivedKey = created?.system?.grimoireKey ?? "";
-      await this.actor.createEmbeddedDocuments("Item",
-        travellingPages.map((p) => {
-          const data = p.toObject();
-          if (arrivedKey) data.system.boundTo = arrivedKey;
-          return data;
-        }));
-      await originalActor.deleteEmbeddedDocuments("Item",
-        travellingPages.map((p) => p.id));
-    }
+    /* The PAGES-TRAVEL-WITH-THE-BOOK bundle stood here and is GONE. A Grimoire
+       moving off an actor carried its own bound pages with it, re-stamped with
+       the arriving book's key. A Libro's three spells are fields ON the book,
+       so they travel inside its `system` with no help at all — which is what
+       makes this the right shape rather than merely a smaller one. */
+
     return created;
   }
 

@@ -11,9 +11,9 @@
  * table keeps working. (Deleting and re-creating the table was the obvious
  * shape and is exactly wrong for that reason.)
  *
- * Only spellbook-type entries seed rows — an unlocked pack accepts any item,
+ * Only `spell`-type entries seed rows — an unlocked pack accepts any item,
  * and a Dagger dropped into a spell pack must not become a rollable spell.
- * A source with NO spellbooks refuses outright instead of emptying the table:
+ * A source with NO spells refuses outright instead of emptying the table:
  * an empty result is never what "reseed" meant, and the refusal is the
  * probe's negative control.
  *
@@ -25,14 +25,16 @@ import { packFor } from "./content-packs.js";
 
 /**
  * Rebuild `table`'s rows from `pack`'s index. Returns the number of rows
- * written, or 0 if the pack held no spellbooks (the table is left untouched).
+ * written, or 0 if the pack held no spells (the table is left untouched).
  * @param {RollTable} table
  * @param {CompendiumCollection} pack
  * @returns {Promise<number>}
  */
 export const reseedTableFromPack = async (table, pack) => {
   const index = await pack.getIndex();
-  const entries = index.filter((e) => e.type === "spellbook")
+  // A Libro is deliberately NOT rollable here — a spell table hands out one
+  // spell, not a three-spell book.
+  const entries = index.filter((e) => e.type === "spell")
     .sort((a, b) => a.name.localeCompare(b.name));
   if (!entries.length) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.EmptySpellSource", { pack: pack.title }));

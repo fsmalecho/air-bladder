@@ -1,7 +1,7 @@
 import { SETTINGS_NS } from "../settings.js";
 import { grantSourceLabel } from "../utils.js";
 import { iconForItem, SPELLBOOK_ICON, SPELLSCROLL_ICON } from "../icons.js";
-import { glogEnabled, glogConversionDiff, glogTextCached } from "../glog.js";
+import { BOOK_PAGE_KEYS } from "../data-models.js";
 
 /**
  * The stored name of a Fatigue item. ENGLISH, always — Foundry's language setting
@@ -14,66 +14,82 @@ import { glogEnabled, glogConversionDiff, glogTextCached } from "../glog.js";
  */
 export const FATIGUE_NAME = "Fatigue";
 
-/**
- * The stored name a scroll created from the Create Item dialog gets when the user
- * types none — ENGLISH, for the same reason as FATIGUE_NAME above, and this is the
- * one place the type list's own label must NOT be reused. That label is localized,
- * and localizing it was right for the <option> and wrong for the name: a Spanish
- * Warden's unnamed scroll was stored as "Pergamino", so the same document read
- * differently to every other client and matched nothing that looks a spellbook up
- * by name (gear resolution, the background-swap identity match, the content
- * overlay's own English keys).
- *
- * Pre-filled at all rather than left blank because core's fallback for an empty
- * name is `defaultName({type})`, and the type here really is "spellbook" — so an
- * unnamed create would otherwise produce a scroll called "Spellbook".
- */
-export const SPELLSCROLL_NAME = "Spellscroll";
+/* `SPELLSCROLL_NAME` stood here and is GONE with the `abSpellscrollTypeOption`
+   hook that was its only reader. That hook injected a second "Spellscroll" option
+   into the Create Item dialog, keyed on `option[value="spellbook"]`; there is no
+   such type any more, and a scroll is now a `spell` with its own checkbox. The
+   English-storage rule the constant existed to keep is unchanged for FATIGUE_NAME
+   above, which is the only stored name the code still matches on. */
 
 /**
- * Every spellscroll is petty and single-use — the Warden's rule, and the one thing
- * that separates a scroll from the book of the same spell. So it is derived from
- * the `scroll` flag rather than typed in: the sheet offers no Petty box and no Max
- * uses field for a spellbook, and these values are written whenever the flag is.
+ * Every Pergamino is petty and single-use — the Warden's rule, and the one thing
+ * that separates a scroll from the spell it holds. So it is derived from the
+ * `scroll` flag rather than typed in: the spell sheet offers no Petty box and no
+ * Max uses field, and these values are written whenever the flag is.
+ *
+ * `bulky: false` rides along because a spell is never bulky either way (see
+ * SPELL_PINNED) and a scroll least of all — pinning it in both directions means
+ * no path can leave a two-slot scroll behind.
  *
  * `uses.value` is deliberately absent: it is set once, on the transition to
  * `scroll: true` (a fresh scroll has its use), and left alone afterwards so
  * marking one spent survives the next save. Forcing it here would silently refill
  * every scroll on every edit.
  */
-const SCROLL_PINNED = { weightless: true, equipped: false, "uses.max": 1 };
-
-/** What ticking `scroll` off restores: a book is not petty and has no uses. */
-const BOOK_PINNED = { weightless: false, "uses.max": 0, "uses.value": 0 };
+const SCROLL_PINNED = { weightless: true, bulky: false, equipped: false, "uses.max": 1 };
 
 /**
- * A page bound into a Grimoire: weightless (the book carries it), never held
- * ready, and NOT a scroll — the transmute converts a scroll into a page, which
- * is the 50gp/6hr conversion the GLOG hack charges for (the cost stays prose;
- * trust players). `scroll: false` is pinned here so the two flags can never
- * both be true, whatever path writes them.
+ * A plain Hechizo: exactly ONE slot, always. Never bulky, never petty — the two
+ * checkboxes the spell sheet therefore does not offer — and no uses counter,
+ * which is what ticking `scroll` off restores.
+ *
+ * Pinned rather than defaulted, the SCROLL_PINNED rule: a schema `initial` is a
+ * value a Warden unticks, and "a spell costs one slot" is a statement about
+ * every write.
  */
-const PAGE_PINNED = {
-  weightless: true, equipped: false, scroll: false,
-  // A page has no uses: it is the spell recorded permanently in the book, so a
-  // transmuted scroll's one-shot counter clears with the scroll flag.
-  "uses.max": 0, "uses.value": 0,
+const SPELL_PINNED = { weightless: false, bulky: false, "uses.max": 0, "uses.value": 0 };
+
+/**
+ * A Libro: ALWAYS bulky, two slots, whatever wrote it.
+ *
+ * Same shape and same reasoning as SCROLL_PINNED — a pinned value, not a schema
+ * default the user can untick — and the sheet renders the Bulky box disabled so
+ * the rule is visible rather than merely enforced. `weightless: false` is the
+ * other half: the two flags are mutually exclusive everywhere else in this
+ * system (the item sheet's `exclusive` pair), so pinning one without the other
+ * would leave "bulky AND petty" reachable by API.
+ */
+const BOOK_PINNED = { bulky: true, weightless: false };
+
+/**
+ * A Libro's non-empty pages, in tab order, ready to render or to cast from.
+ *
+ * ONE reader for three surfaces — the sheet's tabs, the inventory row's
+ * "1. Nombre: texto" lines and the cast picker — so "which pages does this book
+ * actually have" is answered in one place. A page counts as present when it has
+ * a name or a text; blankness is the only marker a page is unused.
+ * @param {CairnItem|Object} book  a book document, or a display copy of one
+ * @returns {{n: number, key: string, name: string, text: string}[]}
+ */
+export const bookPages = (book) => {
+  const pages = book?.system?.pages ?? {};
+  return BOOK_PAGE_KEYS
+    .map((key, i) => ({
+      n: i + 1,
+      key,
+      name: pages[key]?.name ?? "",
+      text: pages[key]?.text ?? "",
+    }))
+    .filter((p) => p.name.trim() !== "" || p.text.trim() !== "");
 };
 
-/**
- * Is an incoming update value an attempt to CLEAR the field rather than set it?
- *
- * Three spellings land in the same place and the guards below must catch all
- * three: `""`, `null` (a StringField casts it back to blank), and v14's
- * `ForcedDeletion` operator — deleting a schema field's key leaves it taking
- * its blank initial. A guard testing only `=== ""` is walked past by the
- * spelling the platform itself now recommends
- * (common/data/operators.mjs:81, the replacement for `-=key: null`).
- * @param {*} value
- * @returns {boolean}
- */
-const isClearing = (value) => !value
-  || (value instanceof foundry.data.operators.ForcedDeletion);
+/* `isClearing` stood here and is GONE with its only two readers, the
+   `grimoireKey` and `boundTo` guards. It answered "is this update trying to
+   BLANK a string field", which mattered for two identities that had to be
+   permanent; no string field on the new types is. If one ever is again, the
+   three spellings it had to catch were `""`, `null`, and v14's `ForcedDeletion`
+   operator (common/data/operators.mjs:81) — a guard testing only `=== ""` is
+   walked past by the spelling the platform itself now recommends. */
 
 /**
  * Extend the basic Item with some very simple modifications.
@@ -94,45 +110,27 @@ export class CairnItem extends Item {
    */
   static getDefaultArtwork(itemData) {
     const type = itemData?.type ?? "item";
-    const img = type === "spellbook" && itemData?.system?.scroll
+    const img = type === "spell" && itemData?.system?.scroll
       ? SPELLSCROLL_ICON
       : iconForItem(type, itemData?.name ?? "");
     return { img };
   }
 
   /**
-   * The one-book wall's other half: the BATCH.
+   * Where a new row LANDS — see `#appendSort` below. It needs the BATCH rather
+   * than the document, which is why it sits at this seam.
    *
-   * `_preCreate` above asks `this.parent.items` whether a Grimoire is already
-   * there, and for a single create that is the whole question. For a BATCH it is
-   * blind by construction — Foundry runs every document's `_preCreate` before
-   * inserting any of them (`client-backend.mjs:102-110`, which pushes to
-   * `documents` only after each per-document workflow returns), so two Grimoires
-   * created in one call each look around, each see zero, and both land. Reachable
-   * with no crafting at all: `changeBackground` batches a custom background's
-   * whole startingGear in one `createEmbeddedDocuments`, so a background listing
-   * two books hands over two.
-   *
-   * Surplus books are SPLICED OUT rather than the operation refused, because
-   * `client-backend.mjs:120` assigns `operation.data = documents` — so dropping
-   * the extras leaves the rest of that background's gear to land, where returning
-   * false would take the boots and the rope with them. One warning for the batch,
-   * not one per book.
-   *
-   * It also decides WHERE A NEW ROW LANDS — see `#appendSort` below. Both
-   * questions need the BATCH rather than the document, which is why they share
-   * this seam.
+   * The one-book wall stood here too and is GONE with the Grimoire flag it
+   * policed ("a character carries at most one Grimoire"). A `book` is an
+   * ordinary type now, with no shared page pool for two of them to fight over,
+   * so there is nothing left to enforce; `#enforceOneBook` went with it.
    * @override
    */
   static async _preCreateOperation(documents, operation, user) {
     const allowed = await super._preCreateOperation(documents, operation, user);
     if (allowed === false) return false;
 
-    const parent = operation?.parent;
-    if (parent?.type === "character" && CairnItem.#enforceOneBook(documents, parent) === false) {
-      return false;
-    }
-    CairnItem.#appendSort(documents, parent);
+    CairnItem.#appendSort(documents, operation?.parent);
   }
 
   /**
@@ -162,15 +160,6 @@ export class CairnItem extends Item {
    *
    * Actors only — a world or compendium item has no actor parent, and the
    * sidebar does its own ordering.
-   *
-   * A BOUND GRIMOIRE PAGE is deliberately left at 0, and it is the one exception
-   * worth knowing: a page has no place in the flat list, because
-   * `groupPagesUnderBooks` lifts every page out and re-files it under its own
-   * book. All that survives is its order relative to its SIBLING pages, and that
-   * has always been alphabetical — `_sortItemsForDisplay` falls through to the
-   * display name when sorts tie. Numbering pages here would silently change that
-   * to the order they were transmuted in, which nobody asked for; there is no
-   * unbind path, so a page never re-enters the list needing a position.
    * @param {CairnItem[]} documents  temporary instances, mutated via updateSource
    * @param {Document|null} parent
    */
@@ -178,44 +167,18 @@ export class CairnItem extends Item {
     if (parent?.documentName !== "Actor") return;
     let next = parent.items.reduce((max, i) => Math.max(max, i.sort ?? 0), 0);
     for (const doc of documents) {
-      if (doc.sort || doc.system?.bound) continue;
+      if (doc.sort) continue;
       next += CONST.SORT_INTEGER_DENSITY;
       doc.updateSource({ sort: next });
     }
   }
 
   /**
-   * The one-book wall's batch half, split out of `_preCreateOperation` so that
-   * method can go on to place sorts for EVERY parent rather than returning early
-   * for anything that is not a character.
-   * @returns {false|void} false when the splice left nothing to create
-   */
-  static #enforceOneBook(documents, parent) {
-    const isGrimoire = (d) => d?.type === "item" && d?.system?.grimoire;
-    // Seeded from the parent for completeness only: a book arriving at a
-    // character who already has one was refused one seam up and is not in
-    // `documents` to begin with.
-    let seen = parent.items.some(isGrimoire);
-    const surplus = [];
-    for (const doc of documents) {
-      if (!isGrimoire(doc)) continue;
-      if (seen) surplus.push(doc);
-      else seen = true;
-    }
-    if (!surplus.length) return;
-    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.GrimoireOnlyOne"));
-    for (const doc of surplus) {
-      const at = documents.indexOf(doc);
-      if (at >= 0) documents.splice(at, 1);
-    }
-    if (!documents.length) return false;
-  }
-
-  /**
-   * Hold a spellbook to the scroll invariant at write time, whichever path wrote
-   * it: the sheet's Scroll box, generation, a drag-and-drop copy, an importer, or
-   * `Actor#createOwnedItem` (which rebuilds `system.weightless` from a top-level
-   * field, so it would hand back an un-petty scroll on its own).
+   * Hold a spell to the scroll invariant, and a book to the bulky one, at write
+   * time — whichever path wrote it: the sheet's Pergamino box, generation, a
+   * drag-and-drop copy, an importer, or `Actor#createOwnedItem` (which rebuilds
+   * `system.weightless` from a top-level field, so it would hand back an
+   * un-petty scroll on its own).
    *
    * Written to the document rather than derived in `prepareData`, so the stored
    * data is true — a derived-only petty flag would be a lie to anything reading the
@@ -227,88 +190,71 @@ export class CairnItem extends Item {
     const allowed = await super._preCreate(data, options, user);
     if (allowed === false) return false;
 
-    // The one-book wall (2026-08-09 ruling): a CHARACTER carries at most one
-    // Grimoire; other books are unrestricted, and so are npcs — an Item Pile
-    // holding two recovered grimoires is a pile doing its job. This is the
-    // ENFORCEMENT layer behind the drop handler's refusal (the two-layer rule
-    // the Fatigue guards set): a stale open dialog, a macro, or a module write
-    // all land here whatever the UI showed.
+    // A HECHIZO NEVER CHANGES HANDS — the ENFORCEMENT half of the wall whose
+    // affordance is `CairnActorSheet._onDropItem`'s refusal. Two layers, the
+    // house rule: removing either alone must not look like a landed change, so
+    // a stale sheet, a macro or a module write all meet this whatever the UI
+    // showed.
     //
-    // This half answers "does the character ALREADY have one". It cannot answer
-    // "does this batch contain two" — see `_preCreateOperation` below, which is
-    // the only seam that can.
-    if (this.type === "item" && this.system.grimoire
-        && this.parent?.type === "character"
-        && this.parent.items.some((i) => i.type === "item" && i.system?.grimoire)) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.GrimoireOnlyOne"));
-      return false;
-    }
-
-    // A GRIMOIRE'S IDENTITY (issue #17, 2026-08-16), minted here so every route
-    // that makes a book gets one: the Reliquary drag, the Create Item dialog,
-    // an importer, a macro, a module. A book MOVING between sheets is a
-    // create-then-delete carrying its `system` across, so it arrives holding
-    // its key and the pages naming it stay its own.
-    //
-    // A key already worn by a book on the SAME parent is a DUPLICATE, not a
-    // move — nothing is in two places on one actor — and gets a fresh one, or
-    // the copy and the original would share one library between them.
-    if (this.type === "item" && this.system.grimoire) {
-      const key = this.system.grimoireKey;
-      const clash = key && this.parent?.items.some((i) =>
-        i !== this && i.type === "item" && i.system?.grimoire && i.system.grimoireKey === key);
-      if (!key || clash) {
-        this.updateSource({ system: { grimoireKey: foundry.utils.randomID() } });
+    // A TRANSFER is the one create that names an item ANOTHER actor is still
+    // holding. Core's drop path hands `item.toObject()` to
+    // `createEmbeddedDocuments` — `_id` and all — and deletes the source only
+    // afterwards, so at this moment both ends exist. A compendium or sidebar
+    // drop carries an `_id` too, which is why the id alone decides nothing: the
+    // source having an ACTOR is the whole test. Generation, the marketplace and
+    // the Create Item dialog name no `_id` at all and never reach the scan.
+    if (this.type === "spell" && this.parent?.documentName === "Actor" && data?._id) {
+      const from = game.actors?.find((a) => a !== this.parent && a.items.has(data._id));
+      if (from) {
+        ui.notifications.warn(game.i18n.localize("CAIRN.Notify.SpellNoTransfer"));
+        return false;
       }
     }
 
-    // A page arriving bound (the travel bundle copies pages between actors)
-    // holds its invariant from the first write, same as a scroll does below.
-    if (this.type === "spellbook" && this.system.bound) {
-      this.updateSource({ system: { ...PAGE_PINNED } });
-    }
-
-    // Under GLOG there are no spellbooks (user ruling 2026-08-09) — only
-    // Grimoires, their bound pages, and spellscrolls. The flip's world sweep
-    // (glog.js) converts what EXISTS; this seam converts what ARRIVES: a
-    // compendium drag, the Create Item dialog, an importer, a macro — which is
-    // how a post-flip drop of Haste stayed a book. Bound pages are exempt (the
-    // travel bundle must land pages as pages, and a page is past the scroll
-    // stage). Runs BEFORE the class-art and scroll-pin blocks below so both
-    // then see a scroll. `uses.value` is set here rather than left to the pin,
-    // whose data-guard would read the BOOK's stored 0 as "a spent scroll
-    // carried across" — a converted book always arrives unspent, the same
-    // choice _preUpdate makes on the sweep's book→scroll transition.
-    if (this.type === "spellbook" && !this.system.scroll && !this.system.bound
-        && glogEnabled()) {
-      const diff = glogConversionDiff(this, await glogTextCached());
-      if (diff) {
-        this.updateSource(foundry.utils.expandObject({ ...diff, "system.uses.value": 1 }));
-      }
-    }
+    /* A CONVERSION SEAM stood here and is GONE with the module that drove it.
+       It caught every arriving non-scroll spell — a compendium drag, the Create
+       Item dialog, an importer, a macro — and rewrote it into a spellscroll
+       carrying a second, re-worded copy of the same spell's text, because a
+       rules setting said the world was in the other of two magic modes. There
+       is one set of magic rules now and nothing to convert between: a spell
+       arrives exactly as its author wrote it, scroll or not. Do not re-add it. */
 
     // Class art for anything created WITHOUT its own image. Foundry's Item schema
     // initialises `img` to `icons/svg/item-bag.svg`, so every item made through the
-    // Create Item dialog kept the generic bag: a hand-made weapon, armor, spellbook
+    // Create Item dialog kept the generic bag: a hand-made weapon, armor, book
     // or scroll looked nothing like the shipped ones. `Actor#createOwnedItem` has
     // always done this for items it mints; the world/dialog path never did.
     //
     // It also unblocked the scroll art. `_preUpdate` only re-arts an item whose
-    // image is still ours to change, and a bag was not — so ticking Scroll on a
-    // dialog-created spellbook silently left the bag in place.
+    // image is still ours to change, and a bag was not — so ticking Pergamino on
+    // a dialog-created spell silently left the bag in place.
     if (!this.img || this.img === this.constructor.DEFAULT_ICON) {
-      const art = this.type === "spellbook" && this.system.scroll
+      const art = this.type === "spell" && this.system.scroll
         ? SPELLSCROLL_ICON
         : iconForItem(this.type, this.name);
       this.updateSource({ img: art });
     }
 
-    if (this.type !== "spellbook" || !this.system.scroll) return;
+    // A LIBRO IS BULKY, from its first write. No transition to catch here the
+    // way the scroll flag has one: there is no un-bulky state a book can arrive
+    // in that this should preserve.
+    if (this.type === "book") {
+      this.updateSource({ system: { ...BOOK_PINNED } });
+      return;
+    }
+
+    if (this.type !== "spell") return;
+    // A plain spell is one slot: neither bulky nor petty, no uses counter. The
+    // scroll case takes over below.
+    if (!this.system.scroll) {
+      this.updateSource({ system: { ...SPELL_PINNED } });
+      return;
+    }
     const pinned = { ...SCROLL_PINNED };
     // A scroll created straight from the flag arrives UNSPENT — pinning only `max`
     // left `value` at the schema default of 0, so a new scroll rendered as already
-    // used up. One created with an explicit count keeps it, which is what lets the
-    // spellscroll migration carry a spent scroll across without refilling it.
+    // used up. One created with an explicit count keeps it, which is what lets a
+    // generated spent scroll be copied across without refilling it.
     if (foundry.utils.getProperty(data ?? {}, "system.uses.value") === undefined) {
       pinned["uses.value"] = 1;
     }
@@ -316,9 +262,11 @@ export class CairnItem extends Item {
   }
 
   /**
-   * The same invariant on edit, plus the two transitions. Ticking Scroll makes a
-   * fresh scroll (its one use unspent) and unticking restores a book; while the
-   * flag merely stays on, `uses.value` is left alone so a spent scroll stays spent.
+   * The same invariants on edit, plus the Pergamino transition. Ticking it makes
+   * a fresh scroll (its one use unspent) and unticking restores a plain
+   * one-slot Hechizo; while the flag merely stays on, `uses.value` is left alone
+   * so a spent scroll stays spent. A Libro has no transition at all — it is
+   * bulky before and after.
    *
    * The art follows the flag only when it is still ours to change — a Warden who
    * picked their own image keeps it.
@@ -328,67 +276,37 @@ export class CairnItem extends Item {
     const allowed = await super._preUpdate(changed, options, user);
     if (allowed === false) return false;
 
-    // A BOOK'S identity is as permanent as a page's binding below, and for a
-    // worse reason: clearing `grimoireKey` orphans every page naming it, and
-    // there is NO way back — `ensureGrimoireKey` mints a fresh key on next use
-    // rather than restoring the old one, so the pages stay pointed at a key no
-    // book wears. Stripped rather than refused, the scroll-pin precedent: the
-    // rest of the edit lands and the clearing silently does not. The sheet
-    // offers no control; only an API write can even try. (Review #15.)
-    if (this.type === "item" && this.system.grimoire && this.system.grimoireKey
-        && changed.system && "grimoireKey" in changed.system
-        && isClearing(changed.system.grimoireKey)) {
-      delete changed.system.grimoireKey;
+    // A Libro stays bulky through every edit, including one that names Bulky
+    // itself. The sheet's box is disabled, so only an API write can even try —
+    // and it is stripped rather than refused, the scroll-pin precedent: the
+    // rest of the edit lands, the un-bulking silently does not.
+    if (this.type === "book") {
+      foundry.utils.mergeObject(changed, { system: { ...BOOK_PINNED } });
+      return;
     }
 
-    if (this.type !== "spellbook") return;
+    if (this.type !== "spell") return;
 
     // The OPERATOR spelling, normalized before any guard reads it (review
     // #17): a ForcedDeletion resets a field to its schema initial — false,
-    // for these two required booleans — and is a truthy OBJECT, so it walked
-    // straight past every equality and truthiness test below: an un-bind the
-    // bound guard was built to strip, or a scroll reset that took the
-    // BECOMING-scroll branch and pinned scroll uses onto a non-scroll. On a
-    // required boolean the operator IS a plain `false` write (and passing it
-    // through to the schema draws a "may not be undefined" validation
-    // complaint on its way to the same end state — dev:grimoire's console
-    // gate caught that), so it is rewritten to one here and the guards below
-    // reason about booleans only. The STRING fields (`boundTo`,
-    // `grimoireKey`) keep their isClearing guards instead — blank is a legal
-    // stored value there, so clearing means something different.
-    for (const key of ["bound", "scroll"]) {
-      if (changed.system?.[key] instanceof foundry.data.operators.ForcedDeletion) {
-        changed.system[key] = false;
-      }
-    }
-
-    // Binding is FOREVER (2026-08-09 ruling #12): a write clearing `bound` is
-    // stripped rather than refused, the scroll-pin precedent — the rest of the
-    // edit lands, the un-bind silently does not. The sheet offers no control;
-    // only an API write can even try.
-    if (this.system.bound && changed.system?.bound === false) {
-      delete changed.system.bound;
-    }
-
-    // WHICH book is as permanent as the binding: a write CLEARING `boundTo`
-    // while one is set is stripped the same way, or a page could be orphaned
-    // into the state issue #17 was about — bound, with no book to name. Writing
-    // one over a BLANK stays legal, because that is the transmute stamping a
-    // page for the first time and the migration stamping a legacy one.
-    if (this.system.boundTo && changed.system && "boundTo" in changed.system
-        && isClearing(changed.system.boundTo)) {
-      delete changed.system.boundTo;
+    // for this required boolean — and is a truthy OBJECT, so it walked
+    // straight past every equality and truthiness test below: a scroll reset
+    // that took the BECOMING-scroll branch and pinned scroll uses onto a
+    // non-scroll. On a required boolean the operator IS a plain `false` write
+    // (and passing it through to the schema draws a "may not be undefined"
+    // validation complaint on its way to the same end state), so it is
+    // rewritten to one here and the guards below reason about booleans only.
+    if (changed.system?.scroll instanceof foundry.data.operators.ForcedDeletion) {
+      changed.system.scroll = false;
     }
 
     // A TRANSITION, not a presence. `_preUpdate` is handed the FULL cleaned
-    // payload, not the diff (client-backend.mjs:229-238), and the spellbook
-    // sheet submits the Scroll checkbox with every `submitOnChange` — so
+    // payload, not the diff (client-backend.mjs:229-238), and the spell sheet
+    // submits the Pergamino checkbox with every `submitOnChange` — so
     // `!== undefined` alone was true for EVERY edit of a scroll's sheet, each
     // one re-entered the becoming-scroll branch below and re-pinned
     // `uses.value: 1`: a spent scroll refilled on a Cost edit, and the Uses
-    // field could never store 0 (review #18; dev:spellscroll's "stays spent"
-    // leg was green because it updated cost WITHOUT the flag the sheet always
-    // carries — it submits the real sheet now). Compared to the STORED flag,
+    // field could never store 0 (review #18). Compared to the STORED flag,
     // only a real tick or untick is a transition; a payload merely carrying the
     // flag falls through to the hold branch, which leaves `uses.value` alone.
     const scrollChanged = changed.system?.scroll !== undefined
@@ -399,7 +317,7 @@ export class CairnItem extends Item {
       // the truthy operator took this branch while resetting the flag.
       const becomingScroll = !!changed.system.scroll;
       foundry.utils.mergeObject(changed, {
-        system: becomingScroll ? { ...SCROLL_PINNED, "uses.value": 1 } : BOOK_PINNED,
+        system: becomingScroll ? { ...SCROLL_PINNED, "uses.value": 1 } : SPELL_PINNED,
       });
       // Re-art only while the image is still ours to change — a Warden who picked
       // their own keeps it. The default bag counts as ours: items created before
@@ -409,24 +327,14 @@ export class CairnItem extends Item {
       if (this.img === was || this.img === this.constructor.DEFAULT_ICON) {
         changed.img = becomingScroll ? SPELLSCROLL_ICON : SPELLBOOK_ICON;
       }
-    } else if (this.system.scroll && changed.system?.bound !== true) {
-      // No transition: just hold the invariant for a scroll being edited. The
-      // `!== true` term lets the transmute through — becoming a page IS the
-      // one legal exit from being a scroll, and PAGE_PINNED below writes the
-      // scroll flag off in the same breath. `!== true` rather than the old
-      // `!changed.system?.bound`: only a genuine binding write may skip the
-      // hold, never merely a truthy value (review #17).
-      foundry.utils.mergeObject(changed, { system: SCROLL_PINNED });
+      return;
     }
-
-    // The page invariant, held on the transition AND on every later edit —
-    // merged LAST, over the scroll handling above, so a scroll being transmuted
-    // ends weightless whatever BOOK_PINNED said a line earlier. `=== true`,
-    // not truthy: only a genuine binding write may dress an item in
-    // PAGE_PINNED (review #17).
-    if (changed.system?.bound === true || (this.system.bound && changed.system?.bound !== false)) {
-      foundry.utils.mergeObject(changed, { system: { ...PAGE_PINNED } });
-    }
+    // No transition: hold whichever invariant is in force for a spell being
+    // edited. Both are held, not just the scroll's — a plain spell is one slot
+    // by the same rule a scroll is petty, and the sheet offers neither box.
+    foundry.utils.mergeObject(changed, {
+      system: this.system.scroll ? { ...SCROLL_PINNED } : { ...SPELL_PINNED },
+    });
   }
 
   /**
@@ -441,15 +349,20 @@ export class CairnItem extends Item {
     // was always true: a Warden could re-tick Equipped on armor sitting in a
     // crate and calcArmor counted it. `isThing` is the live rule (role
     // container/transport), the same test every other site migrated to.
-    // A spellscroll is read once and consumed, never held ready, so it is the one
-    // spellbook that cannot be equipped. A bound page is the other: the BOOK is
-    // what the character holds, and its pages are not separately to hand.
+    // WEAPONS AND ARMOR ONLY. It used to include `spellbook`, minus scrolls and
+    // bound pages — the two spellbooks that could not be held ready. Neither of
+    // the types that replaced it is equippable at all: a Libro is read, not
+    // wielded, and a Hechizo is cast, so the boxes are gone from both sheets and
+    // the two exceptions have nothing left to except.
     this.system.isEquipable =
-      ["weapon", "armor", "spellbook"].includes(this.type) &&
-      !this.system.scroll &&
-      !this.system.bound &&
-      !this.actor?.isThing;
+      ["weapon", "armor"].includes(this.type) && !this.actor?.isThing;
     this.system.hasPlusMinus = (this.system.uses?.max ?? 0) > 0;
+    // AMMUNITION READS AS A NUMBER PAIR ("15/20"), not as a row of circles: a
+    // quiver of twenty is twenty icons, which is a smear rather than a count.
+    // DERIVED, never declared — a schema field would be a second, storable
+    // answer to a question `ranged` already settles, and the two could disagree.
+    // Consumed by items-list.html, which branches on this alone.
+    this.system.usesAsNumbers = this.type === "weapon" && this.system.ranged === true;
     if (this.system.uses) {
       if (this.system.uses.value > this.system.uses.max)
         this.system.uses.value = this.system.uses.max;
@@ -487,8 +400,11 @@ export class CairnItem extends Item {
     if (this.system.useItemIcons) {
       this.system.icon = "";
       switch (this.type) {
-        case "spellbook":
-          this.system.icon = this.system.scroll ? "scroll" : "book";
+        case "book":
+          this.system.icon = "book";
+          break;
+        case "spell":
+          this.system.icon = this.system.scroll ? "scroll" : "hat-wizard";
           break;
         case "weapon":
           this.system.icon = "sword";

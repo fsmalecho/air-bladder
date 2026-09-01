@@ -95,12 +95,11 @@
     --ab-whisper-border: #8a8172;
     --ab-whisper-stripe: #12a3b4;   /* = light --ab-accent, pinned */
 
-    /* The GLOG tag on cast cards: the Die of Fate glow recast in violet --
-       magic gets its own colour beside the teal (a choice you make) and the
-       error red (a consequence). Chat-only, so PINNED like the whisper tokens
-       above: the tile is parchment in both themes and the colour follows the
-       tile, not the theme. */
-    --ab-glog: #8a2be2;
+    /* Magic on cast cards: violet -- magic gets its own colour beside the teal
+       (a choice you make) and the error red (a consequence). Chat-only, so
+       PINNED like the whisper tokens above: the tile is parchment in both
+       themes and the colour follows the tile, not the theme. */
+    --ab-magic: #8a2be2;
 
     /* The whisper's Add-N-Fatigue button glows in the teal Fatigue wears in
        the inventory (.fatigue-row's --ab-accent), so the button and the rows
@@ -1012,6 +1011,16 @@
     font-size: 10px;
 }
 
+/* A ranged weapon's ammunition, rendered as "15/20" in place of the circles.
+   Tabular figures so a quiver counting down does not shuffle the controls to
+   its right by a pixel on every shot. */
+.cairn-item-ammo {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
 .cairn-item-controls {
     display: flex;
     height: 26px;
@@ -1054,8 +1063,7 @@
    re-introduce a shorter override without counting the counters. */
 
 
-.armor.item-sheet-grid,
-.object.item-sheet-grid {
+.armor.item-sheet-grid {
     grid-template-rows: 46px 36px 36px 36px 36px 1fr;
 }
 
@@ -1063,8 +1071,7 @@
     grid-template-rows: 46px 36px 46px 1fr;
 }
 
-.armor.item-sheet-grid .item-sheet-section-tabs,
-.object.item-sheet-grid .item-sheet-section-tabs {
+.armor.item-sheet-grid .item-sheet-section-tabs {
     grid-row-start: 6;
     grid-row-end: 6;
 }
@@ -1074,45 +1081,46 @@
     grid-row-end: 4;
 }
 
-/* The spellbook split off .background when the GLOG checkbox became its fifth
-   counter (a scroll's Uses makes six). Counters auto-place two per row, so five
-   and six both need THREE counter rows — one template covers book and scroll
-   alike, which is also why the old `.has-scroll-uses` variant (a conditional
-   class the template computed) is gone: there is nothing left to vary.
-   Row counts in this file are hand-declared per item type and the tabs section
-   is pinned to a numbered row, so a new counter needs both a new row and the
-   tabs moved down. Without that the extra counter auto-places into an IMPLICIT
-   row beneath the tabs: measured 2026-07-29 with Quantity at y=676 of a 720px
-   grid, off the bottom of the window and hit-tested to the canvas. It was in
-   the DOM, so the region count still looked right. */
-.spellbook.item-sheet-grid {
-    grid-template-rows: 46px 36px 46px 36px 1fr;
+/* THE RULE FOR EVERY BLOCK IN THIS SECTION. Row counts here are hand-declared
+   per item type and the tabs section is pinned to a NUMBERED row, so adding or
+   removing a counter on a sheet shifts everything below it. Counters auto-place
+   TWO PER ROW into the rows beside the portrait (rows 2..n), so N counters need
+   ceil(N/2) counter rows, and the tabs sit on the row after the last of them.
+   Get it wrong and the surplus counter auto-places into an IMPLICIT row BENEATH
+   the tabs: measured 2026-07-29 with Quantity at y=676 of a 720px grid, off the
+   bottom of the window and hit-tested to the canvas. It was in the DOM, so the
+   region count still looked right — this breaks visually, not loudly.
+
+   `.spellbook` and `.plain-item` stood here and are GONE:
+
+     - `.spellbook` (five rows, tabs at 5) went with the type. Its successors
+       are `.book` and `.spell` below, both of which carry FOUR counters or
+       fewer and so need one counter row less than it did.
+     - `.plain-item` (seven rows, tabs at 8) went because the Grimoire checkbox
+       and its page-capacity field went: item-sheet.html is back to TEN
+       counters, which is exactly the five counter rows of the BASE grid
+       (`.item-sheet-grid`, six rows with tabs at 7). The weapon sheet reaches
+       ten too, with Ranged added, and rides the same base rows.
+     - `.object` shared the armor block's rows and went with that type. */
+
+/* The Libro: four counters (Bulky, Language, Cost, Quantity) — two counter
+   rows, tabs at 4. The portrait span is stated outright because the base rule
+   ends it at line 7, which on a four-track grid would stretch it across two
+   implicit rows. */
+.book.item-sheet-grid,
+.spell.item-sheet-grid {
+    grid-template-rows: 46px 36px 36px 1fr;
 }
 
-.spellbook.item-sheet-grid .item-sheet-section-tabs {
-    grid-row-start: 5;
-    grid-row-end: 5;
+.book.item-sheet-grid .item-sheet-section-portrait,
+.spell.item-sheet-grid .item-sheet-section-portrait {
+    grid-row: 1 / 4;
 }
 
-/* The plain-item sheet grew its own variant when the Grimoire checkbox became
-   its 11th counter (page capacity makes 12): rows 2-6 hold ten counters beside
-   the portrait, so the sixth counter row here is what keeps numbers 11 and 12
-   out of an implicit row under the tabs — the same measured failure the
-   spellbook block above records. */
-.plain-item.item-sheet-grid {
-    grid-template-rows: 46px 36px 36px 36px 36px 36px 36px 1fr;
-}
-
-.plain-item.item-sheet-grid .item-sheet-section-tabs {
-    grid-row-start: 8;
-    grid-row-end: 8;
-}
-
-/* A bound page's row sits indented under its Grimoire — the grouping is done in
-   the sheet context (pages re-inserted after the book's row); this is only the
-   visual step that says "these belong to that". */
-.cairn-items-list-row.grimoire-page {
-    margin-left: 18px;
+.book.item-sheet-grid .item-sheet-section-tabs,
+.spell.item-sheet-grid .item-sheet-section-tabs {
+    grid-row-start: 4;
+    grid-row-end: 4;
 }
 
 .small-resource-label {
@@ -1136,22 +1144,34 @@
     grid-row-end: 4;
 }
 
-/* Transport item sheet: five fields (Type / Slots / Bulky / Slow / Cost) were
-   crammed into tight 36px rows beside the portrait. Give them taller rows and a
-   roomier gap so the form breathes; the portrait spans the field rows and the
-   description takes the rest. */
-.transport.item-sheet-grid {
-    row-gap: 12px;
-    grid-template-rows: 46px 40px 40px 40px 1fr;
+/* `.transport.item-sheet-grid` stood here and went with the `transport` ITEM
+   type and its sheet. */
+
+/* A Libro page tab: the spell's name on one line, its text filling the rest.
+   The label sits beside the input rather than above it, so the editor keeps as
+   much of the tab as it can. */
+.book-page-name {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
-.transport.item-sheet-grid .item-sheet-section-portrait {
-    grid-row: 1 / 5;
+.book-page-name input {
+    flex: 1;
 }
 
-.transport.item-sheet-grid .item-sheet-section-tabs {
-    grid-row-start: 5;
-    grid-row-end: 5;
+/* The language gate's notice on a Libro's Descripción tab (book-sheet.html):
+   the reason the numbered page tabs are not there. Italic and quiet -- it is a
+   statement about the reader, not a warning about the document -- but boxed on
+   the left so it reads as chrome rather than as part of the description the
+   Warden wrote underneath it. */
+.book-language-locked {
+    border-left: 3px solid var(--ab-accent);
+    font-style: italic;
+    margin: 0 0 8px;
+    opacity: 0.85;
+    padding-left: 8px;
 }
 
 .weapon-desc-divider {
@@ -1342,25 +1362,16 @@
     text-shadow: 0 0 8px var(--color-level-error, #ce0707);
 }
 
-/* The "GLOG" word opening the flavor line of every GLOG cast card (the public
-   card and the caster's whisper, module/grimoire.js): each card names its
-   system, lit with the Die of Fate treatment (#die-of-fate-button) in the
-   magic violet (user ask, 2026-08-10). */
-.chat-message .glog-flavor-tag {
-    font-weight: 700;
-    text-shadow: 0 0 8px var(--ab-glog);
-}
-
 /* A dice-resolved value inside a cast card's effect text ([sum]/[dice]/[dado]
-   and their arithmetic, resolveSpellText in module/grimoire.js): bold with a
-   dotted underline in the GLOG violet, the tooltip affordance — hovering
+   and their arithmetic, resolveSpellText in module/magic.js): bold with a
+   dotted underline in the magic violet, the tooltip affordance — hovering
    shows the authored expression behind the number (user ask, 2026-08-10).
    Bold alone would read as emphasis the author wrote; the dotted line says
-   "computed, hover me". Same pinned token as the tag above: chat tiles are
-   parchment in both themes. */
+   "computed, hover me". A PINNED token: chat tiles are parchment in both
+   themes, so the colour follows the tile rather than the scheme. */
 .chat-message .grimoire-resolved {
     font-weight: 700;
-    text-decoration: underline dotted var(--ab-glog);
+    text-decoration: underline dotted var(--ab-magic);
     text-decoration-thickness: 2px;
     text-underline-offset: 2px;
 }
@@ -3075,8 +3086,15 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 
 /* Fatigue fills inventory slots; give those rows the Die of Fate's teal
    signature (an --ab-accent-wash tint plus the same --ab-accent glow) so a
-   player can see at a glance how much of their load is fatigue. */
-.fatigue-row {
+   player can see at a glance how much of their load is fatigue.
+
+   A HECHIZO ROW GETS THE SAME TREATMENT (user ask): magic a character is
+   carrying should stand out of the pack list the way fatigue does. ONE rule
+   for both, deliberately — two copies of the same four declarations is where a
+   tint drifts. The class is added in templates/parts/items-list.html; the CSS
+   stays ignorant of item types. */
+.fatigue-row,
+.spell-row {
     background: var(--ab-accent-wash);
     box-shadow: 0 0 8px var(--ab-accent);
     text-shadow: 0 0 8px var(--ab-accent);

@@ -114,5 +114,37 @@
                                     {{/unless}}
                                 {{/if}}
                             </div>
+                            {{!-- Languages known. Same markup as the scars list above,
+                                  because it is the same gesture: a flat list of names,
+                                  none of them rolled for, ticked by hand. The source is
+                                  the Warden's setting, not a table. --}}
+                            <div class="scar-section language-section">
+                                <div class="scar-header">
+                                    <span class="scar-label">{{ localize 'CAIRN.LanguagesSection' }}</span>
+                                    {{#if languageOptions.length}}
+                                    <a class="scar-toggle" data-action="toggleLanguages" title="{{ localize 'CAIRN.ToggleLanguages' }}"><i
+                                            class="fas {{#if languagesCollapsed}}fa-plus-square{{else}}fa-minus-square{{/if}}"></i></a>
+                                    {{else}}
+                                    <span class="scar-display">{{ localize 'CAIRN.LanguagesEmpty' }}</span>
+                                    {{/if}}
+                                </div>
+                                {{#if languageOptions.length}}
+                                    {{#unless languagesCollapsed}}
+                                    <div class="scar-list">
+                                        {{#each languageOptions}}
+                                        <label class="scar-option">
+                                            <input type="checkbox" class="language-check" value="{{this.name}}"
+                                                {{#if this.selected}}checked{{/if}} />
+                                            <span class="scar-text">
+                                                <span class="scar-name">{{this.name}}</span>
+                                            </span>
+                                        </label>
+                                        {{/each}}
+                                    </div>
+                                    {{else}}
+                                    <span class="scar-display">{{#if languageDisplay}}{{languageDisplay}}{{else}}{{ localize 'CAIRN.NoneYet' }}{{/if}}</span>
+                                    {{/unless}}
+                                {{/if}}
+                            </div>
                         </div>
                         {{/if}}

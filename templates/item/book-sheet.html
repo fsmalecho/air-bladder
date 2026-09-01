@@ -1,0 +1,102 @@
+{{!-- No <form> here: ApplicationV2 supplies it (DocumentSheetV2 sets tag: "form").
+      A nested one is dropped by the parser, taking this element's class with it. --}}
+<div class="item-sheet-grid book">
+    <!-- Portrait -->
+    <div class="item-sheet-section-portrait">
+        <img class="portrait" src="{{item.img}}" data-action="editImage" data-edit="img" title="{{nameDisplay}}" />
+    </div>
+    <!-- Name -->
+    <div class="item-sheet-section-name">
+        <input class="name-input" type="text" name="name" value="{{nameDisplay}}"
+            placeholder="{{ localize 'CAIRN.Name' }}" />
+    </div>
+
+    <!-- Bulky. SHOWN AND DISABLED, not hidden: a Libro always takes two slots
+         (BOOK_PINNED in module/item/item.js pins it on every write), and a
+         player reading the sheet should be able to see the rule rather than
+         discover it from the slot count. Disabled inputs are not submitted, so
+         the box can never write anything either way -- the pin is what keeps
+         the stored value true. -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.bulky"
+            data-tooltip="{{ localize 'CAIRN.BookBulkyTip' }}">{{ localize 'CAIRN.Bulky' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="checkbox" checked disabled id="{{@root.idp}}-system.bulky" data-dtype="Boolean" />
+        </div>
+    </div>
+
+    <!-- Language. The options are the Warden's own list (the "Idiomas de la
+         ambientación" setting, read through content-packs.js `languages`), plus
+         a blank row for "not decided" and, when the stored value is no longer in
+         that list, the stored value itself so re-wording the setting cannot
+         silently blank a book. -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.language">{{ localize 'CAIRN.BookLanguage' }}</label>
+        <div class="resource-input-wrapper">
+            <select name="system.language" id="{{@root.idp}}-system.language" data-dtype="String">
+                <option value="" {{#if (eq system.language "")}}selected{{/if}}>{{ localize 'CAIRN.BookLanguageNone' }}</option>
+                {{#each bookLanguages as |lang|}}
+                <option value="{{lang}}" {{#if (eq lang ../system.language)}}selected{{/if}}>{{lang}}</option>
+                {{/each}}
+            </select>
+        </div>
+    </div>
+
+    <!-- Cost -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.cost">{{ localize 'CAIRN.Cost' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="text" name="system.cost" id="{{@root.idp}}-system.cost" value="{{system.cost}}"
+                data-dtype="Number" />
+        </div>
+    </div>
+
+    <!-- Quantity -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.quantity">{{ localize 'CAIRN.Quantity' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="text" name="system.quantity" id="{{@root.idp}}-system.quantity" value="{{system.quantity}}"
+                data-dtype="Number" />
+        </div>
+    </div>
+
+    <div class="item-sheet-section-tabs">
+        <nav class="tabs" data-group="primary">
+            {{#each tabs}}
+            <a class="item {{this.cssClass}}" data-action="tab" data-group="{{this.group}}"
+                data-tab="{{this.id}}">{{ localize this.label }}</a>
+            {{/each}}
+        </nav>
+        <section class="content">
+            <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
+                {{!-- The language gate, said out loud. Without a sentence here a
+                      locked book is a sheet that silently has one tab, which
+                      reads as a book with nothing written in it rather than one
+                      the holder cannot read. The numbered tabs and the page
+                      texts are both absent (item-sheet.js). --}}
+                {{#unless bookReadable}}
+                <p class="book-language-locked">{{ localize 'CAIRN.BookLanguageLocked' }}</p>
+                {{/unless}}
+                <prose-mirror name="system.description" value="{{system.description}}" toggled collaborate relative
+                    data-document-uuid="{{item.uuid}}">{{{enrichedDescription}}}</prose-mirror>
+            </div>
+            {{!-- One numbered tab per page, built from the SAME three entries the
+                  tab list above is (item-sheet.js `_prepareBook` / EXTRA_TABS),
+                  so a page and its tab cannot get out of step. Each holds the
+                  spell's name and the spell's text; leaving both empty is how a
+                  book has fewer than three spells in it. --}}
+            {{#each bookPages as |page|}}
+            <div class="tab {{lookup (lookup @root.tabs page.tab) 'cssClass'}}" data-group="primary"
+                data-tab="{{page.tab}}">
+                <div class="book-page-name">
+                    <label for="{{@root.idp}}-page-{{page.key}}">{{ localize 'CAIRN.BookPageName' }}</label>
+                    <input type="text" name="system.pages.{{page.key}}.name" id="{{@root.idp}}-page-{{page.key}}"
+                        value="{{page.name}}" data-dtype="String" />
+                </div>
+                <prose-mirror name="system.pages.{{page.key}}.text" value="{{page.text}}" toggled collaborate relative
+                    data-document-uuid="{{@root.item.uuid}}">{{{page.enrichedText}}}</prose-mirror>
+            </div>
+            {{/each}}
+        </section>
+    </div>
+</div>

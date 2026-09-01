@@ -1,0 +1,197 @@
+MONDOLME — Fase 5: tipos de objeto y magia
+=============================================
+
+Sobre la fase 3 ya aplicada.
+Es la fase más intrincada hasta ahora: cambia los tipos de objeto y reescribe
+por completo el sistema de magia.
+
+
+CÓMO APLICARLO (4 pasos)
+------------------------
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. En tu carpeta del repositorio, borra estas CINCO carpetas completas:
+
+     module
+     tools
+     lang
+     css
+     templates
+
+3. Descomprime el ZIP dentro de la carpeta del repositorio y reemplaza
+   system.json y package.json cuando Windows pregunte.
+
+4. Commit y push, por ejemplo:
+
+     Fase 5: tipos de objeto, munición y magia
+
+
+LOS TIPOS DE OBJETO
+-------------------
+
+Antes eran siete. Ahora seis:
+
+     Artículo      (antes se llamaba "Objeto")
+     Arma
+     Armadura
+     Trasfondo
+     Libro         NUEVO
+     Hechizo       NUEVO
+
+Desaparecen "Objeto" (el genérico, que era un duplicado empobrecido de
+Artículo), "Transporte" y "Grimorio" (que era una casilla dentro de Artículo,
+y ahora es el tipo Libro).
+
+Ojo: el ROL de actor llamado "transporte" NO se ha tocado. Sigue existiendo,
+igual que compañero y contenedor. Lo que desaparece es el tipo de OBJETO.
+
+
+ARMAS A DISTANCIA Y MUNICIÓN
+----------------------------
+
+El arma tiene una casilla nueva, "A distancia". Al marcarla:
+
+  - aparece una etiqueta "A distancia" junto al arma en el inventario;
+  - las casillas "usos" pasan a llamarse "Munición" y "Munición máx.";
+  - en el inventario ya no salen círculos sino un número: 15/20.
+
+Al tirar el daño de un arma a distancia se gasta una munición. Si no queda
+ninguna, la tirada se rechaza con el aviso "No queda munición para esta arma".
+
+Dos detalles de cómo lo dejé, por si no coinciden con lo que imaginabas:
+el gasto ocurre DESPUÉS de la ventana de calidad del daño (si la cierras no
+gastas nada) y ANTES de la tirada (un fallo también consume la flecha).
+
+
+EL LIBRO
+--------
+
+Siempre voluminoso: ocupa 2 espacios y la casilla no se puede desmarcar.
+
+Tiene cuatro pestañas: "Descripción", "1", "2" y "3". Cada pestaña numerada
+lleva el nombre del hechizo y su texto. Las páginas vacías se ignoran.
+
+En el inventario aparece como "Libro — (nombre)", y debajo se leen sus
+páginas en cursiva, con la forma "1. Nombre del hechizo: texto", igual que
+la recarga de las reliquias.
+
+Tiene una casilla para elegir el idioma en que está escrito, de la lista que
+definiste en Configuración general.
+
+
+EL HECHIZO
+----------
+
+Siempre ocupa 1 espacio, ni voluminoso ni insignificante, y no se puede
+cambiar. En el inventario aparece como "Hechizo — (nombre)" y con el mismo
+resaltado que tiene la fatiga.
+
+No se puede arrastrar a otro actor, solo eliminar. Está impedido por dos
+sitios a la vez (el aviso al soltarlo y el rechazo al crearlo), que es como
+el sistema hace este tipo de reglas.
+
+Tiene una casilla "Pergamino". Al marcarla el hechizo pasa a ser
+insignificante (0 espacios) y en el inventario aparece como
+"Pergamino — (nombre)".
+
+
+LA MAGIA
+--------
+
+La magia GLOG ya no es una variante opcional: es la única forma de magia que
+tiene el sistema, y la palabra "GLOG" ha desaparecido por completo — del
+código, de los ajustes, de la ficha y de las tarjetas de chat.
+
+Se ha eliminado module/glog.js entero, el ajuste "Magia GLOG", la casilla
+GLOG del objeto y la mecánica de transfigurar hechizos en el grimorio.
+
+Lo que se conserva, ahora como estándar: los dados mágicos son tus espacios
+de inventario libres (máximo 4), cada dado de 4 o más causa una fatiga, y
+sacar dobles provoca un percance de la tabla "Percances".
+
+module/grimoire.js pasa a llamarse module/magic.js, porque ya no va de
+grimorios sino de libros, hechizos y pergaminos.
+
+Hay tres formas de lanzar:
+
+  Desde un LIBRO: cada libro tiene su propio botón de lanzar, así que al
+  pulsarlo ya sabes de qué libro tiras. Te ofrece solo las páginas escritas.
+
+  Un HECHIZO: se lanza a sí mismo. Su nombre es el del hechizo y su
+  descripción es el texto. Sin selector de páginas.
+
+  Un PERGAMINO: antes de tirar nada te pregunta
+
+      "La magia deshace el papel del pergamino, ¿estás seguro de que
+       quieres lanzarlo?"
+
+  Si aceptas, se lanza y el pergamino se borra del inventario. Si cancelas,
+  no se gasta ni se tira nada.
+
+
+IDIOMAS
+-------
+
+La lista de idiomas que escribiste en Configuración general ya se usa.
+
+En la ficha de personaje y de PNJ, junto a las cicatrices, hay un bloque
+"Idiomas" donde marcas los que conoce, exactamente igual que las cicatrices.
+
+Un libro escrito en un idioma que el actor no conoce muestra solo su
+Descripción: las tres pestañas de páginas desaparecen, y al intentar lanzar
+desde él avisa de que no lo entiendes.
+
+Cómo resolví los casos raros:
+  - Libro sin idioma asignado: lo lee cualquiera. Un campo vacío no es un
+    candado.
+  - Libro que no pertenece a nadie (en un compendio o en la barra lateral):
+    se ve entero, no hay lector a quien comprobar.
+  - El Guardián lo ve todo siempre.
+
+Nota: los idiomas ticados se conservan aunque después edites la lista en los
+ajustes y quites uno. El actor conserva lo que se le dio hasta que alguien lo
+desmarque a mano.
+
+
+DECISIONES QUE CONVIENE QUE REVISES
+-----------------------------------
+
+1. "Cada concesión de hechizo se convierte en pergamino" era una regla de
+   GLOG que NO he dejado encendida. Existía porque la magia encontrada era un
+   pergamino que copiabas a tu grimorio, y ese gesto de copiar ya no existe.
+   Ahora un Hechizo se lanza directamente y es permanente, así que forzar que
+   toda concesión fuera papel de un solo uso repartiría magia imposible de
+   conservar. Las concesiones que dicen "Pergamino (X)" siguen dando
+   pergaminos; las que dicen "Hechizo (X)" dan un Hechizo.
+
+2. Los prefijos del inventario usan raya larga con espacios ("Libro — X"),
+   no guion corto, para no romper con los que ya había. Dime si prefieres el
+   guion.
+
+3. Ya no hay límite de un libro por personaje (antes solo se permitía un
+   grimorio). No lo pediste, así que lo quité en vez de conservarlo.
+
+4. El Libro y el Hechizo llevan casillas de Coste y Cantidad aunque no las
+   pediste: sin Coste no se les puede poner precio en el mercado.
+
+5. Las páginas del libro son tres campos fijos en los datos (uno, dos, tres)
+   y no una lista. Es lo que permite declararlas como texto enriquecido y lo
+   que deja escrito en el propio esquema que son exactamente tres.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 124 archivos de código pasan la comprobación de sintaxis.
+- system.json, package.json y lang/es.json son JSON válido.
+- Todas las importaciones apuntan a archivos que existen.
+- Los seis tipos de objeto tienen su plantilla, y no sobra ninguna.
+- Todos los textos que usa el código existen en el idioma español.
+- Cero apariciones de "GLOG" en el código, las plantillas, los estilos, el
+  idioma o system.json.
+
+
+SIGUIENTE: Fase 6 — el objeto Trasfondo (características iniciales, tablas
+de preguntas con su dado, bonificaciones por respuesta, idiomas de inicio y
+la fórmula de edad, que se muda aquí desde los ajustes).

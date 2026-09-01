@@ -77,11 +77,6 @@
   ul.inv { list-style: none; }
   ul.inv li { border-bottom: 1px dashed #999; padding: 0.1rem 0; }
   ul.inv li .notes { color: #333; font-style: italic; }
-  /* A Grimoire's pages are indented under it, which is how the paper page says
-     what the inventory's "Page" chip says on screen (a chip would read as a
-     badge here). The em is deliberate: it survives both paper sizes, where a
-     percentage indent does not. */
-  ul.inv li.page { padding-left: 1.4em; }
   .inv-head { font-style: italic; font-weight: bold; margin: 0.5rem 0 0.2rem; }
   ul.plain { list-style: none; }
   ul.plain li { margin-bottom: 0.35rem; }
@@ -226,14 +221,14 @@
   <div class="inv-head">{{ localize "CAIRN.PrintSlotsUsed" }}{{#if main.showSlots}} ( {{ main.used }} / {{ main.max }} ){{/if}}</div>
   <ul class="inv">
     {{#each main.rows}}
-    <li{{#if page}} class="page"{{/if}}>{{ name }}{{#if notes}} <span class="notes">{{ notes }}</span>{{/if}}</li>
+    <li>{{ name }}{{#if notes}} <span class="notes">{{ notes }}</span>{{/if}}</li>
     {{/each}}
   </ul>
   {{#each containers}}
   <div class="inv-head">{{ name }}{{#if showSlots}} ( {{ used }} / {{ max }} ){{/if}}</div>
   <ul class="inv">
     {{#each rows}}
-    <li{{#if page}} class="page"{{/if}}>{{ name }}{{#if notes}} <span class="notes">{{ notes }}</span>{{/if}}</li>
+    <li>{{ name }}{{#if notes}} <span class="notes">{{ notes }}</span>{{/if}}</li>
     {{/each}}
   </ul>
   {{/each}}

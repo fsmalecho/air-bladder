@@ -219,9 +219,7 @@ const vitals = () => ({
  * number on character/hireling (the equipment-limit dialog) and `{value: N}` on
  * npc/container (capacity) — the same name carrying two shapes, which is why
  * `template.json` declaring a bare Number left `calcCurrentMaxSlots` reading
- * `.value` off it and NPCs could not hold anything at all. A plain number also
- * makes minting a container from a bought transport a straight copy, since
- * `Item.transport.slots` is a plain number too.
+ * `.value` off it and NPCs could not hold anything at all.
  */
 const capacity = () => int(0);
 
@@ -300,6 +298,13 @@ class CharacterData extends CairnDataModel {
       armorOverride: optInt(),
       gold: purse(),
       slots: capacity(),
+      // The languages this character knows. A list of plain strings, each one a
+      // name from the Warden's own list (`languages()` in content-packs.js,
+      // split from the comma-separated setting) — stored by NAME rather than by
+      // index, so re-ordering or re-wording that setting never silently
+      // re-languages a character. The SHEET's picker is a later phase; the
+      // field exists now so the data has somewhere to land.
+      languages: strList(),
       // ORPHANED since 2026-08-09 (user ruling): the Features UI went — nothing
       // renders or writes this field any more — but it STAYS declared, so
       // anything a Warden recorded survives on the document. `description`
@@ -410,6 +415,11 @@ class NpcData extends CairnDataModel {
       traits: traits(),
       scarEnabled: bool(),
       scars: strList(),
+      // The languages this person knows — the same field, and the same rules,
+      // as CharacterData's above. On the shared model because a schema cannot
+      // vary by role: a crate carries an empty list nobody reads, which costs
+      // nothing next to two models drifting apart.
+      languages: strList(),
       // What this actor IS to the party — the one discriminator (NPC_ROLES
       // above). Replaces `forHire` and `inanimate`, both of which migrateData
       // below still reads so pre-roles documents derive the right value.
@@ -585,8 +595,9 @@ class NpcData extends CairnDataModel {
    the owner-side `containers` uuid array on CharacterData/NpcData, the other
    half of the same two-way link (see CairnActor#connectedActors, which had
    promised exactly that: "that half goes away with `keeper` itself").
-   `transportKind` survives on the `transport` ITEM type, which is a separate
-   retirement — see docs/npc-roles-plan.md.
+   `transportKind` outlived this on the `transport` ITEM type, which the
+   item-type rewrite has since retired too — see the note where TransportData
+   used to be, below.
 
    HirelingData is gone the other way — folded into NpcData above, which the
    `hireling` type still points at (see ACTOR_DATA_MODELS). That one IS an alias
@@ -654,32 +665,33 @@ class ItemData extends CairnDataModel {
       // and `item` types, and items-list.html renders the tag. No shipped item
       // carries a non-zero value, but a Warden's homebrew amulet can.
       armor: optInt(),
-      // A GLOG Grimoire (the official GLOG Magic hack, rebuilt 2026-08-09 as an
-      // ITEM after the npc-role book was ditched). A FLAG, not a type, by the
-      // relic argument above: the book is an ordinary bulky item that happens
-      // to hold spells, and a type could never be un-become. `grimoirePages`
-      // is the Warden-set page capacity the transmute flow enforces; it means
-      // nothing while `grimoire` is false, which is why it is not a shared
-      // field. At most ONE grimoire per character — enforced in CairnItem
-      // _preCreate and the drop handler, not here (schemas describe one
-      // document; the wall is a statement about the actor's whole inventory).
-      grimoire: bool(),
-      grimoirePages: int(10),
-      // THIS BOOK'S IDENTITY, minted once in CairnItem._preCreate and carried
-      // for the document's whole life (issue #17, 2026-08-16). A page names its
-      // book by this key, which is why it cannot be the item's `_id`: a book
-      // moving between sheets is a create-then-delete, so its id changes on
-      // every journey while `system` copies across verbatim. Empty on a
-      // document written before the field existed; migrateGrimoirePages stamps
-      // those, and every reader tolerates the blank meanwhile.
-      grimoireKey: str(),
+      /* `grimoire`, `grimoirePages` and `grimoireKey` stood here and are GONE
+         (the item-type rewrite). A spellbook was a FLAG on this type — an
+         ordinary bulky item that happened to hold spells, with bound `spellbook`
+         pages naming it by key. Books are a TYPE now (`book` below), carrying
+         their three spells inline, so there is nothing left for a flag, a page
+         capacity or a book identity to mean. Do not re-add them. */
     };
   }
 }
 
 class WeaponData extends CairnDataModel {
   static defineSchema() {
-    return { ...universal(), ...withDamage(), ...consumable(), ...relicFields() };
+    return {
+      ...universal(),
+      ...withDamage(),
+      ...consumable(),
+      ...relicFields(),
+      // A bow, a sling, a crossbow: a weapon fired rather than swung. It changes
+      // three things and none of them is the damage formula — the row shows a
+      // tag, the shared `uses` counter renders as a number pair instead of the
+      // circle icons, and rolling damage spends one of it (the sheet's
+      // #onRollDamage). The counter itself stays `uses`, deliberately: ammunition
+      // IS a use count, and a second field would be a second thing to keep in
+      // step with the +/- controls the row already has. Only the LABELS change,
+      // on the weapon sheet ("Munición" / "Munición máx.").
+      ranged: bool(),
+    };
   }
 }
 
@@ -690,68 +702,103 @@ class ArmorData extends CairnDataModel {
 }
 
 /**
- * A spellbook, and — with `scroll` ticked — a spellscroll.
+ * The three page keys a `book` carries, in the order its sheet tabs show them.
+ *
+ * A LIST, exported, because three surfaces have to agree about it — the sheet's
+ * numbered tabs, the sheet template's three name/text pairs, and the inventory
+ * row's "1. Nombre: texto" lines — and a fourth would agree with none of them.
+ * The keys are words rather than digits because a schema key of "1" reads as an
+ * array index everywhere it is written down, and this is not an array.
+ */
+export const BOOK_PAGE_KEYS = ["one", "two", "three"];
+
+/**
+ * A Libro: a physical book of spells, three pages long.
+ *
+ * A TYPE, not the flag its Grimoire ancestor was, and the three pages are why.
+ * A flag can say "this item is a book"; it cannot give the item three
+ * `{name, text}` pairs without putting them on every dagger in the game, and a
+ * strict schema has no way to say "these fields exist only when that flag is on".
+ *
+ * The pages are a SchemaField of exactly three named pairs rather than an
+ * ArrayField, and that is deliberate on both counts:
+ *
+ *   - EXACTLY THREE is the rule, so the schema states it rather than a length
+ *     check somewhere else stating it. A fourth page is unrepresentable.
+ *   - Each `text` gets a real, addressable path (`pages.one.text`), which is
+ *     what system.json's `htmlFields` needs to name it. An array's members have
+ *     no such path, so an HTMLField inside one is an editor the manifest cannot
+ *     declare.
+ *
+ * A page left blank is a book with fewer than three spells in it — every reader
+ * (the sheet's tabs, the inventory lines, the cast picker) skips a page whose
+ * name and text are both empty. Nothing marks "used"; blankness is the marker.
+ *
+ * ALWAYS BULKY, and the pin is in `CairnItem` (BOOK_PINNED) rather than a schema
+ * `initial` here. An initial is a default a Warden can untick; the rule is that a
+ * book takes two slots, full stop, which is a statement about every write and
+ * therefore belongs where SCROLL_PINNED already lives. The sheet shows the box
+ * disabled so the invariant is visible rather than merely enforced.
+ */
+class BookData extends CairnDataModel {
+  static defineSchema() {
+    return {
+      ...universal(),
+      // The language the book is WRITTEN IN — one name from the Warden's own
+      // list (`languages()` in content-packs.js). A free string with no
+      // `choices`, for the same reason NpcData.containerClass is: the sheet
+      // offers the configured list as a <select>, and a book authored under a
+      // list the Warden has since re-worded must still load rather than fail
+      // enum validation on a value nobody can now type.
+      language: str(),
+      pages: new fields.SchemaField(Object.fromEntries(
+        BOOK_PAGE_KEYS.map((k) => [k, new fields.SchemaField({
+          // The SPELL's name, not the page's — a page is only where the spell
+          // sits. Plain text: it is rendered into the inventory line and the
+          // cast picker, both of which escape it.
+          name: str(),
+          // The spell's own words. HTML, like `description`, and declared in
+          // system.json's htmlFields under this exact path.
+          text: html(),
+        })])
+      )),
+    };
+  }
+}
+
+/**
+ * A Hechizo, and — with `scroll` ticked — a Pergamino.
  *
  * A scroll is NOT a type, for the same reason a relic is not (see relicFields
  * above), only more so: given the rule that every spellscroll is petty and
- * single-use, a scroll carries no data a spellbook does not. It is a spellbook
- * with two values pinned, and its text IS the spell's text. A `spellscroll` type
+ * single-use, a scroll carries no data a spell does not. It is the same spell
+ * with two values pinned, and its text IS the spell's text. A `pergamino` type
  * would duplicate this model and its sheet to express that, and because Foundry
- * treats a document's `type` as immutable, a book could never become a scroll.
+ * treats a document's `type` as immutable, a spell could never become a scroll.
  *
- * `uses` exists ONLY to serve the scroll case — a book has no uses — which is why
- * the sheet shows the counter only when `scroll` is ticked. The invariant itself
- * (petty, max 1 use, not equippable) is enforced on the document in
- * `CairnItem._preCreate`/`_preUpdate`, not here, so that EVERY path agrees: the
- * sheet checkbox, generation, a drag-and-drop copy, and `createOwnedItem` (which
- * rewrites `system.weightless` from a top-level field and would otherwise quietly
- * un-petty a scroll).
+ * ONE SLOT, ALWAYS — never bulky, never petty — until `scroll` is ticked, and
+ * then petty and single-use. Both halves are pinned on the document in
+ * `CairnItem._preCreate`/`_preUpdate` (SPELL_PINNED / SCROLL_PINNED), not with
+ * schema initials here, so that EVERY path agrees: the sheet checkbox,
+ * generation, a drag-and-drop copy, and `createOwnedItem` (which rebuilds
+ * `system.weightless` from a top-level field and would otherwise quietly
+ * un-petty a scroll). `uses.value` stays free so a player can mark a scroll
+ * spent; only `max` is pinned.
  *
- * `uses.value` stays free so a player can mark a scroll spent; only `max` is
- * pinned.
- *
- * `glog` marks the GLOG-format wording of a spell (the official GLOG Magic
- * hack re-words the canon 100 to scale on [dice]/[sum]). A FLAG, not a type,
- * by the same argument as `scroll` — a GLOG spell carries no data a spellbook
- * does not, and it must COMPOSE with `scroll` because GLOG scrolls are real
- * ("they work exactly the same as spells recorded in your Grimoire") — and
- * not a second description field, because the GLOG text is usually different
- * from canon but occasionally byte-identical (Sniff, Hear Whispers), so
- * neither wording can be derived from the other: two documents, one flag
- * each. No per-spell GLOG properties exist to store — the hack states range
- * and duration once, page-wide ("[sum]×10 minutes", "40 feet"), and the
- * [dice]/[sum] variables live inside the effect sentence, which stays prose
- * (no automation of mechanical text).
+ * A SECOND BOOLEAN stood beside `scroll` and is GONE. It marked which of two
+ * WORDINGS a spell carried — the canon text, or the one an optional rules
+ * variant re-worded to scale on [dice]/[sum] — so a world-wide conversion could
+ * tell what it had already swapped. Those rules are simply how magic works now,
+ * there is no second wording to distinguish, and the conversion that was the
+ * flag's only writer is gone. Do not re-add it.
  */
-class SpellbookData extends CairnDataModel {
+class SpellData extends CairnDataModel {
   static defineSchema() {
     return {
       ...universal(),
       ...consumable(),
       scroll: bool(),
-      glog: bool(),
-      // A page BOUND into a carried Grimoire (transmuted spellbook or scroll).
-      // A flag by the same argument as `scroll` — a page carries no data a
-      // spellbook does not — and one-directional by ruling (2026-08-09, #12):
-      // binding is forever, so CairnItem._preUpdate strips any write that
-      // clears it. A bound page is weightless (PAGE_PINNED), never equippable,
-      // never a scroll, and travels with the Grimoire when the book moves.
-      bound: bool(),
-      // WHICH Grimoire — the book's `grimoireKey`, written by the transmute
-      // (issue #17, 2026-08-16). `bound` alone answers "is this page in a
-      // book", which is the whole question on a CHARACTER, who may carry only
-      // one; it is not the question on a pile, which may hold a library. With
-      // only the boolean, dragging one book out of a two-book pile took every
-      // page in it, past its own capacity, and left the other book empty.
-      // Blank on a page bound before the field existed — see grimoireKey.
-      boundTo: str(),
     };
-  }
-}
-
-class ObjectData extends CairnDataModel {
-  static defineSchema() {
-    return { ...universal(), ...consumable(), ...relicFields() };
   }
 }
 
@@ -806,18 +853,22 @@ class BackgroundData extends CairnDataModel {
   }
 }
 
-/** A wagon, cart, mule or backpack — capacity that becomes a container Actor when owned. */
-class TransportData extends CairnDataModel {
-  static defineSchema() {
-    return {
-      ...universal(),
-      transportKind: str("worn"),
-      slots: int(0),
-      load: int(0),
-      slow: bool(),
-    };
-  }
-}
+/* TransportData is gone, and with it the `transport` ITEM type — the retirement
+   the container fold above promised ("`transportKind` survives on the
+   `transport` ITEM type, which is a separate retirement"). A wagon, cart, mule
+   or backpack is an npc ACTOR with `slots` and a `containerClass`, and has been
+   since the container type went; the Item was the last copy of the same idea,
+   carrying a second capacity model (`slots`/`load`/`slow`) and a second
+   vocabulary (`transportKind`) that only the marketplace's legacy branch still
+   read. `transportKind`, `load` and `slow` lived ONLY here and went with it.
+
+   The ACTOR role "transport" is a different thing entirely and is untouched —
+   see NPC_ROLES and THING_ROLES at the top of this file.
+
+   ObjectData is gone the same way. The `object` type was a second `item` with a
+   different label: universal + uses + relic, which is `ItemData` minus the armor
+   field nothing shipped a value for. One type for "a thing you carry" is the
+   whole point of the rewrite. */
 
 /* -------------------------------------------- */
 
@@ -845,8 +896,7 @@ export const ITEM_DATA_MODELS = {
   item: ItemData,
   weapon: WeaponData,
   armor: ArmorData,
-  spellbook: SpellbookData,
-  object: ObjectData,
   background: BackgroundData,
-  transport: TransportData,
+  book: BookData,
+  spell: SpellData,
 };

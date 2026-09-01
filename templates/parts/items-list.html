@@ -19,7 +19,11 @@
   </span>
 </div>
 {{#each items as |item id|}}
-<div class="cairn-items-list-row {{#if item.system.isFatigue}}fatigue-row{{/if}}{{#if item.system.bound}} grimoire-page{{/if}}" data-item-id="{{item._id}}">
+{{!-- `spell-row` gets the Fatigue row's tint. ONE source of truth for that
+      tint: css/cairn.css declares the rule once, for both class names — see
+      `.fatigue-row, .spell-row`. Adding the class here rather than widening the
+      selector to `[data-item-type]` keeps the CSS ignorant of item types. --}}
+<div class="cairn-items-list-row {{#if item.system.isFatigue}}fatigue-row{{/if}}{{#if (eq item.type "spell")}} spell-row{{/if}}" data-item-id="{{item._id}}">
   <div class="cairn-items-list-row-header">
     <div class="cairn-item-name-and-tags">
       {{#if item.system.useItemIcons}}
@@ -27,19 +31,22 @@
       {{/if}}
       <a class="cairn-item-title" data-action="itemDescription">
         {{#markItemUsed item}}
-        {{#boldIf item.system.equipped}}{{#if (eq item.type "spellbook")}}{{ spellbookPrefix item.name item.system.scroll item.system.bound }}{{/if}}{{item.name}}{{/boldIf}}
+        {{#boldIf item.system.equipped}}{{ spellNamePrefix item.name item.type item.system.scroll }}{{item.name}}{{/boldIf}}
         {{/markItemUsed}}
       </a>
-      {{!-- The grant tag says how the CARRIER came by an item. A bound page is
-            not the carrier's, it is the book's — and the thing a background
-            actually handed over was a spellscroll, which stopped existing when
-            it was written into the Grimoire (user ruling 2026-08-16). Same
-            reasoning as the Weightless suppression below. --}}
-      {{#if item.system.grantLabel}}{{#unless item.system.bound}}
+      {{!-- The grant tag says how the CARRIER came by an item. Its bound-page
+            exception went with pages: every row in this list is now something
+            the carrier holds in its own right. --}}
+      {{#if item.system.grantLabel}}
       <div class="cairn-item-tag cairn-grant-tag">{{item.system.grantLabel}}</div>
-      {{/unless}}{{/if}}
+      {{/if}}
       {{#if item.system.blast}}
       <div class="cairn-item-tag">{{ localize 'CAIRN.Blast' }}</div>
+      {{/if}}
+      {{!-- A ranged weapon says so beside its name: it is what decides whether
+            the damage roll spends ammunition, so the row has to show it. --}}
+      {{#if item.system.ranged}}
+      <div class="cairn-item-tag">{{ localize 'CAIRN.Ranged' }}</div>
       {{/if}}
       {{!-- Format keys, not "<number> <noun>" — the same rule (and the same two
             keys) as the marketplace chips and the item-sheet chips, which carry
@@ -57,21 +64,24 @@
       {{#if item.system.criticalDamage}}
       <div class="cairn-item-tag">{{ localize 'CAIRN.CriticalDamage' }}</div>
       {{/if}}
-      {{!-- A bound page's row says "Page", and Weightless is suppressed the same
-            way it is for a container item: the Page chip already implies the
-            book carries it, and two chips saying one thing is drift bait. --}}
-      {{#if item.system.bound}}
-      <div class="cairn-item-tag">{{ localize 'CAIRN.GrimoirePage' }}</div>
-      {{/if}}
-      {{#if item.system.weightless}}{{#unless item.system.isContainerItem}}{{#unless item.system.bound}}
+      {{#if item.system.weightless}}{{#unless item.system.isContainerItem}}
       <div class="cairn-item-tag">{{ localize 'CAIRN.Weightless' }}</div>
-      {{/unless}}{{/unless}}{{/if}}
+      {{/unless}}{{/if}}
       {{#if (gt item.system.quantity 1)}}
       <div class="cairn-item-tag">{{ localize 'CAIRN.NQuantity' n=item.system.quantity }}</div>
       {{/if}}
 
 
+      {{!-- Uses, two ways. AMMUNITION reads as a number pair ("15/20") because
+            twenty circles is a smear rather than a count; everything else keeps
+            the circles, which are readable at the two or three uses a relic or
+            a potion has. The branch is `usesAsNumbers`, DERIVED in
+            CairnItem.prepareData from the weapon's `ranged` flag — not a second
+            stored field that could disagree with it. --}}
       <div class="cairn-item-uses">
+        {{#if item.system.usesAsNumbers}}
+        <span class="cairn-item-ammo">{{item.system.uses.value}}/{{item.system.uses.max}}</span>
+        {{else}}
         {{#times item.system.uses.max}}
         {{#if (gt item.system.uses.value @index)}}
         <i class="fa-solid fa-circle"></i>
@@ -79,6 +89,7 @@
         <i class="fa-regular fa-circle"></i>
         {{/if}}
         {{/times}}
+        {{/if}}
       </div>
       
 
@@ -104,23 +115,23 @@
       {{/if}}
       {{/if}}
 
-      {{#if item.system.canTransmute}}
-      <a class="item-control page-transmute" data-action="pageTransmute"
-        title="{{ localize 'CAIRN.GrimoireTransmute' }}">
-        <i class="fas fa-book-medical"></i>
-      </a>
-      {{/if}}
-
+      {{!-- Cast from THIS Libro. One control per book, so a character carrying
+            two of them casts from the one whose row they clicked. Set only when
+            the book has a written page AND the carrier reads its language
+            (actor-sheet.js; module/magic.js re-derives both). --}}
       {{#if item.system.canCast}}
-      <a class="item-control grimoire-cast" data-action="grimoireCast"
+      <a class="item-control grimoire-cast" data-action="bookCast"
         title="{{ localize 'CAIRN.GrimoireCastHint' }}">
         <i class="fas fa-hand-sparkles"></i>
       </a>
       {{/if}}
 
-      {{#if item.system.canCastScroll}}
-      <a class="item-control scroll-cast" data-action="scrollCast"
-        title="{{ localize 'CAIRN.ScrollCastHint' }}">
+      {{!-- Cast this Hechizo. The hint is the one difference a Pergamino makes
+            on the row: reading it destroys it, and the tooltip says so before
+            the confirmation does. --}}
+      {{#if item.system.canCastSpell}}
+      <a class="item-control scroll-cast" data-action="spellCast"
+        title="{{#if item.system.scroll}}{{ localize 'CAIRN.ScrollCastHint' }}{{else}}{{ localize 'CAIRN.SpellCastHint' }}{{/if}}">
         <i class="fas fa-hand-sparkles"></i>
       </a>
       {{/if}}

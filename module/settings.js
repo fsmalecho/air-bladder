@@ -35,7 +35,7 @@ export const SETTING_KEYS = [
   "pack-items", "languages",
   "use-panic", "use-cairn-dice-notation", "use-item-icons", "show-grant-tags",
   "show-grant-tags-print", "show-omens",
-  "use-warden-title", "change-log", "auto-record-scars", "enable-glog-magic",
+  "use-warden-title", "change-log", "auto-record-scars",
   // Character Generation
   "content-source-2e", "content-source-custom", "content-source-barebones",
   "barebones-failed-career", "show-generate-header",
@@ -43,18 +43,18 @@ export const SETTING_KEYS = [
   // disabled-backgrounds is Warden CONFIGURATION (which 2e backgrounds are
   // switched off), not a migration marker — it must ride the namespace
   // migration like custom-portrait-list does. It was registered without being
-  // listed here (review #9); the six completion markers (roles-restamped,
-  // companion-restamped, hireling-split, grimoire-keys-stamped,
-  // connections-migrated, art-migration-generation) stay unlisted on purpose.
+  // listed here (review #9); the five completion markers (roles-restamped,
+  // companion-restamped, hireling-split, connections-migrated,
+  // art-migration-generation) stay unlisted on purpose.
   // Every one of them dates
   // from AFTER the namespace move, so there is no "cairn.<key>" value for this
   // list to carry across — listing them would iterate keys that cannot exist.
   //
   // The old wording here said the reason was that losing a marker only re-runs
-  // an idempotent migration. True of the other four — the grimoire stamp skips
-  // anything already keyed — and NOT true of `hireling-split`, which selects on
-  // a stored `role: "npc"` that a real NPC also carries once it has run. Do not
-  // reason about any new marker from that sentence; reason about the migration.
+  // an idempotent migration. True of most of them, and NOT true of
+  // `hireling-split`, which selects on a stored `role: "npc"` that a real NPC
+  // also carries once it has run. Do not reason about any new marker from that
+  // sentence; reason about the migration.
   "custom-portrait-folder", "custom-portrait-list", "age-formula",
   "disabled-backgrounds",
   // Internal but CONFIGURATION, not a marker: the parked-Connections flag
@@ -135,7 +135,7 @@ export const INTERNAL_SETTING_KEYS = [
 
 /**
  * The Warden's settings, as SUBMENUS (2026-08-22, user ruling: "one submenu
- * per group" — four of them, once GLOG & Other Hacks was asked for the same
+ * per group" — four of them, once the rule-hacks menu was asked for the same
  * day): the main Configure Settings window shows one button per group under
  * Mondolme and nothing else, and each opens a small application holding
  * that group's rows — see `settings-menus.js`. Every key listed here is
@@ -213,15 +213,18 @@ export const SETTING_GROUPS = [
     ],
   },
   {
-    // The optional rule hacks, in a menu of their own (2026-08-22, user ask):
-    // the GLOG Magic conversion and the Knave-style failed career for Barebones
-    // characters, moved out of General and Character Generation respectively.
+    // The optional rule hacks, in a menu of their own (2026-08-22, user ask).
+    // Down to ONE member: the Knave-style failed career for Barebones
+    // characters, moved out of Character Generation. The magic hack that used
+    // to sit beside it is not a hack any more — those rules ARE the magic
+    // rules of this system, with no setting to switch them off — so the group
+    // is kept for the member it still has rather than for the pair it began as.
     id: "hacks",
     title: "CAIRN.Settings.GroupHacks",
     button: "CAIRN.Settings.GroupHacksButton",
     hint: "CAIRN.Settings.GroupHacksHint",
     icon: "fa-solid fa-flask",
-    keys: ["enable-glog-magic", "barebones-failed-career"],
+    keys: ["barebones-failed-career"],
     // The failed career is meaningless unless Barebones sheets are offered —
     // and that master checkbox lives in the Character Generation menu, not
     // here, so this app greys the row from the STORED value at render instead
@@ -307,18 +310,10 @@ export const registerSettings = () => {
     default: 0,
   });
 
-  // Completion marker for the Grimoire page-key stamp (issue #17, 2026-08-16):
-  // every book gets an identity, every bound page names its own. Marker-gated
-  // rather than state-gated for the usual reason — an unkeyed page can also be
-  // one a Warden has legitimately left unmatched (the migration leaves the
-  // unreadable case alone on purpose), and a state test would re-ask that
-  // question on every load. `config: false`: internal, in no submenu.
-  game.settings.register(SETTINGS_NS, "grimoire-keys-stamped", {
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-  });
+  /* `grimoire-keys-stamped` was registered here and is GONE with
+     `migrateGrimoirePages`, the one migration that read or wrote it. A setting
+     no code reads is a row in every world's database and a line in this file
+     that reads like a live feature. */
 
   // Completion marker for the connections flatten + ownership migration
   // (2026-08-01, the flat graph). Same reasoning as its sibling above: gated
@@ -573,53 +568,6 @@ export const registerSettings = () => {
     type: Boolean,
     default: false,
     requiresReload: false,
-  });
-
-  // GLOG Magic (the official Cairn hack) — a RULES setting like use-panic, not
-  // a content source: it never joins SOURCE_KEYS or the floor below. OVERRIDING
-  // by ruling (2026-08-05): while on, generation uses only GLOG and custom
-  // spells and every granted spell lands as a spellscroll — and TURNING IT ON
-  // CONVERTS THE WORLD, totally: every canon spellbook anywhere becomes a GLOG
-  // spellscroll and every canon scroll's text swaps (module/glog.js). Turning
-  // it OFF converts nothing back; that asymmetry was accepted at ruling time,
-  // which is why the hint says so out loud. The onChange runs the sweep on the
-  // active GM's client only, and the sweep is idempotent, so the two-tab GM
-  // quirk cannot double-convert.
-  game.settings.register(SETTINGS_NS, "enable-glog-magic", {
-    name: "CAIRN.Settings.EnableGlogMagic.label",
-    hint: "CAIRN.Settings.EnableGlogMagic.hint",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-    onChange: async (value) => {
-      // Either flip drops the create seam's cached swap map (module/glog.js)
-      // — caution, not need: the pack is locked, but a stale cache after an
-      // unlock-edit-relock would be a silent wrong text with no error.
-      const { runGlogConversion, clearGlogTextCache } = await import("./glog.js");
-      clearGlogTextCache();
-      // The sweep is a one-way world conversion with no rollback, and the
-      // client fires onChange WITHOUT awaiting it (Setting._onUpdate), so a
-      // throw out of here is an unhandled rejection naming neither the system
-      // nor the operation, with the world left half-converted and no signal
-      // but the ABSENCE of the "converted N" toast. Caught and surfaced, the
-      // way every other async seam in this system is (cairn.js phase/socket).
-      if (value) {
-        try {
-          await runGlogConversion();
-        } catch (err) {
-          console.error("mondolme | GLOG world conversion failed:", err);
-          ui.notifications.error(game.i18n.localize("CAIRN.Notify.GlogConversionFailed"));
-        }
-      }
-      // The per-scroll Cast control (canCastScroll, actor-sheet.js) is read
-      // live in _prepareContext but only takes effect on the NEXT render.
-      // Turning the setting OFF converts nothing, so no document update fires
-      // and without this fan an open sheet keeps its now-dead Cast controls
-      // until an unrelated redraw (the review #13 rule that rerenderActorSheets
-      // exists for). Both directions, and on every client the onChange reaches.
-      rerenderActorSheets();
-    },
   });
 
   // ---- Character Generation ------------------------------------------------

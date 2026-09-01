@@ -19,27 +19,13 @@ export const ICON_DIR = "systems/mondolme/icons";
 // .png paths already baked into documents in existing worlds.
 const P = (n) => `${ICON_DIR}/${n}.svg`;
 
-/**
- * The `transportKind` vocabulary, and each kind's label key — ONE definition,
- * because it was previously written out separately in `item-sheet.js` (the
- * transport sheet's pick-list) and `marketplace.js` (the shop's chips), which is
- * two places to forget when a kind is added.
- *
- * "pile" is a loot heap or stash: a container that nothing carries. It is the
- * only kind that is not a way of moving things around, which is why it shows in
- * the Actor Directory (see `cairn.js`) — a character's Containers tab is the one
- * place something no character holds could never be reached from.
- *
- * The transport ITEM sheet offers it too, from this same list. Nothing in the
- * shipped `transports` pack uses it and a purchasable pile would be odd, but one
- * vocabulary with a strange corner beats two that drift.
- */
-export const TRANSPORT_KINDS = {
-  worn: "CAIRN.TransportWorn",
-  mount: "CAIRN.TransportMount",
-  vehicle: "CAIRN.TransportVehicle",
-  pile: "CAIRN.TransportPile",
-};
+/* `TRANSPORT_KINDS` stood here and is GONE with the `transport` ITEM type. It
+   was the `transportKind` vocabulary — worn / mount / vehicle / pile — and its
+   only two readers were that type's sheet pick-list and the shop's chips for
+   it, both of which went in the same pass. `containerClass` below still ACCEPTS
+   one of those words as its `legacyKind` argument, because the generator passes
+   "mount"/"vehicle" to classify a beast it is about to mint; those are argument
+   values, not a stored field, and they need no table. */
 
 /**
  * What a container IS, as one classification with two consumers: its art, and
@@ -195,7 +181,7 @@ export const containerClassLabel = (name = "", legacyKind = "", stored = "") =>
  * "item" type (scrolls, bags, chests). Tools are NOT detectable by name — they
  * are a whole pack — so the importer maps that pack directly; everything created
  * at runtime falls through to the generic bindle.
- * @param {String} type  item type: weapon | armor | spellbook | transport | item | object | background
+ * @param {String} type  item type: weapon | armor | book | spell | item | background
  * @param {String} [name]
  * @returns {String}  a systems/mondolme/icons/*.svg path
  */
@@ -203,9 +189,16 @@ export const iconForItem = (type = "item", name = "") => {
   switch (type) {
     case "weapon": return P("weapons");
     case "armor": return P("armor");
-    case "spellbook": return P("spellbook");
-    case "transport": return iconForTransport(name);
+    // Both faces of the retired `spellbook` type, split in two. A Hechizo takes
+    // the book glyph as its resting state; ticking Pergamino swaps it for
+    // SPELLSCROLL_ICON in CairnItem, which is the one place that flag decides art.
+    case "book": return P("spellbook");
+    case "spell": return P("spellbook");
     case "background": return P("background");
+    // `case "transport"` stood here and went with the `transport` ITEM type.
+    // Container and vehicle ACTORS still get their art from iconForTransport
+    // below — that function is untouched and is called directly by actor.js,
+    // the marketplace and the generator.
   }
   const n = String(name).toLowerCase();
   // The system's namesake. A rule here rather than a hand-set `img:` in the

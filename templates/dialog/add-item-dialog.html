@@ -16,14 +16,18 @@
     <label>{{localize 'CAIRN.Type'}}:</label>
     <br />
     <select name="itemtype" class="add-type">
+      {{!-- Exactly ONE selected. "item" is the default; this list once carried
+            `selected` on two options, and the LAST one wins, so Add Item
+            silently created the wrong type.
+
+            `background` is deliberately absent, as it always has been: a
+            Trasfondo is not inventory — dropping one on a sheet CHANGES the
+            character's background rather than adding a row. --}}
       <option value="item" selected>{{localize 'TYPES.Item.item'}}</option>
       <option value="armor">{{localize 'TYPES.Item.armor'}}</option>
       <option value="weapon">{{localize 'TYPES.Item.weapon'}}</option>
-      <option value="spellbook">{{localize 'TYPES.Item.spellbook'}}</option>
-      {{!-- Exactly ONE selected. "item" is the default; this carried `selected`
-            on both, and the LAST one wins, so Add Item silently created an
-            "object" — the type with no damage, armor or uses. --}}
-      <option value="object">{{localize 'TYPES.Item.object'}}</option>
+      <option value="book">{{localize 'TYPES.Item.book'}}</option>
+      <option value="spell">{{localize 'TYPES.Item.spell'}}</option>
     </select>
   </div>
   <div class="form-group">

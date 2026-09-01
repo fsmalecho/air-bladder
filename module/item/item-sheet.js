@@ -1,6 +1,8 @@
 import { resolveGearItem } from "../gear.js";
 import { previewBackground, duplicateBackgroundToWorld } from "../character-generator.js";
-import { TRANSPORT_KINDS } from "../icons.js";
+import { languages } from "../content-packs.js";
+import { canReadBook } from "../magic.js";
+import { BOOK_PAGE_KEYS } from "../data-models.js";
 import { bindEditorClickAwaySave, cleanDescription, formatCount, sourceLabel } from "../utils.js";
 import { pickArt } from "../art-picker.js";
 
@@ -68,17 +70,25 @@ const renderPreviewReport = (r) => {
 const TABLE_COUNT = 2;
 const OPTIONS_PER_TABLE = 6;
 
-/** The extra tab each item type carries beyond Description, if any. */
+/**
+ * The extra tabs each item type carries beyond Description, in the order they
+ * are shown. A LIST per type since the Libro joined with three of them.
+ */
 const EXTRA_TABS = {
-  item: { id: "crit-dmg", label: "CAIRN.CriticalDamage" },
-  weapon: { id: "crit-dmg", label: "CAIRN.CriticalDamage" },
-  background: { id: "details", label: "CAIRN.BackgroundDetails" },
+  item: [{ id: "crit-dmg", label: "CAIRN.CriticalDamage" }],
+  weapon: [{ id: "crit-dmg", label: "CAIRN.CriticalDamage" }],
+  background: [{ id: "details", label: "CAIRN.BackgroundDetails" }],
+  // One tab per page, labelled with its number and nothing else — the page IS
+  // the number on a three-page book. `page1`/`page2`/`page3` rather than
+  // "1"/"2"/"3" as ids, because a tab id lands in a `data-tab` attribute and a
+  // Handlebars path (`tabs.[1].cssClass`), neither of which wants a bare digit.
+  book: BOOK_PAGE_KEYS.map((_key, i) => ({ id: `page${i + 1}`, label: `CAIRN.BookPage${i + 1}` })),
 };
 
 /**
  * Recharge, for relics. Keyed on the DOCUMENT rather than the type — which is the
- * whole point of `relic` being a flag: a relic is equally an item, a weapon, an
- * armor or an object, so no entry in EXTRA_TABS above could express it.
+ * whole point of `relic` being a flag: a relic is equally an item, a weapon or
+ * an armor, so no entry in EXTRA_TABS above could express it.
  */
 const RELIC_TAB = { id: "recharge", label: "CAIRN.Recharge" };
 
@@ -117,7 +127,7 @@ const snapshotItem = (item) => {
 /**
  * The item sheet, on ApplicationV2.
  *
- * One class serves all seven item types; the template and the tab set are chosen
+ * One class serves all six item types; the template and the tab set are chosen
  * per render from `item.type` (see _configureRenderParts / _getTabsConfig).
  *
  * Two AppV1 behaviours are re-declared here rather than inherited, because
@@ -144,9 +154,9 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     actions: {
       // OVERRIDES core's `editImage`, which opens a bare FilePicker. Every item
       // template's portrait carries data-action="editImage", so declaring it
-      // here routes all seven of them — gear, weapons, armor, spellbooks,
-      // objects, transports and backgrounds — through the system's art picker
-      // instead, which is where the Game-Icons gallery lives.
+      // here routes all six of them — gear, weapons, armor, backgrounds, books
+      // and spells — through the system's art picker instead, which is where
+      // the Game-Icons gallery lives.
       editImage: CairnItemSheet.#onEditImage,
       duplicateBackground: CairnItemSheet.#onDuplicateBackground,
       testBackground: CairnItemSheet.#onTestBackground,
@@ -217,10 +227,17 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   _getTabsConfig(group) {
     const config = foundry.utils.deepClone(super._getTabsConfig(group));
     if (!config) return config;
-    const extra = EXTRA_TABS[this.item.type];
-    if (extra) config.tabs.push(extra);
+    // THE LANGUAGE GATE (module/magic.js `canReadBook`): a Libro whose language
+    // its holder does not know keeps its numbered page tabs to itself, and the
+    // sheet is the Descripción tab alone. Not merely hidden — `_prepareBook`
+    // hands the template no pages either, so the spell texts are absent from
+    // the DOM rather than one inspector away.
+    const locked = this.item.type === "book" && !canReadBook(this.item);
+    const extra = locked ? null : EXTRA_TABS[this.item.type];
+    if (extra) config.tabs.push(...extra);
     if (this.item.system?.relic) config.tabs.push(RELIC_TAB);
-    // Unticking Relic removes the tab you are standing on. Exactly the failure the
+    // Unticking Relic removes the tab you are standing on — and so does losing
+    // a language while standing on page 2. Exactly the failure the
     // actor sheet's Containers tab has, and it carries the same guard with the same
     // comment: `_prepareTabs` only defaults the group when it is UNSET (`??=`), so
     // without this the group keeps pointing at "recharge", nothing matches, no panel
@@ -272,11 +289,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.usesLabel = recharges ? "CAIRN.Charges" : "CAIRN.Uses";
     context.maxUsesLabel = recharges ? "CAIRN.MaxCharges" : "CAIRN.MaxUses";
 
-    // Transport kind pick-list for the transport sheet's <select>; keys are
-    // stored, values are localized by selectOptions. The vocabulary lives in
-    // icons.js, which is where the kinds are documented and where the art is
-    // keyed off them.
-    if (this.item.type === "transport") context.transportKinds = TRANSPORT_KINDS;
+    if (this.item.type === "book") await this._prepareBook(context);
     if (this.item.type === "background") {
       context.isGM = game.user.isGM;
       if (this.isEditable) await this._prepareBackgroundEditor(context);
@@ -284,6 +297,57 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       else await this._prepareBackgroundReadOnly(context);
     }
     return context;
+  }
+
+  /**
+   * The Libro's three pages, and the Warden's language list.
+   *
+   * The pages are handed over as a LIST in tab order rather than left to the
+   * template to address one by one, so the numbered tabs, their name inputs and
+   * their editors all come off the same three entries — a fourth tab would need
+   * a fourth page here, which is exactly the coupling wanted.
+   *
+   * `languages()` is the ONE source for what a language may be (content-packs.js
+   * splits the Warden's comma-separated setting). The stored value rides along
+   * even when it is not in that list: a Warden who re-words the setting must not
+   * silently blank the language off every book already written, so the select
+   * carries the orphan as its own option and shows it selected.
+   *
+   * THE LANGUAGE GATE decides whether the pages are built at all. A holder who
+   * does not know the book's language gets an EMPTY list, not a hidden one:
+   * `_getTabsConfig` has already dropped the numbered tabs, and handing the
+   * template three panels it cannot show would put every spell's text in the
+   * DOM for anyone who opened an inspector. The language SELECT stays visible
+   * on purpose — reading which language you are locked out of is the point.
+   * @private
+   */
+  async _prepareBook(context) {
+    const stored = this.item.system.language ?? "";
+    const configured = languages();
+    context.bookLanguages = (!stored || configured.includes(stored))
+      ? configured : [stored, ...configured];
+    context.bookReadable = canReadBook(this.item);
+    if (!context.bookReadable) {
+      context.bookPages = [];
+      return;
+    }
+    // The same enrich-then-clean pipeline `_prepareContext` uses for
+    // `description`, for the same reason: every enriched field on this sheet
+    // reaches innerHTML through {{{ }}}.
+    const enrich = async (html) =>
+      cleanDescription(await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        html ?? "", { relativeTo: this.item }));
+    context.bookPages = await Promise.all(BOOK_PAGE_KEYS.map(async (key, i) => {
+      const page = this.item.system.pages?.[key] ?? {};
+      return {
+        n: i + 1,
+        key,
+        tab: `page${i + 1}`,
+        name: page.name ?? "",
+        text: page.text ?? "",
+        enrichedText: await enrich(page.text),
+      };
+    }));
   }
 
   /**

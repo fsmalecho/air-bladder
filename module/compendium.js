@@ -27,7 +27,7 @@
  *
  * WIDER than content-packs.js's `generatorTable`, and both exist on purpose:
  * this one answers "the Warden's own copy of this table, from anywhere", which
- * is what the Faction die, the faction generator and the GLOG mishap card each
+ * is what the Faction die, the faction generator and the cast mishap card each
  * promise; `generatorTable` answers "this table, in the compendium the Warden
  * nominated", which is what generation reads and what can therefore report a
  * missing one precisely.

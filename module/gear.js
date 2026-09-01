@@ -18,7 +18,6 @@
  */
 
 import { iconForItem, SPELLSCROLL_ICON } from "./icons.js";
-import { glogEnabled, GLOG_NAME_ALIASES } from "./glog.js";
 import { itemByName } from "./content-packs.js";
 
 // The eight-pack precedence list that used to live here — seven gear packs plus
@@ -93,10 +92,11 @@ export const isLightGear = (name) =>
  * spellbook named for a candle would still file as a book — type outranks
  * name throughout.
  *
- * `book` (2026-08-21, user ask): spellbooks and spellscrolls sort together
- * near the top, directly after weapons and armor. One band for both because
- * they are one TYPE — a scroll is a spellbook with the `scroll` flag — and
- * a type test is the only marker that survives renaming a spell.
+ * `book` (2026-08-21, user ask): magic sorts together near the top, directly
+ * after weapons and armor. ONE band for the Libro and the Hechizo — including
+ * a Hechizo with Pergamino ticked — because a type test is the only marker
+ * that survives renaming a spell, and a scroll is still the same type as the
+ * spell it holds.
  */
 export const GRANT_BANDS = { weapon: 0, armor: 1, book: 2, other: 3, light: 4, rations: 5 };
 
@@ -104,7 +104,7 @@ export const GRANT_BANDS = { weapon: 0, armor: 1, book: 2, other: 3, light: 4, r
 export const grantBand = (item) => {
   if (item?.type === "weapon") return GRANT_BANDS.weapon;
   if (item?.type === "armor") return GRANT_BANDS.armor;
-  if (item?.type === "spellbook") return GRANT_BANDS.book;
+  if (item?.type === "book" || item?.type === "spell") return GRANT_BANDS.book;
   const name = String(item?.name ?? "");
   if (RATIONS_RE.test(name)) return GRANT_BANDS.rations;
   if (isLightGear(name)) return GRANT_BANDS.light;
@@ -185,8 +185,8 @@ export const spellNameFromGrant = (name) => {
 export const isScrollGrant = (name) => /^scroll\s*\(.+\)$/i.test(String(name).trim());
 
 /**
- * A single-use petty scroll built from a resolved spellbook document: the SAME
- * spellbook type with `scroll` ticked, the spell's own text as its description, and
+ * A single-use petty scroll built from a resolved spell document: the SAME
+ * `spell` type with `scroll` ticked, the spell's own text as its description, and
  * stored under the bare spell name — the inventory row adds the "Spellscroll — "
  * prefix at display time, exactly as it does for a book. THE one definition of
  * "what a scroll is", shared by named scroll grants (resolveGearItem) and the
@@ -202,7 +202,7 @@ export const isScrollGrant = (name) => /^scroll\s*\(.+\)$/i.test(String(name).tr
  */
 export const spellScrollItem = (book, { quantity = 1, uses } = {}) => ({
   name: book.name,
-  type: "spellbook",
+  type: "spell",
   img: SPELLSCROLL_ICON,
   system: {
     // toObject() rather than deepClone — see resolveGearItem. The spread saved
@@ -290,20 +290,16 @@ export const buildGearItem = (g) => {
  */
 export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
   const spell = spellNameFromGrant(name);
-  let targetName = spell ?? GEAR_ALIASES.get(String(name).trim().toLowerCase()) ?? name;
-  // Under GLOG, two canon spells appear under NEW names (Marble Craze, Missile
-  // Shield — see GLOG_NAME_ALIASES); the alias applies ONLY while GLOG is in
-  // force, so canon-mode resolution never sees it. What is GONE with the shipped
-  // packs is the pack-level exclusion the 2026-08-05 ruling was expressed as
-  // ("resolve against the GLOG wordings, canon excluded"): there is one Objetos
-  // compendium now, so which wording a spell has is a property of the Warden's
-  // content and not of which pack it was read from. The FORM half of the ruling
-  // is untouched and enforced below — under GLOG every spell grant is a scroll.
-  // glog.js is imported STATICALLY: a per-call `await import()` cost ~600ms
-  // every call in the live page — once per resolved gear NAME — and glog.js →
-  // settings.js is a leaf chain, no cycle.
-  const useGlog = !!spell && glogEnabled();
-  if (useGlog) targetName = GLOG_NAME_ALIASES.get(targetName.toLowerCase()) ?? targetName;
+  const targetName = spell ?? GEAR_ALIASES.get(String(name).trim().toLowerCase()) ?? name;
+  /* A SECOND ALIAS PASS stood here and is GONE with the module that held its
+     map. It rewrote two spell names (Marble Craze → Marble Madness, Missile
+     Shield → Shield) while a rules setting said the world was in the other of
+     two magic modes, so a grant resolved against the re-worded copy of a spell
+     instead of the canon one. There is ONE Objetos compendium and one wording
+     now — whichever the Warden put in it — so which text a spell has is a
+     property of their content, not of a mode, and there is nothing left to
+     alias between. GEAR_ALIASES above is a different map (typo/synonym gear
+     names) and is untouched. */
 
   const found = await itemByName(targetName);
   if (!found) {
@@ -311,13 +307,16 @@ export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
     return null;
   }
 
-  // A "Scroll (X)" grant is the spell as a single-use petty scroll, not the
-  // slot-taking book. Without this a background handing out a scroll silently
-  // grants a full spellbook (and the sheet even labels it "Spellbook — X").
-  // Under GLOG, EVERY spell grant is a scroll — "Spellbook (X)" included: found
-  // magic is a scroll you copy into your grimoire, and permanent books are
-  // treasure, never handed out (rulings 2 and 7, 2026-08-05).
-  if (found.type === "spellbook" && (isScrollGrant(name) || glogEnabled())) {
+  // A "Scroll (X)" grant is the spell as a single-use petty scroll; every other
+  // spell grant is the Hechizo itself, permanent and castable in its own right.
+  //
+  // THE GRANT NAMES THE FORM, and nothing else does any more. A setting used to
+  // force EVERY spell grant into a scroll ("found magic is a scroll you copy
+  // into your grimoire"), which made sense only while a scroll could be written
+  // into a carried book — a gesture that went with the bound-page machinery. A
+  // Hechizo casts itself now, so turning every grant into one-use paper would
+  // hand out magic that can never be kept and can never be filed anywhere.
+  if (found.type === "spell" && isScrollGrant(name)) {
     return spellScrollItem(found, { quantity, uses });
   }
 

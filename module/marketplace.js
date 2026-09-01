@@ -1,6 +1,6 @@
 import { findTableItems } from "./compendium.js";
 import { marketTable, packFor, MARKET_TABLES } from "./content-packs.js";
-import { iconForTransport, TRANSPORT_KINDS } from "./icons.js";
+import { iconForTransport } from "./icons.js";
 import { atConnectionLimit, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { formatCount } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
@@ -161,15 +161,11 @@ export const getMarketplaceCatalog = async () => {
 /** Slots an item occupies: bulky = 2, weightless/petty = 0, otherwise 1. */
 const slotCost = (system) => (system.bulky ? 2 : system.weightless ? 0 : 1);
 
-/**
- * Does this row buy a thing that CARRIES, rather than a thing you carry?
- *
- * Two shapes qualify, and both are checked because the pack is mid-move: the
- * legacy `transport` Item, and an npc Actor from Mounts & Transports. Checking
- * only `type` would treat an Actor row as ordinary gear -- rendering it with a
- * one-slot footprint instead of its capacity, and buying it as an embedded item.
- */
-const isCarrier = (data) => data.documentName === "Actor" || data.type === "transport";
+/* `isCarrier` stood here and is GONE with the `transport` ITEM type it existed
+   to recognise alongside an Actor row. With that type retired the question is
+   `data.documentName === "Actor"` and nothing else — one term, written at the
+   three sites that ask it rather than wrapped in a helper whose name promised a
+   classification it no longer performs. */
 
 /** A compact mechanics label for a shop row (damage / armor / bulky / petty / uses). */
 const chips = (item) => {
@@ -187,15 +183,11 @@ const chips = (item) => {
   return out;
 };
 
-/** Chips for a transport row: its kind, then slow/bulky flavour. */
-const transportChips = (item) => {
-  const s = item.system;
-  const out = [];
-  if (TRANSPORT_KINDS[s.transportKind]) out.push(game.i18n.localize(TRANSPORT_KINDS[s.transportKind]));
-  if (s.bulky) out.push(game.i18n.localize("CAIRN.Bulky"));
-  if (s.slow) out.push(game.i18n.localize("CAIRN.TransportSlow"));
-  return out;
-};
+/* `transportChips` stood here and is GONE with the `transport` ITEM type. It
+   rendered that type's own three fields — `transportKind`, `bulky`, `slow` —
+   and an npc Actor row carries none of them, so there was never a second
+   caller. A carrier row states its capacity ("+6 espacios") and its name, which
+   is what a shopper buying a mule is choosing between. */
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -323,25 +315,16 @@ export const acquireTransport = async (actor, doc, pay) => {
   }
   // Give it a real portrait AND a matching map token; fall back to the class icon
   // if the document somehow carries no art.
-  const art = doc.img ?? iconForTransport(doc.name, doc.system.transportKind, doc.system.containerClass);
+  const art = doc.img ?? iconForTransport(doc.name, "", doc.system.containerClass);
   const s = doc.system;
-  // An Actor row states its `role` outright (NpcData.migrateData derives one
-  // for a pre-roles document). A legacy `transport` Item has no such field, so
-  // infer from transportKind: worn packs and vehicles are things, only a mount
-  // (the transportKind) is a creature. Without this a bought Backpack came out
-  // animate — and, having no hp field either, was handed the schema's default
-  // 6 HP on the way through (the same phantom-6 trap mounts.mjs documents). A
-  // kindless legacy Item keeps its old animate reading, a companion.
-  //
-  // The animate ROLE is `companion` (renamed from `mount` on 2026-08-08); the
-  // `transportKind === "mount"` test stays because "mount" is a live KIND value,
-  // not a role. Writing "mount" as a role here relied on migrateData rewriting
-  // it on read — a shim for legacy data doing live work for a current write.
-  const role = s.role
-    ?? (s.transportKind
-      ? (s.transportKind === "mount" ? "companion"
-        : s.transportKind === "vehicle" ? "transport" : "container")
-      : "companion");
+  // An Actor row states its `role` outright (NpcData.migrateData derives one for
+  // a pre-roles document), so the row IS the answer. The `transportKind`
+  // inference that stood here went with the `transport` ITEM type: it existed to
+  // give a legacy Item a role it had no field for, and no Item is bought through
+  // this path any more. The `?? "companion"` fallback stays for a hand-made npc
+  // row whose role somehow reads blank — animate, with its stat block, which is
+  // the safe way to be wrong about a mule.
+  const role = s.role || "companion";
   const isThing = role === "transport" || role === "container";
   // An npc, not a `container`. What is bought is now the same kind of document as
   // what the compendium ships, so a Horse bought from the shop and a Horse
@@ -462,12 +445,11 @@ export const openMarketplace = async (actor, opts = {}) => {
   const sections = categories.map((cat) => {
     const rows = cat.items.map((data) => {
       const d = data;
-      if (isCarrier(data)) {
+      if (data.documentName === "Actor") {
         const idx = built.push(data) - 1;
         const cap = data.system.slots ?? 0;
-        const tags = transportChips(data).map((c) => `<span class="mkt-chip">${esc(c)}</span>`).join("");
         const metaHtml = `<span class="mkt-slots mkt-capacity" title="${game.i18n.localize("CAIRN.TransportCapacity")}">+${esc(formatCount("CAIRN.NSlot", cap))}</span>`;
-        return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: tags, metaHtml, descHtml: descHtmlOf(d.system.description) });
+        return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: "", metaHtml, descHtml: descHtmlOf(d.system.description) });
       }
       const idx = built.push(data) - 1;
       const slots = slotCost(data.system);
@@ -530,7 +512,7 @@ export const openMarketplace = async (actor, opts = {}) => {
       // Actor and never counts against the buyer's slots (buying a mule is how
       // you FIX being full, so refusing it at the till would be perverse), and
       // a PETTY item costs no slot at all.
-      const needsRoom = data && !isCarrier(data) && !data.system?.weightless;
+      const needsRoom = data && data.documentName !== "Actor" && !data.system?.weightless;
       const noRoom = full && !!needsRoom;
       buy.disabled = noRoom || gold < cost;
       take.disabled = noRoom;
@@ -556,8 +538,9 @@ export const openMarketplace = async (actor, opts = {}) => {
         // with nothing but a console error (review #9). The error is surfaced
         // and the rows re-derive either way.
         try {
-          // A transport mints a container Actor; everything else is an embedded item.
-          if (isCarrier(data)) await acquireTransport(actor, data, pay);
+          // A carrier row is an Actor and is minted-and-connected; everything
+          // else is an embedded item.
+          if (data.documentName === "Actor") await acquireTransport(actor, data, pay);
           else await acquire(actor, foundry.utils.deepClone(data), pay);
         } catch (err) {
           console.error("Mondolme | marketplace acquire failed:", err);

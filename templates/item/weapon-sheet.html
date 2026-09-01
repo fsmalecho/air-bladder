@@ -47,8 +47,22 @@
             </div>
         </div>
 
-        <!-- Relic. A flag, not a type: this same box appears on the item, weapon,
-             armor and object sheets, because a relic can be any of them. Ticking it
+        <!-- Ranged. A bow, a sling, a crossbow. It puts a tag on the inventory
+             row, turns the two counters below into ammunition (their labels
+             change, the row renders them as "15/20" instead of circles), and
+             makes rolling this weapon's damage spend one round — refused
+             outright at zero (CairnActorSheet #onRollDamage). -->
+        <div class="resource-counter long-counter">
+            <label class="large-resource-label" for="{{@root.idp}}-system.ranged"
+                data-tooltip="{{ localize 'CAIRN.RangedTip' }}">{{ localize 'CAIRN.Ranged' }}</label>
+            <div class="resource-input-wrapper">
+                <input type="checkbox" {{checked system.ranged}} name="system.ranged" id="{{@root.idp}}-system.ranged"
+                        value="{{system.ranged}}" data-dtype="Boolean" />
+            </div>
+        </div>
+
+        <!-- Relic. A flag, not a type: this same box appears on the item, weapon
+             and armor sheets, because a relic can be any of them. Ticking it
              reveals the Recharge tab; filling that in relabels the counter above
              from "uses" to "charges", which is the only thing separating the two in
              2e. -->
@@ -60,16 +74,20 @@
             </div>
         </div>
          
-        <!-- Number of uses -->
+        <!-- Number of uses -- AMMUNITION on a ranged weapon. The same two stored
+             fields either way (system.uses.value / .max); only the words change,
+             because a quiver of arrows IS a use count and a second pair of
+             fields would be a second thing to keep in step with the +/- controls
+             on the row. -->
         <div class="resource-counter long-counter">
-            <label class="large-resource-label" for="{{@root.idp}}-system.uses.value">{{ localize @root.usesLabel }}</label>
+            <label class="large-resource-label" for="{{@root.idp}}-system.uses.value">{{#if system.ranged}}{{ localize 'CAIRN.Ammo' }}{{else}}{{ localize @root.usesLabel }}{{/if}}</label>
             <div class="resource-input-wrapper">
                 <input type="text" name="system.uses.value" id="{{@root.idp}}-system.uses.value"
                         value="{{system.uses.value}}" data-dtype="Number" />
             </div>
         </div>
         <div class="resource-counter long-counter">
-            <label class="large-resource-label" for="{{@root.idp}}-system.uses.max">{{ localize @root.maxUsesLabel }}</label>
+            <label class="large-resource-label" for="{{@root.idp}}-system.uses.max">{{#if system.ranged}}{{ localize 'CAIRN.AmmoMax' }}{{else}}{{ localize @root.maxUsesLabel }}{{/if}}</label>
             <div class="resource-input-wrapper">
                 <input type="text" name="system.uses.max" id="{{@root.idp}}-system.uses.max"
                       value="{{system.uses.max}}" data-dtype="Number" />

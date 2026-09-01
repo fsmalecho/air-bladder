@@ -1,23 +1,30 @@
 /**
- * The GLOG cast flow — a DialogV2 raised from the carried Grimoire, a resolved
- * spell text, a public card and a private whisper (rulings 2026-08-09; the
- * GLOG Magic hack, cairnrpg.com/hacks/glog-magic/).
+ * The cast flow — a DialogV2 raised from a carried Libro or from a Hechizo, a
+ * resolved spell text, a public card and a private whisper (rulings
+ * 2026-08-09).
  *
- * Magic Dice are the caster's FREE INVENTORY SLOTS, read at the moment of
- * asking and never stored: fill a slot and the next cast's pool shrinks by
- * itself — the hack's feedback loop falls out of the slot math with no
- * bookkeeping to drift. The dice cap at 4 (the hack's limit), the Roll is a
- * real Foundry Roll (DSN animates it) SPOKEN BY THE CHARACTER, and nothing
- * mechanical is automated past the report: the whisper offers ONE button —
- * Add N Fatigue, never refused (`ignoreCapacity`) — and on doubles it carries
- * the drawn Mishap. The Mishaps table resolves WORLD-FIRST, the Faction-die
- * precedent, so a Warden customizes it by importing a world copy.
+ * THESE ARE THE MAGIC RULES OF THIS SYSTEM, not a variant of them. There is no
+ * setting to consult and no second mode to convert to or from: Magic Dice are
+ * the caster's FREE INVENTORY SLOTS, read at the moment of asking and never
+ * stored — fill a slot and the next cast's pool shrinks by itself, so the
+ * feedback loop falls out of the slot math with no bookkeeping to drift. The
+ * dice cap at 4, the Roll is a real Foundry Roll (DSN animates it) SPOKEN BY
+ * THE CHARACTER, and nothing mechanical is automated past the report: the
+ * whisper offers ONE button — Add N Fatigue, never refused (`ignoreCapacity`)
+ * — and on doubles it carries the drawn Mishap. The Mishaps table resolves
+ * WORLD-FIRST, the Faction-die precedent, so a Warden customizes it by
+ * importing a world copy.
+ *
+ * THREE WAYS TO CAST, one back half (`reportCast`):
+ *   - from a Libro: pick one of the book's non-empty pages (`castFromBook`);
+ *   - a Hechizo: the spell item casts itself (`castSpell`);
+ *   - a Pergamino: a Hechizo with `scroll` ticked — confirmed first, because
+ *     the cast destroys the paper, and deleted after the card (`castSpell`).
  */
-import { FATIGUE_NAME } from "./item/item.js";
+import { FATIGUE_NAME, bookPages } from "./item/item.js";
 import { findTableByName } from "./compendium.js";
 import { TABLES } from "./content-packs.js";
 import { formatCount } from "./utils.js";
-import { SETTINGS_NS } from "./settings.js";
 
 /**
  * The Mishaps table, by NAME — the Warden's own copy first (findTableByName is
@@ -28,97 +35,59 @@ import { SETTINGS_NS } from "./settings.js";
 export const MISHAPS_TABLE_NAME = TABLES.mishaps;
 
 /**
- * Every Grimoire `actor` holds. A CHARACTER carries at most one — the one-book
- * wall, enforced in CairnItem — but a pile, a crate or a mule may hold a
- * library, and that is the case every "the grimoire" lookup used to get wrong.
+ * Every Libro `actor` holds.
+ *
+ * A type test, not a flag test: `book` is an item TYPE, and nothing limits a
+ * character to one of them — which is why every caller below either takes the
+ * book it was pointed at or offers ALL of them, and none reaches for `[0]`.
  * @param {CairnActor|null} actor
  * @returns {CairnItem[]}
  */
-export const grimoiresOn = (actor) =>
-  actor ? actor.items.filter((i) => i.type === "item" && i.system?.grimoire) : [];
+export const booksOn = (actor) =>
+  actor ? actor.items.filter((i) => i.type === "book") : [];
 
 /**
- * The pages belonging to ONE book (issue #17, fsmalecho, 2026-08-16).
+ * THE LANGUAGE GATE. A Libro is written in one language (`system.language`,
+ * chosen on its sheet from the Warden's configured list); a person knows a
+ * list of them (`system.languages`). Someone who does not know a book's
+ * language cannot reach its pages — not on the sheet, not in a cast.
  *
- * A page names its book by `system.boundTo`, matching the book's
- * `system.grimoireKey`. Both are `system` data rather than ids on purpose: a
- * book moving between sheets is a create-then-delete, so its `_id` changes
- * every journey while `system` copies across verbatim.
+ * Three deliberate exemptions, each an answer to "who is being kept out":
  *
- * An UNKEYED page — bound before the field existed, in a world
- * `migrateGrimoirePages` has not opened yet — belongs to the book only when the
- * actor holds exactly ONE. That was the whole rule before this fix, and it was
- * right in exactly that case: on a character it still is, because a character
- * may only ever carry one. On a multi-book actor an unkeyed page belongs to
- * nobody nameable, so it stays where it is. Guessing is what the bug did:
- * dragging one of two books out of a pile took all six pages with it, past the
- * book's own capacity, and left the other book empty.
- * @param {CairnActor} actor
- * @param {CairnItem} book
- * @returns {CairnItem[]}
+ *   - A book with NO language set is readable by everyone. An unset field is a
+ *     book nobody has decided about, not a locked one, and every book authored
+ *     before the Warden filled the setting in would otherwise be unreadable by
+ *     the entire table.
+ *   - A book owned by NO actor — sitting in a compendium, the sidebar, or a
+ *     drop preview — shows everything. There is nobody to test against; the
+ *     gate is a fact about a reader, and without one there is no question to
+ *     answer.
+ *   - The Warden sees everything, the way they see every other sheet. The gate
+ *     is a rule for players; a GM who cannot read the book they are running is
+ *     no rule at all.
+ *
+ * @param {CairnItem} book         a `book` item
+ * @param {CairnActor|null} [actor] the reader; defaults to the book's owner
+ * @returns {boolean}
  */
-export const pagesOfGrimoire = (actor, book) => {
-  if (!actor || !book) return [];
-  const key = book.system?.grimoireKey ?? "";
-  const sole = grimoiresOn(actor).length === 1;
-  return actor.items.filter((i) => {
-    if (i.type !== "spellbook" || !i.system.bound) return false;
-    const to = i.system.boundTo ?? "";
-    return to && key ? to === key : !to && sole;
-  });
+export const canReadBook = (book, actor = book?.parent ?? null) => {
+  const language = String(book?.system?.language ?? "").trim();
+  if (!language) return true;
+  if (game.user?.isGM) return true;
+  if (actor?.documentName !== "Actor") return true;
+  return (actor.system?.languages ?? [])
+    .some((known) => String(known).trim() === language);
 };
 
-/**
- * Re-order an already-sorted item list so each bound page follows the book it
- * belongs to. Display order only — nothing is written, and `sort` values are
- * untouched.
- *
- * Shared by the inventory tab and the printed page ON PURPOSE: those two
- * surfaces have drifted before (review #12, when print built rows in insertion
- * order while the sheet sorted), and the printed sheet showed it again the day
- * the sheet learned to group — pages scattered up and down the alphabet with
- * the Grimoire in the middle, reported 2026-08-16.
- *
- * An UNCLAIMED page — legacy and unkeyed, on an actor holding more than one
- * book — is left exactly where the sort put it rather than filed under a guess.
- * @param {CairnActor} actor  the OWNER of these items, not the sheet's actor:
- *                            print renders a connected companion's gear too
- * @param {Array} list        rows or documents, in display order
- * @param {(row:any)=>string} idOf  reads an item id off a list entry
- * @returns {Array} a new array; `list` is never mutated
- */
-export const groupPagesUnderBooks = (actor, list, idOf) => {
-  const claimed = new Map();
-  for (const book of grimoiresOn(actor)) {
-    for (const p of pagesOfGrimoire(actor, book)) {
-      if (!claimed.has(p.id)) claimed.set(p.id, book.id);
-    }
-  }
-  if (!claimed.size) return list;
-  const out = [];
-  for (const row of list) {
-    if (claimed.has(idOf(row))) continue; // emitted under its own book, below
-    out.push(row);
-    const here = idOf(row);
-    out.push(...list.filter((r) => claimed.get(idOf(r)) === here));
-  }
-  return out;
-};
+/* `pagesOfGrimoire`, `groupPagesUnderBooks` and `ensureGrimoireKey` stood here
+   and are GONE with the bound-page machinery.
 
-/**
- * The book's key, minting and persisting one if it predates the field. Called
- * at the moment a page is about to name it — the transmute — so a legacy book
- * acquires its identity on first use rather than waiting for the migration.
- * @param {CairnItem} book
- * @returns {Promise<string>}
- */
-export const ensureGrimoireKey = async (book) => {
-  const key = book?.system?.grimoireKey ?? "";
-  if (key) return key;
-  const minted = foundry.utils.randomID();
-  await book.update({ "system.grimoireKey": minted });
-  return minted;
-};
+   A page used to be a `spellbook` DOCUMENT with `bound` set, naming its book by
+   `boundTo` / `grimoireKey`; the three functions found a book's pages, filed
+   them under it in a display list, and minted the book's identity. A Libro
+   carries its three pages INLINE now (`system.pages`), so a page has no
+   document, no id, no owner to resolve and no order to restore — `bookPages`
+   in item/item.js is the whole of what is left, and it is a field read. */
 
 /**
  * Resolve a spell's DISPLAYED text against the dice just rolled.
@@ -206,25 +175,22 @@ const magicDice = (actor) =>
  * Where the public cast card records its source name/description and the dice
  * that produced it, alongside the rendered HTML.
  */
-const GLOG_CAST_FLAG = "glogCast";
+const CAST_FLAG = "cast";
 
 /**
  * Both tiles identify themselves as spellcasting in the flavor line — the
  * speaker name alone reads as ordinary chat (user wording, 2026-08-10:
- * "Salina's Spell" / "Salina's spell triggered a magical mishap!") — and every
- * GLOG card opens it with a lit "GLOG" tag (same day's ruling: the Die of Fate
- * treatment in its own colour). A future GLOG card must carry the tag too;
- * today these two messages are the only ones.
+ * "Salina's Spell" / "Salina's spell triggered a magical mishap!").
  *
  * The NAME is whatever the caller resolved — the speaker alias.
  */
-const glogCastFlavor = (key, name) =>
-  `<span class="glog-flavor-tag">GLOG</span> — ${game.i18n.format(key, { name: esc(name) })}`;
+const castFlavor = (key, name) =>
+  game.i18n.format(key, { name: esc(name) });
 
 /**
  * The public card's body, from a name and description.
  */
-const glogCastBody = (name, desc, dice, sum) => [
+const castBody = (name, desc, dice, sum) => [
   `<div class="grimoire-cast-card">`,
   `<h3>${esc(name)}</h3>`,
   `<div class="grimoire-cast-effect">${resolveSpellText(desc, dice, sum)}</div>`,
@@ -234,12 +200,12 @@ const glogCastBody = (name, desc, dice, sum) => [
 /**
  * The shared back half of every cast: roll the invested dice and report —
  * the resolved effect publicly, the mechanics privately. One function on
- * purpose: a scroll "works exactly the same as spells recorded in your
- * Grimoire" (the hack's own sentence, shipped verbatim in the handout), so a
- * second copy of the fatigue/mishap machinery would be a place for the two
- * casts to drift apart.
+ * purpose: a scroll works exactly the same as a spell written on a Libro's
+ * page, so a second copy of the fatigue/mishap machinery would be a place for
+ * the three casting paths to drift apart.
  * @param {CairnActor} actor
- * @param {CairnItem} spell   a bound page, or a spellscroll
+ * @param {{name: string, system: {description: string}}} spell
+ *        a Hechizo document, or one of a Libro's pages wearing that shape
  * @param {number} dice       Magic Dice invested (1..4)
  * @returns {Promise<ChatMessage>} the public card
  */
@@ -262,10 +228,10 @@ const reportCast = async (actor, spell, dice) => {
   const alias = speaker.alias ?? actor.name;
   const publicCard = await ChatMessage.create({
     speaker,
-    flavor: glogCastFlavor("CAIRN.GrimoireCastFlavor", alias),
+    flavor: castFlavor("CAIRN.GrimoireCastFlavor", alias),
     rolls: [roll],
-    content: glogCastBody(spell.name, spell.system.description ?? "", dice, sum),
-    flags: { "mondolme": { [GLOG_CAST_FLAG]: {
+    content: castBody(spell.name, spell.system.description ?? "", dice, sum),
+    flags: { "mondolme": { [CAST_FLAG]: {
       name: spell.name,
       desc: spell.system.description ?? "",
       alias,
@@ -332,7 +298,7 @@ const reportCast = async (actor, spell, dice) => {
   // card, so `isRoll` is false and the wider branch above never applies.
   await ChatMessage.create({
     speaker,
-    flavor: glogCastFlavor(
+    flavor: castFlavor(
       doubles ? "CAIRN.GrimoireMishapFlavor" : "CAIRN.GrimoireCastFlavor", alias),
     whisper: [game.user.id],
     content: lines.join("\n"),
@@ -342,50 +308,31 @@ const reportCast = async (actor, spell, dice) => {
 };
 
 /**
- * Cast from `actor`'s carried Grimoire: pick a bound page and a power
- * (1..min(4, free slots)), roll, and report — the resolved effect publicly,
- * the mechanics privately. Returns the public ChatMessage, or null when the
- * cast could not happen (no book, no pages, no dice, dialog dismissed).
- * @param {CairnActor} actor
- * @returns {Promise<ChatMessage|null>}
+ * What the pickers and the card call a page whose spell has TEXT but no NAME.
+ * `bookPages` counts such a page as present (blankness in BOTH fields is the
+ * only "unused" marker), so something has to label it, and a bare empty option
+ * is unpickable.
  */
-export const castFromGrimoire = async (actor) => {
-  if (actor?.type !== "character") return null;
-  const book = grimoiresOn(actor)[0];
-  if (!book) return null;
-  // This book's pages, not every page on the actor. Identical on a character
-  // (the one-book wall), and it is the wall that is doing that work — reading
-  // the actor's whole shelf here would be a second place to fix if it ever
-  // moved.
-  const pages = pagesOfGrimoire(actor, book);
-  if (!pages.length) {
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoPages",
-      { name: book.name }));
-    return null;
-  }
-  const maxDice = magicDice(actor);
-  if (maxDice < 1) {
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoDice", { name: actor.name }));
-    return null;
-  }
+const pageLabel = (page) =>
+  page.name.trim() || game.i18n.format("CAIRN.BookPageUnnamed", { n: page.n });
 
+/**
+ * Ask for the Magic Dice to invest, 1..max. Shared by both cast entry points so
+ * the two dialogs cannot drift in wording or in cancel behaviour.
+ * @param {number} maxDice
+ * @param {{title: string, before?: string}} opts  `before` is extra form HTML
+ *        rendered ABOVE the dice row (the book/page picker)
+ * @returns {Promise<{dice: number, page: string}|null>} null on cancel or ✕
+ */
+const askCast = async (maxDice, { title, before = "" }) => {
   const L = (k) => game.i18n.localize(k);
-  // The VALUE stays the item id.
-  const pageOptions = pages.map((p) =>
-    `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
   const powerOptions = Array.from({ length: maxDice }, (_, i) =>
     `<option value="${i + 1}">${i + 1}</option>`).join("");
-  const picked = await foundry.applications.api.DialogV2.wait({
-    window: {
-      title: game.i18n.format("CAIRN.GrimoireCastFrom", { book: book.name }),
-      icon: "fas fa-hand-sparkles",
-    },
+  return foundry.applications.api.DialogV2.wait({
+    window: { title, icon: "fas fa-hand-sparkles" },
     position: { width: 400 },
     content: `
-      <div class="form-group">
-        <label>${L("CAIRN.GrimoireCastSpell")}</label>
-        <select name="page">${pageOptions}</select>
-      </div>
+      ${before}
       <div class="form-group">
         <label>${game.i18n.format("CAIRN.GrimoireCastPick", { max: maxDice })}</label>
         <select name="dice">${powerOptions}</select>
@@ -394,7 +341,7 @@ export const castFromGrimoire = async (actor) => {
       {
         action: "cast", label: L("CAIRN.GrimoireCast"), icon: "fas fa-hand-sparkles", default: true,
         callback: (_ev, button) => ({
-          pageId: String(button.form?.elements?.page?.value ?? ""),
+          page: String(button.form?.elements?.page?.value ?? ""),
           dice: Number(button.form?.elements?.dice?.value) || 1,
         }),
       },
@@ -404,89 +351,170 @@ export const castFromGrimoire = async (actor) => {
       // "cancel" — truthy at every call site. The kettlewright-import options
       // dialog was fixed for this in review #9 and the same line was written
       // three more times afterwards; `false` survives the `??` and reads as the
-      // refusal it is. Here the damage was masked ("cancel".pageId is
-      // undefined, so the guard below bailed by accident), which is exactly how
-      // it survived to be copied into castScroll, where it was not masked.
+      // refusal it is. In the scroll cast it was not merely masked: the result
+      // was read as a bare dice count, so Cancel reached `new Roll("canceld6")`
+      // and threw `Unresolved StringTerm` into a handler core never awaits.
       { action: "cancel", label: L("CAIRN.Cancel"), callback: () => false },
     ],
     rejectClose: false,
   });
-  if (!picked) return null;
-  const page = actor.items.get(picked.pageId);
-  if (!page) return null;
-
-  return reportCast(actor, page, picked.dice);
 };
 
 /**
- * Cast a SPELLSCROLL — no Grimoire needed, by the hack's own rule: "Scrolls
- * contain a single spell and are destroyed after a single use. Otherwise,
- * they work exactly the same as spells recorded in your Grimoire." So the
- * whole cast machinery runs — full Magic Dice, Fatigue, Mishaps — and the
- * one difference is the spend at the end: the scroll's single use is marked
- * (uses 1 -> 0, the strike-through every spent scroll already wears), never
- * deleted, so the paid 50gp transmute into a book someone later finds is
- * still the player's to weigh against a spent piece of vellum.
+ * Cast from a Libro: pick a page and a power (1..min(4, free slots)), roll, and
+ * report — the resolved effect publicly, the mechanics privately.
  *
- * Gated on `enable-glog-magic` — a RULES setting (the use-panic class): the
- * setting is what makes Magic Dice a rule of this world at all. The row
- * control is the affordance; every guard re-derives here.
+ * WHICH BOOK. Nothing limits a character to one Libro, so `book` is passed in
+ * by the inventory row that was clicked and the question never arises. Called
+ * WITHOUT one (a macro, a keybinding), every readable book's pages are offered
+ * in ONE picker, grouped under the book they are written in — the caster
+ * chooses the book and the page in a single gesture, and no path anywhere
+ * silently reaches for the first book on the sheet.
+ *
+ * Returns the public ChatMessage, or null when the cast could not happen (no
+ * book, no readable book, no pages, no dice, dialog dismissed).
  * @param {CairnActor} actor
- * @param {CairnItem} scroll
+ * @param {CairnItem|null} [book]  the one book to cast from, or null for all
  * @returns {Promise<ChatMessage|null>}
  */
-export const castScroll = async (actor, scroll) => {
+export const castFromBook = async (actor, book = null) => {
   if (actor?.type !== "character") return null;
-  if (!game.settings.get(SETTINGS_NS, "enable-glog-magic")) return null;
-  if (scroll?.type !== "spellbook" || !scroll.system.scroll || scroll.system.bound) return null;
-  if ((scroll.system.uses?.value ?? 0) < 1) {
-    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ScrollSpent"));
+  const all = book ? [book] : booksOn(actor);
+  if (!all.length) return null;
+
+  // THE LANGUAGE GATE, re-derived here rather than trusted from the row: a
+  // sheet rendered before the caster forgot a language must not be a way in.
+  const readable = all.filter((b) => canReadBook(b, actor));
+  if (!readable.length) {
+    // Named when there is exactly one book to name; otherwise the caster is
+    // told the general fact rather than a guess about which book they meant.
+    ui.notifications.warn(all.length === 1
+      ? game.i18n.format("CAIRN.Notify.BookLanguageUnknown",
+        { name: all[0].name, language: all[0].system.language })
+      : game.i18n.localize("CAIRN.Notify.BooksLanguageUnknown"));
     return null;
   }
+
+  // Every readable book's non-empty pages, each remembering its book. A page
+  // whose name AND text are both blank is skipped silently by `bookPages` —
+  // that is what "a book with fewer than three spells" looks like.
+  const entries = [];
+  for (const b of readable) {
+    for (const page of bookPages(b)) entries.push({ book: b, page });
+  }
+  if (!entries.length) {
+    ui.notifications.warn(readable.length === 1
+      ? game.i18n.format("CAIRN.Notify.GrimoireNoPages", { name: readable[0].name })
+      : game.i18n.localize("CAIRN.Notify.BooksNoPages"));
+    return null;
+  }
+
   const maxDice = magicDice(actor);
   if (maxDice < 1) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoDice", { name: actor.name }));
     return null;
   }
 
-  const L = (k) => game.i18n.localize(k);
-  const powerOptions = Array.from({ length: maxDice }, (_, i) =>
-    `<option value="${i + 1}">${i + 1}</option>`).join("");
-  const picked = await foundry.applications.api.DialogV2.wait({
-    window: {
-      title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: scroll.name }),
-      icon: "fas fa-hand-sparkles",
-    },
-    position: { width: 400 },
-    content: `
+  // The VALUE is "<book id>:<page key>" — a page has no id of its own (it is
+  // two fields on the book), and an item id is alphanumeric, so the colon can
+  // never appear inside either half.
+  const option = ({ book: b, page }) =>
+    `<option value="${esc(`${b.id}:${page.key}`)}">${esc(pageLabel(page))}</option>`;
+  // ONE book: a flat list, and the window title says which book it is. SEVERAL:
+  // the same list grouped under each book's name, so choosing the book and
+  // choosing the page are the same choice.
+  const pageOptions = readable.length === 1
+    ? entries.map(option).join("")
+    : readable.map((b) => {
+      const opts = entries.filter((e) => e.book === b).map(option).join("");
+      return opts ? `<optgroup label="${esc(b.name)}">${opts}</optgroup>` : "";
+    }).join("");
+
+  const picked = await askCast(maxDice, {
+    title: readable.length === 1
+      ? game.i18n.format("CAIRN.GrimoireCastFrom", { book: readable[0].name })
+      : game.i18n.localize("CAIRN.GrimoireCastFromBooks"),
+    before: `
       <div class="form-group">
-        <label>${game.i18n.format("CAIRN.GrimoireCastPick", { max: maxDice })}</label>
-        <select name="dice">${powerOptions}</select>
+        <label>${game.i18n.localize("CAIRN.GrimoireCastSpell")}</label>
+        <select name="page">${pageOptions}</select>
       </div>`,
-    buttons: [
-      {
-        action: "cast", label: L("CAIRN.GrimoireCast"), icon: "fas fa-hand-sparkles", default: true,
-        callback: (_ev, button) => Number(button.form?.elements?.dice?.value) || 1,
-      },
-      // `false`, never `null` — see castFromGrimoire above for why. THIS is the
-      // site where it bit: `picked` is read as the dice count with no shape
-      // test, so Cancel resolved "cancel", passed the guard below, and reached
-      // `new Roll("canceld6")` — which throws `Unresolved StringTerm` into an
-      // action handler core never awaits, so the player saw a dialog close and
-      // nothing else, with the error only in their console. The scroll's charge
-      // survived by the ordering below (the spend follows the card), not by any
-      // guard.
-      { action: "cancel", label: L("CAIRN.Cancel"), callback: () => false },
-    ],
-    rejectClose: false,
   });
   if (!picked) return null;
 
-  const card = await reportCast(actor, scroll, picked);
-  // The spend, AFTER the report so a failed card never eats the scroll.
-  // `_preUpdate`'s scroll pin deliberately leaves `uses.value` alone, which is
-  // exactly what lets this stick.
-  await scroll.update({ "system.uses.value": 0 });
+  const [bookId, pageKey] = String(picked.page).split(":");
+  const chosen = entries.find((e) => e.book.id === bookId && e.page.key === pageKey);
+  if (!chosen) return null;
+
+  // A page wears the {name, system.description} shape `reportCast` reads. It is
+  // not a document and never was one on this type: the two fields ARE the page.
+  return reportCast(actor, {
+    name: pageLabel(chosen.page),
+    system: { description: chosen.page.text },
+  }, picked.dice);
+};
+
+/**
+ * "The magic undoes the paper" — ONE format-free localization key, never
+ * `localize("…") + name + "?"`. Spanish OPENS the question with «¿», which no
+ * amount of concatenating a trailing "?" can produce; the sentence has to be
+ * the translator's to write, whole. Same shape as `confirmDelete` in actor.js.
+ */
+const confirmScrollCast = () =>
+  foundry.applications.api.DialogV2.confirm({
+    content: game.i18n.localize("CAIRN.Notify.ConfirmCastScroll"),
+    rejectClose: false,
+    modal: true,
+  });
+
+/**
+ * Cast a HECHIZO — and, with `scroll` ticked, a PERGAMINO.
+ *
+ * A spell casts ITSELF: its name is the spell's name and `system.description`
+ * is the text, so there is no page picker, only the dice.
+ *
+ * A Pergamino is the same cast with a beginning and an end. BEFORE anything is
+ * rolled it asks, because the paper does not survive being read; AFTER the card
+ * is posted the item is DELETED from the actor — that ordering is deliberate,
+ * so a card that fails to post can never eat the scroll. Dismissing the
+ * confirmation spends nothing and rolls nothing.
+ *
+ * @param {CairnActor} actor
+ * @param {CairnItem} spell   a `spell` item, scroll or not
+ * @returns {Promise<ChatMessage|null>}
+ */
+export const castSpell = async (actor, spell) => {
+  if (actor?.type !== "character") return null;
+  if (spell?.type !== "spell") return null;
+  const isScroll = !!spell.system.scroll;
+  // A scroll generated already-spent (gear.js hands out those) has nothing left
+  // to read. Every other scroll carries its one use from `_preCreate`.
+  if (isScroll && (spell.system.uses?.value ?? 0) < 1) {
+    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ScrollSpent"));
+    return null;
+  }
+  // The dice check comes BEFORE the confirmation, deliberately: there is no
+  // point asking somebody to burn a scroll for a cast their inventory cannot
+  // pay for. It is still "before anything is rolled" either way — the roll is
+  // three statements below, after the picker.
+  const maxDice = magicDice(actor);
+  if (maxDice < 1) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoDice", { name: actor.name }));
+    return null;
+  }
+  if (isScroll && !(await confirmScrollCast())) return null;
+
+  const picked = await askCast(maxDice, {
+    title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: spell.name }),
+  });
+  if (!picked) return null;
+
+  const card = await reportCast(actor, spell, picked.dice);
+  // The paper goes AFTER the report, so a failed card never destroys a scroll.
+  // Deleted rather than marked spent: `delete()` straight on the document, not
+  // `deleteOwnedItem`, which raises its own "Delete X?" confirmation — the
+  // caster has already answered that question above and must not be asked twice.
+  if (isScroll) await spell.delete();
   return card;
 };
 
