@@ -1,5 +1,9 @@
 import { CairnActor } from "./actor/actor.js";
-import { compendiumInfoFromString, drawTableText, resultText, findTableByName } from "./compendium.js";
+import { resultText, findTableByName } from "./compendium.js";
+import {
+  docFromPack, documentsOfType, generatorTable, generatorText, itemByName, packFor,
+  warnNoTable, TABLES,
+} from "./content-packs.js";
 import { Cairn } from "./config.js";
 import { evaluateFormula, formatCount } from "./utils.js";
 import {
@@ -9,7 +13,7 @@ import {
 import { containerClass, iconForTransport } from "./icons.js";
 import { connectionHeadroom, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { SETTINGS_NS } from "./settings.js";
-import { glogEnabled, GLOG_SPELL_PACKS } from "./glog.js";
+import { glogEnabled } from "./glog.js";
 import { PERSON_ROLES } from "./data-models.js";
 
 // Foundry validates a document flag's scope against real package ids, so flags
@@ -429,9 +433,10 @@ const defaultPortraitPool = async () => {
  * folder when the Warden keeps one, else the general pool. Omitting it asks
  * for the general pool, which is what every caller got before categories
  * existed — so an un-converted caller behaves exactly as it always did. The
- * shipped fallback is NOT category-aware and must not become so here: monsters
- * have their own (game-icons creatures, in monster-generator.js) and would be
- * badly served by 70 drawings of people.
+ * shipped fallback is NOT category-aware and must not become so here: it would
+ * serve a monster badly, 70 drawings of people for a thing that is not one.
+ * (The monster generator that picked its own game-icons creature art is gone,
+ * 2026-08-29; a monster takes whatever art its maker gives it.)
  *
  * THE TOKEN IS THE PORTRAIT. Aspeheim's gallery was the one paired set this
  * drew from — two folders sharing a filename, a 1000px face and a 256px token
@@ -638,8 +643,7 @@ export const rollGold = async (formula) => evaluateFormula(formula);
  * ROLLS ONLY, and deliberately. Age is a free-text input on the sheet
  * (templates/parts/bio-block.html) with this die beside it, so a hand-typed
  * age is nobody's business but the player's — the old bounds never
- * constrained it and the formula does not either. Since 2026-08-21 an
- * IMPORTED age is verbatim too (kettlewright-import.js): parsed, not rolled.
+ * constrained it and the formula does not either.
  *
  * The single choke point for age: all four generation call sites and the
  * sheet's re-roll come through here, so the setting lands everywhere at once.
@@ -684,31 +688,35 @@ export const effectiveAgeFormula = (fallback) => {
 
 /**
  * Draw one text result from each named table (used for the eight 2e traits).
- * @param {Object<string,string>} items  key -> "pack;TableName"
+ *
+ * The values are BARE TABLE NAMES now, not "pack;Table" addresses: every one of
+ * them lives in the Warden's Generadores compendium, so the pack half of the old
+ * string said the same thing eight times. `generatorText` degrades a missing
+ * table to "" exactly as `drawTableText` did — generation must never throw
+ * half-way and leave a part-built actor — and tells the Warden which table is
+ * missing on the way past, once per table per session.
+ * @param {Object<string,string>} items  key -> table name
  * @returns {Promise<Object<string,string>>}
  */
 export const rollTextItems = async (items) => {
   const data = {};
-  for (const [key, value] of Object.entries(items)) {
-    const [compendium, table] = compendiumInfoFromString(value);
-    data[key] = await drawTableText(compendium, table);
+  for (const [key, name] of Object.entries(items)) {
+    data[key] = await generatorText(name);
   }
   return data;
 };
 
 /**
- * Roll a name off a name table, given a "pack;Table Name" config string. Cairn 2e
- * dropped 1e's name tables, so everything that needs a random person's name — a
- * hireling, a Barebones character — draws from the Warden NPC name table. Uses
- * roll(), never draw(), so the table's drawn state is never mutated.
- * @param {String} config  "packId;Table Name"
+ * Roll a name off a name table. Cairn 2e dropped 1e's name tables, so everything
+ * that needs a random person's name — a hireling, an NPC, a Barebones character
+ * — draws from the Nombres table. Uses roll(), never draw(), so the table's
+ * drawn state is never mutated.
+ * @param {String} tableName  a Generadores table name (CONFIG.Cairn.*.name)
  * @param {String} fallback  used when the table is missing or empty
  * @returns {Promise<String>}
  */
-export const rollNameFromTable = async (config, fallback) => {
-  const [packName, tableName] = compendiumInfoFromString(config);
-  const pack = game.packs.get(packName);
-  const table = pack ? (await pack.getDocuments()).find((t) => t.name === tableName) : null;
+export const rollNameFromTable = async (tableName, fallback) => {
+  const table = tableName ? await generatorTable(tableName) : null;
   if (!table) return fallback;
   const { results } = await table.roll();
   return resultText(results[0]).trim() || fallback;
@@ -795,11 +803,10 @@ const tagBackgroundGear = (items) =>
 /*  Bonds                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** The shipped 2e Bonds table. */
-const shippedBondsTable = async () => {
-  const pack = game.packs.get("mondolme.tables-2e");
-  return pack ? (await pack.getDocuments()).find((t) => t.name === "Bonds") ?? null : null;
-};
+/** The Vínculos table out of the Warden's Generadores compendium. A miss is
+ *  reported by `generatorTable` — a character owed a bond and given none is
+ *  exactly the kind of quiet shortfall nobody notices at the table. */
+const bondsTable = async () => generatorTable(TABLES.bonds);
 
 /**
  * A bond's identity, for telling two of them apart. A stored bond keeps no
@@ -826,8 +833,9 @@ const bondKey = (text) => String(text ?? "").trim().toLowerCase();
 const BOND_DRAW_ATTEMPTS = 10;
 
 /**
- * Draw a Cairn 2e bond. With no argument this is the shipped `tables-2e` "Bonds"
- * table, whose each result carries its mechanical payload in flags.mondolme
+ * Draw a Cairn 2e bond. With no argument this is the Vínculos table in the
+ * Warden's Generadores compendium, whose results may carry a mechanical payload
+ * in flags.mondolme
  * (starting gold and a gear reference, resolved here); the result text is the
  * narrative. Uses roll(), never draw(), so the table's drawn state is never mutated.
  *
@@ -835,10 +843,9 @@ const BOND_DRAW_ATTEMPTS = 10;
  * ONLY by design: Foundry's RollTable UI cannot author custom flags, so a hand-made
  * row has no gold and no gear — and rather than invent structure by parsing its prose,
  * the payload simply comes back empty and the text carries the meaning, which is the
- * same call the system makes everywhere else about mechanical text. The shipped table
- * keeps its automatic payload because the importer writes those flags.
+ * same call the system makes everywhere else about mechanical text.
  *
- * A named table that cannot be found falls back to the shipped one, so a typo or a
+ * A named table that cannot be found falls back to Vínculos, so a typo or a
  * table left behind when a background was shared degrades to a normal 2e bond rather
  * than to no bond at all.
  *
@@ -857,9 +864,13 @@ export const drawBond = async (tableName, { avoid = [] } = {}) => {
   // World-first, by name — the rationale lives on findTableByName.
   let table = wanted ? await findTableByName(wanted) : null;
   if (wanted && !table) {
-    console.warn(`Mondolme | no RollTable named "${wanted}" — falling back to the 2e Bonds table`);
+    console.warn(`Mondolme | no RollTable named "${wanted}" — falling back to ${TABLES.bonds}`);
   }
-  table ??= await shippedBondsTable();
+  // The fallback is where the Warden is told, and only here: a background naming
+  // a table that does not exist is a content typo the fallback covers, while
+  // having no bonds table AT ALL means every 2e character generated in this
+  // world is a bond short.
+  table ??= await bondsTable();
   if (!table) return null;
 
   // Re-roll a repeat. `taken` is built once; the table is not mutated by roll(),
@@ -1068,13 +1079,24 @@ export const previewBackground = async (bg, n = 10) => {
 const CUSTOM_BG_PACK = "world.custom-backgrounds";
 
 /**
- * The GM's editable "Custom Backgrounds" world compendium, created on first use.
- * A world pack (never a system pack — Foundry overwrites those on update) is the
- * only place user backgrounds survive; the discovery scan finds them there
- * regardless of pack name, so this is purely a predictable, auto-created home.
+ * Where a duplicated background is written: the Warden's own TRASFONDOS
+ * compendium when it can take one, else the auto-created world pack.
+ *
+ * The order changed with the source (2026-08-29). There is exactly one place
+ * backgrounds are READ from now, so writing a copy anywhere else produces a
+ * background nothing can roll — which is what "Duplicate" quietly did the moment
+ * the discovery scan went away. Writing into the configured compendium is
+ * therefore the point of the action, not a convenience.
+ *
+ * `locked` is the one thing that can refuse it: a compendium that came from a
+ * module is read-only, and Foundry rejects the create rather than asking. The
+ * world pack is the fallback for exactly that case — the copy survives, the
+ * Warden can drag it where they want it, and nothing is lost in silence.
  * @returns {Promise<CompendiumCollection|null>}
  */
 const ensureCustomBackgroundPack = async () => {
+  const configured = packFor("backgrounds");
+  if (configured && !configured.locked) return configured;
   const existing = game.packs.get(CUSTOM_BG_PACK);
   if (existing) return existing;
   // The label is stored on the pack, so it is fixed in whatever language the
@@ -1089,12 +1111,12 @@ const ensureCustomBackgroundPack = async () => {
 };
 
 /**
- * Copy a background into the GM's editable world pack as a fully-formed starting
- * point to rename and rework — the "Duplicate into my backgrounds" action
+ * Copy a background into an editable compendium as a fully-formed starting point
+ * to rename and rework — the "Duplicate into my backgrounds" action
  * (docs/custom-backgrounds-plan.md §8). By-name gear references are kept as-is
- * (they point at shipped items every install already has, so the copy is portable
- * within the system); a GM who wants a one-off item re-drops it to snapshot. The
- * copy is forced to source "2e" so it is immediately discoverable.
+ * (they point into the same Objetos compendium the original resolved against, so
+ * the copy grants what the original did); a GM who wants a one-off item re-drops
+ * it to snapshot. The copy is forced to source "2e" so it runs the 2e generator.
  * @param {CairnItem} bg
  * @returns {Promise<CairnItem|null>}
  */
@@ -1125,11 +1147,11 @@ const containerKindFor = (name) => (/\b(wagon|cart|sled|sledge)\b/i.test(name) ?
  * produces (marketplace.js acquireTransport), so a granted donkey and a bought
  * one behave identically.
  *
- * The spec's name is resolved against the editable Mounts & Transports Actor
- * pack first, so a Warden who retunes "Donkey" there changes every donkey granted
- * afterwards; the grant's own `slots` still wins, because that number is the
- * background's (a Rivertooth is +6 where a Blacklegged Dandy is +4). A name with
- * no pack document — the one-off beasts — is minted from the spec alone.
+ * The spec's name is resolved against the Warden's Objetos compendium first, so
+ * retuning "Donkey" there changes every donkey granted afterwards; the grant's
+ * own `slots` still wins, because that number is the background's (a Rivertooth
+ * is +6 where a Blacklegged Dandy is +4). A name the compendium does not carry —
+ * the one-off beasts — is minted from the spec alone.
  *
  * Each container is flagged with the question that granted it, so a re-roll or a
  * regenerate can delete exactly those and leave bought/manual containers alone.
@@ -1162,14 +1184,15 @@ export const grantContainers = async (actor, specs) => {
     }));
     specs = specs.slice(0, headroom);
   }
-  // The Mounts & Transports ACTOR pack, not the legacy transport Item pack. The
-  // payload below copies hp / armorOverride / role / containerClass off the
-  // resolved document, and only the Actor documents HAVE those fields — resolving
-  // against the Item pack made every one of those reads a miss, so a granted
-  // Rivertooth arrived with the schema's default 6 HP instead of its stated 8
-  // (review #5, critical: the pack was stocked by nothing).
-  const pack = game.packs.get("mondolme.mounts-transports");
-  const docs = pack ? await pack.getDocuments() : [];
+  // Named beasts and vehicles resolve BY NAME out of the Warden's Objetos
+  // compendium (2026-08-29). The dedicated Mounts & Transports ACTOR pack this
+  // used to read is gone with every other shipped pack, so what a granted
+  // "Rivertooth" resolves to is whatever the Warden authored under that name —
+  // and the payload below takes each field only `??`-wise, so a document that
+  // carries no `hp` or no `role` (an Item rather than an Actor, say) degrades to
+  // exactly the same defaults a beast the compendium has never heard of gets.
+  // QUIET on a miss: a one-off "Mangy Wolfdog" that no compendium carries is the
+  // documented normal case here, not a content mistake to report.
   // Resolve a spec against that editable pack (art/stats/description), with
   // sensible fallbacks for one-off beasts the pack doesn't carry. `kind` only
   // matters on the no-document path (icon + class inference by name); a resolved
@@ -1191,9 +1214,16 @@ export const grantContainers = async (actor, specs) => {
     const pool = customPoolFor("companion");
     return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   };
-  const resolve = (spec) => {
-    const doc = docs.find((d) => d.name.toLowerCase() === String(spec.name).toLowerCase());
-    const kind = doc ? (doc.system.role === "companion" ? "mount" : "vehicle") : containerKindFor(spec.name);
+  const resolve = async (spec) => {
+    const doc = await itemByName(spec.name, { quiet: true });
+    // `role` decides mount-or-vehicle only when the resolved document HAS one;
+    // otherwise the name does, exactly as it does for an unresolved beast. A
+    // document with no role used to be impossible (the old pack held Actors
+    // only) and reading `doc.system.role === "companion"` through it would have
+    // filed every resolved beast as a vehicle.
+    const kind = doc?.system?.role
+      ? (doc.system.role === "companion" ? "mount" : "vehicle")
+      : containerKindFor(spec.name);
     const art = doc?.img
       ?? (kind === "mount" ? companionArt() : null)
       ?? iconForTransport(spec.name, kind);
@@ -1218,15 +1248,15 @@ export const grantContainers = async (actor, specs) => {
   /* Resolved ONCE, because the keeper's notes need the same answers the payload
    * does: what this thing IS (role + Kind) and, where the granting option said
    * nothing itself, the stock description off its pack document. */
-  const entries = specs.map((spec) => {
-    const { doc, kind, art } = resolve(spec);
+  const entries = await Promise.all(specs.map(async (spec) => {
+    const { doc, kind, art } = await resolve(spec);
     return {
       spec, doc, kind, art,
-      cls: doc?.system.containerClass || containerClass(spec.name, kind),
-      role: doc?.system.role
+      cls: doc?.system?.containerClass || containerClass(spec.name, kind),
+      role: doc?.system?.role
         ?? ({ mount: "companion", vehicle: "transport", worn: "container", pile: "container" }[kind] ?? "companion"),
     };
-  });
+  }));
   const payloads = entries.map(({ spec, doc, art, cls, role }) => {
     return {
       type: "npc",
@@ -1235,8 +1265,8 @@ export const grantContainers = async (actor, specs) => {
       prototypeToken: { texture: { src: art } },
       system: {
         connectedTo: actor.uuid,
-        slots: spec.slots ?? doc?.system.slots ?? 0,
-        description: doc?.system.description ?? "",
+        slots: spec.slots ?? doc?.system?.slots ?? 0,
+        description: doc?.system?.description ?? "",
         // The Actor document records its class; a one-off beast with no document
         // infers it from the name the way the sheet does. Leaving it blank would
         // have shipped a horse whose art and one-word label were both decided by
@@ -1246,10 +1276,10 @@ export const grantContainers = async (actor, specs) => {
         // inferred kind (a granted "Mangy Wolfdog" is a mount-shaped creature
         // and keeps its stat block, exactly as the old animate default did).
         role,
-        cost: doc?.system.cost ?? 0,
+        cost: doc?.system?.cost ?? 0,
         generationEnabled: false,
-        ...(doc?.system.hp ? { hp: { value: doc.system.hp.value, max: doc.system.hp.max } } : {}),
-        ...(doc?.system.armorOverride != null ? { armorOverride: doc.system.armorOverride } : {}),
+        ...(doc?.system?.hp ? { hp: { value: doc.system.hp.value, max: doc.system.hp.max } } : {}),
+        ...(doc?.system?.armorOverride != null ? { armorOverride: doc.system.armorOverride } : {}),
         // The ABILITIES too — the stat block travels whole. hp/armorOverride
         // have been copied since review #5 ("a granted Rivertooth arrived with
         // the schema's default 6 HP"); abilities joined 2026-08-08 when the
@@ -1257,7 +1287,11 @@ export const grantContainers = async (actor, specs) => {
         // schema's 10/10/10 is the same bug class. Via toObject(), never by
         // reference: a DataModel getter hands back the LIVE object, and a
         // shared reference here poisons the pack document.
-        ...(doc ? { abilities: doc.system.toObject().abilities } : {}),
+        // Tested on the FIELD, not on `doc`: what the name resolves to is now
+        // whatever the Warden authored, and an item that carries no ability
+        // block must leave the schema's own defaults standing rather than
+        // writing `abilities: undefined` over them.
+        ...(doc?.system?.abilities ? { abilities: doc.system.toObject().abilities } : {}),
       },
       flags: {
         [FLAG_SCOPE]: { grantSource: spec.grantSource ?? "background" },
@@ -1487,19 +1521,14 @@ export const replaceGrantedContainers = async (actor, source, specs) => {
  * @returns {Promise<Object|null>}
  */
 export const generate2eCharacter = async (chosenBg = null) => {
-  // Draw from getBackgroundsFor("2e"), NOT from the shipped pack directly. This
-  // read `game.packs.get("mondolme.backgrounds-2e")` inline, so random
-  // generation ignored both content toggles: a Warden running a homebrew-only
-  // game (shipped off, custom on) still got shipped backgrounds, and their own
-  // were never rolled at all. Only the picker and changeBackground went through
-  // the union, which is why it looked like a settings bug rather than a
-  // generation one. generateBarebonesCharacter had it right all along via
-  // getBarebonesBackgrounds(). Reported as issue #9.
+  // Through the shared pool, NOT a pack read of its own — the rule that outlived
+  // the packs (issue #9: an inline pack read here ignored the Warden's choices,
+  // so random generation and the picker rolled different pools). Today the pool
+  // is one compendium minus the switched-off rows, and going through it is what
+  // keeps the eye toggle honest for a RANDOM draw and not just the picker.
   const backgrounds = await getBackgroundsFor("2e");
   if (!chosenBg && !backgrounds.length) {
-    ui.notifications?.warn(game.i18n.localize(customOnly()
-      ? "CAIRN.NoCustomBackgrounds"
-      : "CAIRN.NoBackgrounds2e"));
+    ui.notifications?.warn(game.i18n.localize("CAIRN.NoBackgrounds2e"));
     return null;
   }
   // A chosen background (from a picker / persisted across regenerate) is used
@@ -1594,80 +1623,53 @@ export const generate2eCharacter = async (chosenBg = null) => {
  * the same `background` Item type 2e uses — it simply carries a name and three
  * gear references, with the archetype/names/choice-table fields left empty.
  *
- * Its three creation steps are RollTables in `tables-barebones` whose results
- * REFERENCE pool items, so a Warden restocks a step by dragging an item into the
- * table. Rolling is always table.roll(), never draw(): drawing marks results as
- * used and would silently exhaust a table over a campaign.
+ * Its three creation steps are RollTables in the Warden's Generadores compendium
+ * (Arma, Armadura, Equipo) whose results REFERENCE pool items, so a Warden
+ * restocks a step by dragging an item into the table. Rolling is always
+ * table.roll(), never draw(): drawing marks results as used and would silently
+ * exhaust a table over a campaign.
  * ======================================================================== */
 
-const BAREBONES_BG_PACK = "mondolme.backgrounds-barebones";
-const BAREBONES_TABLE_PACK = "mondolme.tables-barebones";
-
-/** The 100 Barebones background documents. @returns {Promise<CairnItem[]>} */
-export const getBarebonesBackgrounds = async () => {
-  const pack = game.packs.get(BAREBONES_BG_PACK);
-  return pack ? pack.getDocuments() : [];
-};
-
-/** The Barebones background with this name — used to keep it across a regenerate
- *  (Barebones characters are keyed by uuid like 2e; this is the fallback for one
- *  generated before the uuid was stored). @returns {Promise<CairnItem|null>} */
-export const getBarebonesBackgroundByName = async (name) =>
-  (await getBarebonesBackgrounds()).find((b) => b.name === name) ?? null;
-
-/** One table out of the Barebones pack, by name. @returns {Promise<RollTable|null>} */
-const barebonesTable = async (name) => {
-  const pack = game.packs.get(BAREBONES_TABLE_PACK);
-  if (!pack) return null;
-  return (await pack.getDocuments()).find((t) => t.name === name) ?? null;
-};
+/** One creation table, by name. A miss is reported by `generatorTable` and the
+ *  step degrades to nothing — the character is one item short, and the Warden is
+ *  told which table would have filled it. */
+const barebonesTable = async (name) => generatorTable(name);
 
 /**
- * The pack a RANDOM spell is drawn from — canon only, by ruling (2026-08-05):
- * "random assignment of spells and spell scrolls during character generation
- * with Cairn 2e Canon Backgrounds [uses] only the spells listed in the
- * Spellbooks compendium." Deliberately NOT `SPELL_PACKS`: that list answers a
- * different question — which packs a by-NAME grant like "Spellbook (Shield)"
- * resolves against — and a shared constant would let widening one silently
- * widen the other.
- */
-const SPELL_POOL_PACK = "mondolme.spellbooks";
-
-/**
- * One random spellbook DOCUMENT out of `packIds`, index-first.
+ * One random spellbook DOCUMENT — a draw on the Hechizos table.
  *
- * No cache, on purpose. The old shape memoized `getDocuments()` across both
- * spell packs and never invalidated, so a spell a Warden added to an unlocked
- * pack was undrawable until the browser reloaded — silently. There is nothing
- * to invalidate here: core maintains `pack.index` live on every client
- * (client-document.mjs _onCreate/_onUpdate/_onDelete all reindex), so reading
- * the index each draw is both current and effectively free, and only the one
- * winning document pays a server fetch.
+ * A TABLE, not an index scan of a pack (2026-08-29). This used to enumerate
+ * every `spellbook` item in a shipped Spellbooks compendium and pick uniformly;
+ * with one Objetos compendium holding every item in the game, "every spellbook
+ * in the pack" is no longer a pool anybody curated. A RollTable IS that curation
+ * — the Warden decides what a random spell can be, and can weight it — and its
+ * rows point at spellbook Items exactly as the market tables point at goods.
  *
- * The type filter is load-bearing: an unlocked pack accepts ANY item, and a
- * Dagger dropped into Spellbooks must not come out of "a random spellbook".
+ * The GLOG fork went with it: which wording a random spell has is a property of
+ * what the Warden put in the table, not of which pack it was read out of. Under
+ * GLOG the draw still becomes a SCROLL — that is randomSpellbookItem's job, and
+ * it is the half of the ruling that survives a single compendium.
+ *
+ * No cache, on purpose: a Warden's edit to the table must be drawable at once.
  * @returns {Promise<CairnItem|null>}
  */
-export const randomSpellbookDoc = async (packIds = null) => {
-  // Under GLOG the pool is the GLOG wordings plus the custom set, canon
-  // excluded (ruling 2026-08-05). The setting is read per DRAW, so flipping it
-  // needs no reload. Statically imported: a per-call `await import()` here
-  // cost ~600ms EVERY call in the live page (it is why dev:spell-pool timed
-  // out on 2026-08-05), and glog.js → settings.js is a leaf chain, no cycle.
-  if (!packIds) {
-    packIds = glogEnabled() ? GLOG_SPELL_PACKS : [SPELL_POOL_PACK];
+export const randomSpellbookDoc = async () => {
+  const table = await generatorTable(TABLES.spells);
+  if (!table) return null;
+  const { results } = await table.roll();
+  const result = results?.[0] ?? null;
+  const doc = result?.documentUuid ? await fromUuid(result.documentUuid) : null;
+  // The type filter is load-bearing and stays: a table row can point at
+  // anything, and a Dagger must not come out of "a random spellbook". Console
+  // only — the Warden has a working table with one bad row, which is not the
+  // same failure as having no table, and the notification for THAT already fired
+  // above.
+  if (doc?.documentName !== "Item" || doc.type !== "spellbook") {
+    console.warn(`Mondolme | the "${TABLES.spells}" row `
+      + `"${resultText(result)}" does not point at a spellbook item`);
+    return null;
   }
-  const candidates = [];
-  for (const key of packIds) {
-    const pack = game.packs.get(key);
-    if (!pack) continue;
-    for (const e of await pack.getIndex()) {
-      if (e.type === "spellbook") candidates.push({ pack, id: e._id });
-    }
-  }
-  if (!candidates.length) return null;
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
-  return pick.pack.getDocument(pick.id);
+  return doc;
 };
 
 /** A random spellbook as an owned item, named for the spell it holds. The
@@ -1744,11 +1746,11 @@ const resolveBarebonesResult = async (result) => {
     return resolveBarebonesResult(results[0]);
   }
   const lower = name.toLowerCase();
-  if (lower === "scroll of random spellbook") {
+  if (GEAR_INSTRUCTIONS.scroll.has(lower)) {
     const s = await randomScrollItem();
     return s ? { item: s, name: s.name } : null;
   }
-  if (lower === "spellbook" || lower === "random spellbook") {
+  if (GEAR_INSTRUCTIONS.spellbook.has(lower)) {
     const s = await randomSpellbookItem();
     return s ? { item: s, name: s.name } : null;
   }
@@ -1774,13 +1776,32 @@ const rollBarebonesTable = async (tableName) => {
 /** The starting-gear rows the SRD writes as an INSTRUCTION rather than an item.
  *  Kept as one list so the dispatch below and the duplicate-guard that seeds
  *  `avoid` can never disagree about what counts as a literal item. */
+/**
+ * The instruction rows a Warden may type into a background's starting gear
+ * INSTEAD of an item name: each one means "roll something here" rather than
+ * "grant the item called this".
+ *
+ * Spanish, because the Warden authoring the background is writing Spanish. The
+ * old English spellings are still accepted — they cost one Set entry each and
+ * they are what any background written against the upstream system says.
+ */
+const GEAR_INSTRUCTIONS = {
+  extraGear: new Set(["equipo adicional aleatorio", "random additional gear"]),
+  scroll: new Set(["pergamino de hechizo aleatorio", "scroll of random spellbook"]),
+  spellbook: new Set([
+    "hechizo", "hechizo aleatorio", "spellbook", "random spellbook",
+  ]),
+};
+
 const INSTRUCTION_ROWS = new Set([
-  "random additional gear", "scroll of random spellbook", "spellbook", "random spellbook",
+  ...GEAR_INSTRUCTIONS.extraGear,
+  ...GEAR_INSTRUCTIONS.scroll,
+  ...GEAR_INSTRUCTIONS.spellbook,
 ]);
 
 const rollAdditionalGear = async (avoid = new Set()) => {
   for (let tries = 0; tries < 50; tries++) {
-    const got = await rollBarebonesTable("Barebones: Creation - Additional Gear");
+    const got = await rollBarebonesTable(TABLES.gear);
     if (!got?.item) continue;                        // a cart/wagon, or unresolved
     if (avoid.has(got.name.toLowerCase())) continue;
     return got.item;
@@ -1833,9 +1854,9 @@ export const resolveStartingGear = async (bg, avoid = new Set()) => {
     // A snapshot travels inside the background (custom-authored gear), so it
     // resolves without ever touching the canonical packs or the instruction rows.
     if (ref.itemData) item = ownedFromSnapshot(ref.itemData, { quantity: ref.quantity ?? 1, uses: ref.uses });
-    else if (lower === "random additional gear") item = await rollAdditionalGear(avoid);
-    else if (lower === "scroll of random spellbook") item = await randomScrollItem();
-    else if (lower === "spellbook" || lower === "random spellbook") item = await randomSpellbookItem();
+    else if (GEAR_INSTRUCTIONS.extraGear.has(lower)) item = await rollAdditionalGear(avoid);
+    else if (GEAR_INSTRUCTIONS.scroll.has(lower)) item = await randomScrollItem();
+    else if (GEAR_INSTRUCTIONS.spellbook.has(lower)) item = await randomSpellbookItem();
     else item = await resolveGearItem(ref.name, { quantity: ref.quantity ?? 1, uses: ref.uses });
     if (item) { out.push(item); avoid.add(item.name.toLowerCase()); }
   }
@@ -1861,13 +1882,13 @@ export const resolveStartingGear = async (bg, avoid = new Set()) => {
 const rollBarebonesEquipment = async (avoid = new Set()) => {
   // Every Barebones character starts with these; they come from the SRD's
   // procedure, not from the background, so a PC's carry no source chip.
-  const base = await resolveRefs([{ name: "Rations", uses: 3 }, { name: "Torch", uses: 3 }]);
+  const base = await resolveRefs([{ name: "Raciones", uses: 3 }, { name: "Antorcha", uses: 3 }]);
   for (const i of base) avoid.add(i.name.toLowerCase());
 
   // Step 5: Armor and Weapon, both equipped. "None" armor buys an extra gear roll.
-  const weapon = (await rollBarebonesTable("Barebones: Creation - Weapon"))?.item ?? null;
+  const weapon = (await rollBarebonesTable(TABLES.weapon))?.item ?? null;
   if (weapon) { weapon.system.equipped = true; avoid.add(weapon.name.toLowerCase()); }
-  const armor = (await rollBarebonesTable("Barebones: Creation - Armor"))?.item ?? null;
+  const armor = (await rollBarebonesTable(TABLES.armor))?.item ?? null;
   if (armor) { armor.system.equipped = true; avoid.add(armor.name.toLowerCase()); }
 
   // Step 6 — Additional Gear, always.
@@ -1894,7 +1915,7 @@ const rollBarebonesEquipment = async (avoid = new Set()) => {
  * @returns {Promise<Object|null>}
  */
 export const generateBarebonesCharacter = async (chosenBg = null) => {
-  const backgrounds = await getBarebonesBackgrounds();
+  const backgrounds = await allBackgrounds();
   if (!chosenBg && !backgrounds.length) {
     ui.notifications?.warn(game.i18n.localize("CAIRN.NoBackgroundsBarebones"));
     return null;
@@ -2063,36 +2084,64 @@ export const generateCharacter = async (background = null, source = null) => {
  * back to a flat list whose summary is the gear the background grants.
  * ======================================================================== */
 
-/** The pack a content source's backgrounds live in. */
-const BG_PACK_FOR = { "2e": "mondolme.backgrounds-2e", barebones: BAREBONES_BG_PACK };
-
 /**
- * The SHIPPED custom pack (2026-08-04 ruling): "custom" means not published in
- * the Cairn 2e Player's Guide — whoever wrote it. This pack ships third-party
- * CC BY-SA sets (currently "Backgrounds for Cairn", Gordon McCormick) and is
- * admitted by the same CUSTOM toggle as the Warden's own authored backgrounds.
- */
-const SHIPPED_CUSTOM_BG_PACK = "mondolme.backgrounds-custom";
-
-/**
- * Everything the CUSTOM toggle admits: the shipped custom pack plus the
- * world/module scan. One function so the pool and the picker's Custom section
- * can never disagree about membership.
+ * THE background source: every `background` Item in the Warden's Trasfondos
+ * compendium (2026-08-29).
+ *
+ * Four sources collapsed into this one. There used to be a canon 2e pack, a
+ * Barebones pack, a shipped third-party "custom" pack, and a scan of every world
+ * and module Item compendium for `background` items — four provenances, three
+ * settings toggles gating them, and a picker section built out of the
+ * difference. None of them can exist now: the system ships no packs, so every
+ * background a world has is one the Warden put in one compendium, and "is this
+ * one canon?" has no answer left to give.
+ *
+ * What survives untouched is the per-background EYE TOGGLE — `disabledBackgrounds`,
+ * stored as uuids in a world setting — because that is a Warden's choice about
+ * their own content rather than a fact about where it came from.
+ *
+ * @param {Object} [opts]
+ * @param {Boolean} [opts.includeDisabled]  the Warden's picker view, which shows
+ *   switched-off backgrounds greyed rather than hiding them
  * @returns {Promise<CairnItem[]>}
  */
-const getAllCustomBackgrounds = async () => {
-  const out = [];
-  const shipped = game.packs.get(SHIPPED_CUSTOM_BG_PACK);
-  if (shipped) out.push(...(await shipped.getDocuments()));
-  out.push(...(await getCustomBackgrounds()));
-  return out;
+export const allBackgrounds = async ({ includeDisabled = false } = {}) => {
+  const docs = await documentsOfType("backgrounds", "background");
+  if (includeDisabled) return docs;
+  const off = disabledBackgrounds();
+  return docs.filter((b) => !off.has(b.uuid));
 };
 
+/** The background with this name, or null. Used to keep a character's background
+ *  across a regenerate when only its name was stored, to resolve a failed
+ *  career's keepsake, and to find an NPC Background's gear.
+ *  @returns {Promise<CairnItem|null>} */
+export const backgroundByName = async (name, { npcFirst = false } = {}) => {
+  // Two background compendiums now: the players' and the NPC generator's. They
+  // may be the same pack, or two — a Warden who wants short NPC backgrounds
+  // keeps them apart. Both are searched either way, only the ORDER changes, so
+  // one pack configured twice behaves exactly as one pack, and a name that only
+  // exists on the other side still resolves instead of silently granting nothing.
+  const order = npcFirst ? ["npcBackgrounds", "backgrounds"] : ["backgrounds", "npcBackgrounds"];
+  for (const kind of order) {
+    const doc = await docFromPack(kind, name, { quiet: true });
+    if (doc?.type === "background") return doc;
+  }
+  return null;
+};
+
+/* The two names the dev probes in tools/ still call these by. Kept as aliases
+ * rather than renamed there, because "Barebones backgrounds" and "2e
+ * backgrounds" are the same list now and the probes are not this file's to
+ * edit. */
+export const getBarebonesBackgrounds = () => allBackgrounds();
+export const getBarebonesBackgroundByName = (name) => backgroundByName(name);
+
 /**
- * The 2e backgrounds the Warden has switched off — the picker rows' eye
- * toggle (2026-08-04), canon and custom alike. Stored as UUIDs in a world
- * setting, never on the documents: a shipped pack is replaced wholesale on
- * every system update.
+ * The backgrounds the Warden has switched off — the picker rows' eye toggle
+ * (2026-08-04). Stored as UUIDs in a world setting, never on the documents,
+ * because a compendium the Warden shares or re-imports must not carry one
+ * world's switched-off list into another.
  * @returns {Set<String>}
  */
 export const disabledBackgrounds = () =>
@@ -2102,9 +2151,9 @@ export const disabledBackgrounds = () =>
  * Flip one background's disabled state, refusing the disable that would leave
  * generation with NOTHING to roll — the same "can never do nothing" invariant
  * the pool holds, enforced at the only place the state changes. (The pool can
- * still go empty by flipping a content-source toggle afterwards — disabling
- * every custom while canon is on, then switching canon off — and that case
- * keeps its existing answer: generation notifies and does nothing.)
+ * still go empty another way — the Warden re-points the Trasfondos setting at an
+ * empty compendium — and that case keeps its existing answer: generation
+ * notifies and does nothing.)
  * @param {String} uuid
  * @returns {Promise<Set<String>|null>}  the new set, or null if refused
  */
@@ -2113,7 +2162,7 @@ export const toggleBackgroundDisabled = async (uuid) => {
   if (off.has(uuid)) {
     off.delete(uuid);
   } else {
-    const left = (await get2eBackgrounds()).filter((b) => b.uuid !== uuid);
+    const left = (await allBackgrounds()).filter((b) => b.uuid !== uuid);
     if (!left.length) {
       ui.notifications.warn(game.i18n.localize("CAIRN.Notify.LastBackground"));
       return null;
@@ -2125,108 +2174,17 @@ export const toggleBackgroundDisabled = async (uuid) => {
 };
 
 /**
- * A homebrew-only game: the Warden has switched the shipped 2e backgrounds OFF
- * and their own ON. The distinction that matters is "off on purpose" versus
- * "nothing configured" — only the first forbids falling back to shipped content.
- * @returns {Boolean}
- */
-const customOnly = () =>
-  !game.settings.get(SETTINGS_NS, "content-source-2e") &&
-  game.settings.get(SETTINGS_NS, "content-source-custom");
-
-/**
- * Homebrew backgrounds: every `background` Item with source "2e" that lives in a
- * WORLD or MODULE compendium. Location, not a flag, is the discriminator — shipped
- * 2e backgrounds live in the system pack (governed by the 2e toggle, excluded
- * here), a GM's own homebrew in the editable world pack, and shared homebrew in an
- * installed module's pack. The module case is how a GM shares a set: bundle the
- * world "Custom Backgrounds" pack into a module (Foundry's Module Maker); the
- * recipient installs it and the backgrounds show up here. Module packs are usually
- * locked/read-only, which is fine — they are a source; editing goes through the
- * "Duplicate into Custom Backgrounds" action, which copies into the world pack.
+ * Every background for a content source.
  *
- * System packs are overwritten on update, so authored content must live in a world
- * (or shipped-via-module) pack to survive. Scanning is zero-config: we read the
- * lightweight pack INDEX first and only materialize documents that are actually
- * source-"2e" backgrounds, so admitting (potentially large, third-party) module
- * item packs costs a cheap index read, not a full load. Only called when the custom
- * toggle is on.
+ * The `source` argument no longer selects anything — every background lives in
+ * the one Trasfondos compendium — and is kept because the two generation PATHS
+ * are still real and still ask this question in their own words. A background's
+ * own `system.source` still decides which generator runs on it
+ * (generateCharacter), which is where the 2e/Barebones difference actually
+ * lives: in the procedure, not in the shelf the background was taken off.
  * @returns {Promise<CairnItem[]>}
  */
-const getCustomBackgrounds = async () => {
-  const out = [];
-  for (const pack of game.packs) {
-    if (pack.metadata.type !== "Item") continue;
-    const pt = pack.metadata.packageType;
-    if (pt !== "world" && pt !== "module") continue;
-    const index = await pack.getIndex({ fields: ["system.source"] });
-    for (const entry of index) {
-      if (entry.type === "background" && entry.system?.source === "2e") {
-        const doc = await pack.getDocument(entry._id);
-        if (doc) out.push(doc);
-      }
-    }
-  }
-  return out;
-};
-
-/**
- * The 2e background pool: the shipped pack and/or the world's custom backgrounds,
- * each gated by its own toggle and unioned de-duped by id. Shipped-off + custom-on
- * is a homebrew-only game. An empty union (everything off, or custom-on with no
- * world backgrounds yet) falls back to the shipped pack so the picker is never
- * empty — the same "can never do nothing" invariant promptContentSource holds at
- * the source level.
- * @returns {Promise<CairnItem[]>}
- */
-/**
- * One fetch, both answers: the 2e pool AND which ids the CUSTOM toggle
- * admitted. `pack.getDocuments()` is a server round trip on EVERY call
- * (~1.7s warm for the 20-doc pack, measured 2026-08-04), so the picker must
- * not build the pool twice just to learn which entries are custom — that
- * doubled cost is what pushed the picker's open past the probe's wait and
- * looked like a hang.
- */
-const build2ePool = async ({ includeDisabled = false } = {}) => {
-  const byId = new Map();
-  const customIds = new Set();
-  const addShipped = async () => {
-    const pack = game.packs.get(BG_PACK_FOR["2e"]);
-    if (pack) for (const b of await pack.getDocuments()) byId.set(b.id, b);
-  };
-  const shippedOn = game.settings.get(SETTINGS_NS, "content-source-2e");
-  if (shippedOn) await addShipped();
-  if (game.settings.get(SETTINGS_NS, "content-source-custom")) {
-    for (const b of await getAllCustomBackgrounds()) {
-      byId.set(b.id, b);
-      customIds.add(b.id);
-    }
-  }
-  // Fall back ONLY when no toggle expressed a preference. A homebrew-only game
-  // with nothing authored yet must NOT be quietly handed the shipped pack: the
-  // Warden switched it off on purpose, and substituting it is the same mistake
-  // as defaulting a dismissed dialog to 2e (issue #6) — an explicit instruction
-  // overridden by a convenience. The caller notifies and generates nothing
-  // instead, which is recoverable; silently generating from content you disabled
-  // is not, because nothing tells you it happened.
-  if (!byId.size && !customOnly()) await addShipped();
-  // The per-background eye toggle filters LAST, so a disabled background stays
-  // disabled through every branch above, the fallback included. includeDisabled
-  // is the Warden's picker view — the rows render greyed so they can be turned
-  // back on; every other caller (random rolls, swaps, imports) gets the
-  // filtered pool.
-  const off = includeDisabled ? null : disabledBackgrounds();
-  return { docs: [...byId.values()].filter((b) => !off || !off.has(b.uuid)), customIds };
-};
-
-const get2eBackgrounds = async (opts) => (await build2ePool(opts)).docs;
-
-/** Every background for a content source. @returns {Promise<CairnItem[]>} */
-export const getBackgroundsFor = async (source) => {
-  if (source === "2e") return get2eBackgrounds();
-  const pack = game.packs.get(BG_PACK_FOR[source] ?? BG_PACK_FOR["2e"]);
-  return pack ? pack.getDocuments() : [];
-};
+export const getBackgroundsFor = async (_source) => allBackgrounds();
 
 /** Archetype grouping order; anything else falls to the end, alphabetically. */
 const ARCHETYPE_ORDER = ["Fighter", "Wizard", "Thief"];
@@ -2237,51 +2195,39 @@ const ARCHETYPE_ORDER = ["Fighter", "Wizard", "Thief"];
  * which the picker renders as a plain alphabetical list.
  * @returns {Promise<{archetype:String, backgrounds:CairnItem[]}[]>}
  */
-export const getBackgroundsByArchetype = async (source) => {
-  // The Warden's 2e view keeps disabled backgrounds VISIBLE — the picker greys
-  // them and offers the re-enable toggle; hiding them would make a disable
-  // permanent-by-accident. Players get the filtered pool. ONE pool build
-  // supplies both the documents and the custom membership — see build2ePool.
+export const getBackgroundsByArchetype = async (_source) => {
+  // The Warden's view keeps disabled backgrounds VISIBLE — the picker greys them
+  // and offers the re-enable toggle; hiding them would make a disable
+  // permanent-by-accident. Players get the filtered pool.
   //
-  // CUSTOM backgrounds get their own picker section instead of being
-  // interleaved into the archetype groups (user ruling 2026-08-04): a Warden
-  // reading the list tells the Player's Guide twenty from everything else at
-  // a glance. Membership is by PROVENANCE — the shipped custom pack plus the
-  // world/module scan — never by a field on the document, so a duplicate a
-  // Warden edited stays custom and a canon background can never drift in.
-  let backgrounds, customIds;
-  if (source === "2e") {
-    ({ docs: backgrounds, customIds } = await build2ePool({ includeDisabled: game.user.isGM }));
-  } else {
-    backgrounds = await getBackgroundsFor(source);
-    customIds = new Set();
-  }
+  // The separate "Custom" SECTION this used to append is gone with the packs it
+  // was built out of (2026-08-29). It existed to tell the Player's Guide twenty
+  // from everything else at a glance, and membership was by PROVENANCE — which
+  // pack a background came out of. One compendium has no provenances to compare,
+  // so a Warden who still wants that grouping has a better tool for it than a
+  // hardcoded section: give those backgrounds an archetype of their own and they
+  // group under it.
+  const backgrounds = await allBackgrounds({ includeDisabled: game.user.isGM });
   const byName = (x, y) => x.name.localeCompare(y.name, game.i18n.lang);
-  const custom = backgrounds.filter((b) => customIds.has(b.id)).sort(byName);
-  const canon = backgrounds.filter((b) => !customIds.has(b.id));
 
-  let out;
-  if (!canon.some((b) => b.system.archetype)) {
-    // No archetypes at all (every Barebones background): one unnamed group the
-    // picker renders as a plain alphabetical list.
-    out = canon.length ? [{ archetype: "", backgrounds: [...canon].sort(byName) }] : [];
-  } else {
-    const groups = new Map();
-    for (const bg of canon) {
-      const a = bg.system.archetype || "Other";
-      if (!groups.has(a)) groups.set(a, []);
-      groups.get(a).push(bg);
-    }
-    const order = [
-      ...ARCHETYPE_ORDER.filter((a) => groups.has(a)),
-      ...[...groups.keys()].filter((a) => !ARCHETYPE_ORDER.includes(a)).sort(),
-    ];
-    out = order.map((a) => ({ archetype: a, backgrounds: groups.get(a).sort(byName) }));
+  if (!backgrounds.some((b) => b.system.archetype)) {
+    // No archetypes at all (a compendium of Barebones-shaped backgrounds): one
+    // unnamed group the picker renders as a plain alphabetical list.
+    return backgrounds.length
+      ? [{ archetype: "", backgrounds: [...backgrounds].sort(byName) }]
+      : [];
   }
-  // "Custom" resolves through archetypeLabel -> CAIRN.Archetype.Custom, the
-  // "Custom 2e Backgrounds" heading. Last on purpose: canon first, then yours.
-  if (custom.length) out.push({ archetype: "Custom", backgrounds: custom });
-  return out;
+  const groups = new Map();
+  for (const bg of backgrounds) {
+    const a = bg.system.archetype || "Other";
+    if (!groups.has(a)) groups.set(a, []);
+    groups.get(a).push(bg);
+  }
+  const order = [
+    ...ARCHETYPE_ORDER.filter((a) => groups.has(a)),
+    ...[...groups.keys()].filter((a) => !ARCHETYPE_ORDER.includes(a)).sort(),
+  ];
+  return order.map((a) => ({ archetype: a, backgrounds: groups.get(a).sort(byName) }));
 };
 
 /**
@@ -2472,7 +2418,7 @@ export const promptBackground = async (source, currentUuid = null) => {
  * @returns {Promise<{name: String}|false>}  false when cancelled
  */
 export const promptFailedCareer = async (currentName = null) => {
-  const backgrounds = await getBarebonesBackgrounds();
+  const backgrounds = await allBackgrounds();
   if (!backgrounds.length) return false;
   // Same name sort as promptBackground's groups (review #9).
   const sorted = [...backgrounds].sort((a, b) =>
@@ -2526,7 +2472,7 @@ export const promptFailedCareer = async (currentName = null) => {
  * @returns {Promise<String>}
  */
 export const rollFailedCareerName = async (exclude = "") => {
-  const backgrounds = await getBarebonesBackgrounds();
+  const backgrounds = await allBackgrounds();
   const pool = backgrounds.filter((b) => b.name !== exclude);
   const from = pool.length ? pool : backgrounds;
   return from.length ? from[Math.floor(Math.random() * from.length)].name : "";
@@ -2558,7 +2504,7 @@ const failedCareerItemFromBg = async (bg) => {
  * @returns {Promise<Object|null>}
  */
 export const buildFailedCareerItem = async (careerName) =>
-  failedCareerItemFromBg(await getBarebonesBackgroundByName(careerName));
+  failedCareerItemFromBg(await backgroundByName(careerName));
 
 /**
  * Swap the actor's failed-career keepsake for a fresh pick from `careerName`'s
@@ -2603,12 +2549,11 @@ export const changeBackground = async (actor, newBg = null) => {
   let bg = newBg;
   if (!bg) {
     const backgrounds = await getBackgroundsFor(source);
-    // Say why nothing happened. An empty pool is now reachable on purpose (a
-    // homebrew-only game with nothing authored yet), so a bare `return` would
-    // read as a dead button.
+    // Say why nothing happened. An empty pool is entirely reachable — an
+    // unassigned or empty Trasfondos compendium — so a bare `return` would read
+    // as a dead button.
     if (!backgrounds.length) {
-      ui.notifications?.warn(game.i18n.localize(
-        source === "2e" && customOnly() ? "CAIRN.NoCustomBackgrounds" : "CAIRN.NoBackgrounds2e"));
+      ui.notifications?.warn(game.i18n.localize("CAIRN.NoBackgrounds2e"));
       return;
     }
     const pool = backgrounds.filter((b) => b.uuid !== actor.system.backgroundUuid);
@@ -2789,8 +2734,10 @@ export const createActorWithCharacter = async (characterData, { folder = null, o
     data.img = pair.img;
     data.prototypeToken.texture = { src: pair.token };
   }
-  // The createDialog switchboard threads the folder "+"'s destination through
-  // here (2026-08-02); the directory button passes nothing and lands at root.
+  // A destination folder, when a caller has one. The createDialog switchboard
+  // that threaded the folder "+"'s destination through here is gone
+  // (2026-08-29), so every current caller passes nothing and lands at root;
+  // the parameter stays for a macro or a future caller that does have one.
   if (folder) data.folder = folder;
   // The generatePC relay mints on the Warden's client FOR a player, so the
   // requester's OWNER must be in the CREATE data, not patched on after:
@@ -3056,7 +3003,7 @@ export const regenerateActor = async (actor) => {
   let bg = actor.system.backgroundUuid ? await fromUuid(actor.system.backgroundUuid) : null;
   // A Barebones character made before backgrounds had uuids is keyed by name.
   if (!bg && actor.system.contentSource === "barebones") {
-    bg = await getBarebonesBackgroundByName(actor.system.background);
+    bg = await backgroundByName(actor.system.background);
   }
   const characterData = await generateCharacter(bg, actor.system.contentSource);
   const updated = await updateActorWithCharacter(actor, characterData);
@@ -3155,7 +3102,7 @@ export const generateHireling = async () => {
     hp: h?.hp ?? 6,
     // A person, not just a statblock (2026-08-01): the biography the PC
     // generator rolls, through the SAME paths — rollAge honours the Warden's
-    // minimum-age floor, rollTextItems draws the eight tables-2e trait tables.
+    // minimum-age floor, rollTextItems draws the eight biography trait tables.
     // PRONOUNS ARE NEVER ROLLED (2026-08-20, user ruling). They were a uniform
     // pick of three from 2026-08-01 until now, on the reasoning that a
     // generated stranger needs an answer on arrival. They do not: pronouns are
@@ -3169,54 +3116,14 @@ export const generateHireling = async () => {
   };
 };
 
-/** @returns {Object} Foundry create/update data for a generated hireling. */
-const hirelingToActorData = (h) => ({
-  name: h.name || "NPC",
-  // TYPE npc, ROLE hireling. The `hireling` type is a registered alias kept only
-  // so existing documents keep their ids (see ACTOR_DATA_MODELS); nothing new is
-  // ever minted under it. The role is what says this person is for hire, and
-  // `forHire` rides along because it gates the rate row.
-  type: "npc",
-  system: {
-    role: "hireling",
-    // Off-by-default, stated rather than inherited — see characterToActorData.
-    generationEnabled: false,
-    forHire: true,
-    profession: h.profession ?? "",
-    dayRate: h.rate ?? 0,
-    abilities: personAbilityData(h.abilities),
-    hp: { value: h.hp, max: h.hp },
-    // The rolled biography (generateHireling): identity fields, kept by every
-    // partial re-roll and replaced only by a full regenerate.
-    pronouns: h.pronouns ?? "",
-    age: h.age ?? "",
-    traits: h.traits ?? {},
-    gold: 0,
-    deprived: false,
-    panicked: false,
-    critical: false,
-    armorOverride: null,
-  },
-  items: h.items,
-});
-
-/**
- * Create a fully-generated HIRELING actor with a random portrait + paired token
- * (assigned on creation only, like a player character; re-rolls preserve it by
- * omission). `createNpc` below is its twin for the other person role.
- * @returns {Promise<CairnActor>}
- */
-export const createHireling = async ({ folder = null } = {}) => {
-  const data = hirelingToActorData(await generateHireling());
-  const pair = await randomPortraitPair("npc");
-  if (pair) {
-    data.img = pair.img;
-    data.prototypeToken = { ...(data.prototypeToken ?? {}), texture: { src: pair.token } };
-  }
-  // Folder threaded from the createDialog switchboard (2026-08-02).
-  if (folder) data.folder = folder;
-  return CairnActor.create(data);
-};
+/* `hirelingToActorData` and `createHireling` stood here and are GONE
+   (2026-08-29, ruled): the Crear seguidor button is deleted with the rest of
+   the generators, and those two were reachable from nothing else. The ROLE
+   `hireling` is untouched — it is still the schema initial for an npc, still
+   an option in the Rol select, and `generateHireling` / `regenerateHireling` /
+   `rerollHirelingCareer` below all still serve the sheet's dice for an
+   existing one. What is gone is only the make-me-one-from-nothing button; a
+   hireling starts blank from Create Actor now. */
 
 /**
  * Full re-roll of an existing NPC: a fresh random statblock (new profession,
@@ -3253,7 +3160,7 @@ export const regenerateHireling = async (actor) => {
       traits: h.traits,
       critical: false,
       // A whole new person resets the same defensive/status/wealth fields the
-      // create payload (hirelingToActorData) sets — omitting them left the OLD npc's
+      // create payload the deleted `hirelingToActorData` set — omitting them left the OLD npc's
       // armorOverride, gold, deprived and panicked on the regenerated one.
       armorOverride: null,
       gold: 0,
@@ -3346,8 +3253,8 @@ export const rerollNpcName = async (actor) => {
 /**
  * Re-roll only an NPC's or Monster's FACTION, leaving everything else alone.
  * The table resolves BY NAME, world first (findTableByName): a Warden's own
- * "Warden: NPC - Faction" beats the shipped warden-npcs copy, so their
- * campaign's faction list survives a system update. roll(), never draw() —
+ * Facción table beats the copy in their Generadores compendium, so the list
+ * they edit most easily is the one that deals. roll(), never draw() —
  * the Warden's-tables invariant (module/config.js).
  *
  * A missing or empty table changes nothing — degrade, never blank.
@@ -3369,9 +3276,9 @@ export const rerollNpcFaction = async (actor) => {
  * NPCs — the people the party MEETS (2026-08-20)
  *
  * The other half of the hireling/npc split. A hireling is a statblock with a
- * day rate; an NPC is somebody: a Background off the Warden's Guide table, and
- * four traits — Quirk, Goal, Virtue, Vice — off that book's NPC tables, which
- * have shipped in `warden-npcs` all along with nothing reading them.
+ * day rate; an NPC is somebody: a Background off the Trasfondo table, and four
+ * traits — Peculiaridad, Objetivo, Virtud, Defecto — off the Warden's own
+ * tables.
  *
  * Two deliberate absences, and both are the point rather than an omission:
  *
@@ -3393,12 +3300,12 @@ export const rerollNpcFaction = async (actor) => {
 /**
  * The six APPEARANCE traits of the 2e biography, without virtue and vice.
  *
- * An NPC shows all ten trait rows, but its Virtue and Vice come off the
- * Warden's Guide NPC lists rather than tables-2e — same stored keys, different
- * source. Derived from the 2e config by subtraction rather than written out
- * again, so a table re-pointed there reaches NPCs too and the two lists cannot
- * drift.
- * @returns {Object<String,String>} key -> "pack;Table Name"
+ * An NPC shows all ten trait rows, but its Virtue and Vice are addressed
+ * through the NPC map rather than the 2e one — same stored keys, and the two
+ * maps are free to name different tables. Derived from the 2e config by
+ * subtraction rather than written out again, so a table re-pointed there
+ * reaches NPCs too and the two lists cannot drift.
+ * @returns {Object<String,String>} key -> table name
  */
 const appearanceTables = () => {
   const all = CONFIG.Cairn?.characterGenerator2e?.biography?.items ?? {};
@@ -3406,8 +3313,8 @@ const appearanceTables = () => {
 };
 
 /**
- * Roll an NPC's ten traits: the six appearance ones from tables-2e, then the
- * four NPC ones. Order matters — the NPC tables are second, so their virtue and
+ * Roll an NPC's ten traits: the six appearance ones from the 2e biography map,
+ * then the four NPC ones. Order matters — the NPC tables are second, so their virtue and
  * vice WIN over the 2e pair if `appearanceTables` ever stops filtering them out.
  * @returns {Promise<Object<String,String>>}
  */
@@ -3417,31 +3324,43 @@ const rollNpcTraits = async () => ({
 });
 
 /**
- * The gear an NPC's Background hands them, resolved the same way a Barebones
- * character's and a hireling's are: by-NAME references into the editable gear
- * pool, so a Warden editing an item changes what every NPC generated afterwards
- * carries.
+ * The `background` Item an NPC's rolled Background NAMES, or null.
  *
- * The items come from the nearest BAREBONES background
- * (Cairn.npcGenerator.backgroundGear), because that is the only background list
- * in the system whose entries carry gear — an NPC Background is a word off a
- * d20 table and a 2e background grants far more than a stranger should have.
- * Lord and Politician map to nothing and get nothing.
+ * THE lookup that replaced `Cairn.npcGenerator.backgroundGear` (2026-08-29). That
+ * was a hardcoded English map from one shipped table's eighteen rows to their
+ * nearest Barebones counterpart — a translation table between two lists this
+ * system no longer ships either of. What stands in its place needs no map at
+ * all: the Trasfondo table's rows and the Trasfondos compendium's backgrounds
+ * are both the Warden's, so a row that names a background they wrote FINDS it,
+ * and one that does not simply grants nothing.
  *
- * Through `resolveStartingGear`, NOT a bare `resolveRefs`. Nine Barebones
- * backgrounds write a row as an INSTRUCTION rather than an item ("Random
- * Additional Gear", "Scroll of Random Spellbook", "Spellbook") and a plain
- * reference lookup drops every one of them without a word. Two of the eighteen
- * targets carry one: a Peddler arrived with a Sack and nothing else. That is
- * the whole reason the shared resolver is exported.
+ * A row with no matching background is a LEGITIMATE outcome, not an error — the
+ * old map expressed exactly this by leaving Lord and Politician out, on the
+ * grounds that rank and office are not occupations that come with a kit. So the
+ * lookup is quiet: no warning, no gear, no fuss.
+ * @param {String} name  the Background text stored on the actor
+ * @returns {Promise<CairnItem|null>}
+ */
+const npcBackgroundItem = async (name) =>
+  backgroundByName(String(name ?? "").trim(), { npcFirst: true });
+
+/**
+ * The gear an NPC's Background hands them: that background's OWN startingGear,
+ * resolved the same way a character's and a hireling's are — by-NAME references
+ * into the editable gear pool, so a Warden editing an item changes what every
+ * NPC generated afterwards carries.
  *
- * What it deliberately does NOT do is grant CONTAINERS. Exactly two Barebones
- * backgrounds declare one — the Merchant's Wagon and the Peddler's Cart — and a
- * container is a second ACTOR, connected, which the Actor Directory always
- * lists. A Warden generating a dozen NPCs would be minting carts faster than
- * they can want them, and the Connections UI they would manage them through is
- * parked. A hireling's career grants no container either, so items-only is also
- * the answer that matches the other person role.
+ * Through `resolveStartingGear`, NOT a bare `resolveRefs`. A background may write
+ * a row as an INSTRUCTION rather than an item ("Random Additional Gear", "Scroll
+ * of Random Spellbook", "Spellbook") and a plain reference lookup drops every one
+ * of them without a word — that is the whole reason the shared resolver is
+ * exported.
+ *
+ * What it deliberately does NOT do is grant CONTAINERS, even when the background
+ * declares one. A container is a second ACTOR, connected, which the Actor
+ * Directory always lists — a Warden generating a dozen NPCs would be minting
+ * carts faster than they can want them. A hireling's career grants no container
+ * either, so items-only is also the answer that matches the other person role.
  *
  * Tagged grantSource "background", the whole set and not just the interesting
  * half: `tagBackgroundGear` deliberately leaves rations/torches/lanterns
@@ -3449,13 +3368,10 @@ const rollNpcTraits = async () => ({
  * afford that — a re-rolled Background finds its old gear BY the tag, so an
  * untagged grant would survive every re-roll and pile up. The hireling's
  * buildHirelingItems tags all of its own for the same reason.
- * @param {String} background  the ENGLISH table text stored on the actor
+ * @param {CairnItem} bg  the background Item, already resolved by the caller
  * @returns {Promise<Object[]>}
  */
-const buildNpcItems = async (background, avoid = new Set()) => {
-  const target = Cairn.npcGenerator?.backgroundGear?.[String(background ?? "").trim()];
-  if (!target) return [];
-  const bg = await getBarebonesBackgroundByName(target);
+const buildNpcItems = async (bg, avoid = new Set()) => {
   if (!bg) return [];
   const items = await resolveStartingGear(bg, avoid);
   return items.map((item) => {
@@ -3494,17 +3410,19 @@ const buildNpcKit = async (avoid = new Set()) =>
  * @returns {Promise<Object[]>}
  */
 const buildNpcGear = async (background) => {
-  // A Background with no Barebones counterpart — Lord and Politician — grants
-  // NOTHING AT ALL, kit included (user ruling 2026-08-21, reversing the
-  // 2026-08-20 "the kit does not care what you do for a living"). Rank and
-  // office arrive empty-handed; the Warden equips them deliberately or not at
-  // all. Later the same day the Background die and picker gained the SAME
-  // emptiness on an existing NPC — applyNpcBackground wipes the kit when one
-  // of these two lands — retiring the "a new station does not unpack the bag"
-  // scoping this guard carried for a few hours.
-  if (!Cairn.npcGenerator?.backgroundGear?.[String(background ?? "").trim()]) return [];
+  // A Background with no background ITEM of that name grants NOTHING AT ALL, kit
+  // included (user ruling 2026-08-21, reversing the 2026-08-20 "the kit does not
+  // care what you do for a living"). It used to be Lord and Politician, named in
+  // a map; it is now whatever the Warden's Trasfondo table names that their
+  // Trasfondos compendium does not answer for — rank and office arrive
+  // empty-handed, and the Warden equips them deliberately or not at all. The
+  // Background die and picker apply the same rule to an EXISTING NPC
+  // (applyNpcBackground), so generating a Lord and swapping to Lord end up with
+  // the same person.
+  const bg = await npcBackgroundItem(background);
+  if (!bg) return [];
   const avoid = new Set(["rations", "torch"]);
-  const items = await buildNpcItems(background, avoid);
+  const items = await buildNpcItems(bg, avoid);
   return [...items, ...(await buildNpcKit(avoid))];
 };
 
@@ -3556,11 +3474,11 @@ const reorderInventory = async (actor) => {
   }
 };
 
-/** One Background off the Warden's Guide table, or "" when it is missing. */
+/** One Background off the Trasfondo table, or "" when it is missing (which
+ *  `generatorText` reports, once per session). */
 const rollNpcBackground = async () => {
-  const [packName, tableName] = compendiumInfoFromString(CONFIG.Cairn?.npcGenerator?.background ?? "");
-  if (!packName) return "";
-  return drawTableText(packName, tableName);
+  const tableName = CONFIG.Cairn?.npcGenerator?.background;
+  return tableName ? generatorText(tableName) : "";
 };
 
 /** Generate a full NPC person. @returns {Promise<Object>} */
@@ -3641,7 +3559,7 @@ export const createNpc = async ({ folder = null } = {}) => {
     data.img = pair.img;
     data.prototypeToken = { ...(data.prototypeToken ?? {}), texture: { src: pair.token } };
   }
-  // Folder threaded from the createDialog switchboard (2026-08-02).
+  // A destination folder, when a caller has one — see createCharacter above.
   if (folder) data.folder = folder;
   return CairnActor.create(data);
 };
@@ -3730,11 +3648,11 @@ export const rerollNpcBackground = async (actor) => {
 
 /**
  * The CHOSEN-Background half (2026-08-21, user ask): the magnifying glass
- * beside the Background field. Same apply as the die, so a picked Politician
+ * beside the Background field. Same apply as the die, so a picked Background
  * and a rolled one are the same event — the old trade's gear goes, and the kit
  * follows applyNpcBackground's rules: kept trade-for-trade, wiped by a
- * counterpart-less Background, repacked when none survives.
- * @param {CairnActor} actor @param {String} text  the ENGLISH table text
+ * Background with no Item of its own, repacked when none survives.
+ * @param {CairnActor} actor @param {String} text  the row text, verbatim
  * @returns {Promise<CairnActor>}
  */
 export const pickNpcBackground = async (actor, text) =>
@@ -3744,13 +3662,15 @@ export const pickNpcBackground = async (actor, text) =>
  *  disagree about what changing a Background means. @private */
 const applyNpcBackground = async (actor, rolled) => {
   if (!rolled) return actor;
-  // A counterpart-less Background — Lord and Politician — takes EVERYTHING the
+  // A Background the Trasfondos compendium has no Item for takes EVERYTHING the
   // generators gave, kit included (user ruling 2026-08-21, reversing the same
   // day's "a new station does not unpack the bag"): after any swap the NPC
-  // holds what GENERATING the new Background would grant, and for those two
-  // that is nothing. The Warden's own items are untagged and stay, as
-  // everywhere.
-  const geared = !!Cairn.npcGenerator?.backgroundGear?.[String(rolled).trim()];
+  // holds what GENERATING the new Background would grant, and for one with no
+  // Item that is nothing. The Warden's own items are untagged and stay, as
+  // everywhere. Resolved ONCE and passed down, so the die, the picker and the
+  // gear builder cannot disagree about whether this Background exists.
+  const bg = await npcBackgroundItem(rolled);
+  const geared = !!bg;
   // Old grant out, new grant in — the same shape as applyHirelingCareer, and
   // `render: false` on both so one update renders rather than three.
   const stale = npcGrantedItemIds(actor, geared ? ["background"] : ["background", "npc-kit"]);
@@ -3760,13 +3680,13 @@ const applyNpcBackground = async (actor, rolled) => {
   const avoid = new Set(actor.items
     .filter((i) => !stale.includes(i.id))
     .map((i) => i.name.toLowerCase()));
-  const items = geared ? await buildNpcItems(rolled, avoid) : [];
-  // A kit only when NONE survives — this NPC was, or was generated as, a Lord
-  // or Politician, whose bag is empty by the ruling above. PRESENCE is the
-  // test, never the old Background's name: however the kit went missing, a
-  // geared Background packs one, exactly as generation would (the reported
-  // miss, 2026-08-21: a Politician swapped to Peddler held the Peddler's Sack
-  // and nothing else).
+  const items = geared ? await buildNpcItems(bg, avoid) : [];
+  // A kit only when NONE survives — this NPC was, or was generated as, someone
+  // whose Background has no Item and whose bag is therefore empty by the ruling
+  // above. PRESENCE is the test, never the old Background's name: however the
+  // kit went missing, a geared Background packs one, exactly as generation would
+  // (the reported miss, 2026-08-21: a Politician swapped to Peddler held the
+  // Peddler's Sack and nothing else).
   if (geared && npcGrantedItemIds(actor, ["npc-kit"]).length === 0) {
     items.push(...await buildNpcKit(avoid));
   }
@@ -3847,15 +3767,18 @@ export const promptHirelingCareer = async (actor) => {
 };
 
 /**
- * Pick an NPC's Background from the Warden's Guide d20 table, or Random via
- * the die's own path. The VALUE is the raw row text — the stored string is
- * the backgroundGear match key.
+ * Pick an NPC's Background off the Trasfondo table, or Random via the die's own
+ * path. The VALUE is the raw row text — the stored string is what the gear
+ * lookup matches a `background` Item's NAME against.
  * @param {CairnActor} actor @returns {Promise<CairnActor>}
  */
 export const promptNpcBackground = async (actor) => {
-  const [packName, tableName] = compendiumInfoFromString(CONFIG.Cairn?.npcGenerator?.background ?? "");
-  const pack = packName ? game.packs.get(packName) : null;
-  const table = pack ? (await pack.getDocuments()).find((d) => d.name === tableName) : null;
+  // `generatorTable` non-quiet: this button did NOTHING AT ALL when the table
+  // was missing — no dialog, no message, a magnifying glass that swallowed the
+  // click — which is the worst shape a failure can take on a control a Warden
+  // is about to press again. Reported once per session, like every other miss.
+  const tableName = CONFIG.Cairn?.npcGenerator?.background;
+  const table = tableName ? await generatorTable(tableName) : null;
   if (!table) return actor;
   const current = String(actor.system.background ?? "").trim();
   const rows = table.results.map((r) => String(resultText(r)).trim()).filter(Boolean)
@@ -3874,8 +3797,15 @@ export const promptNpcBackground = async (actor) => {
  */
 export const promptNpcFaction = async (actor) => {
   const tableName = CONFIG.Cairn?.npcGenerator?.faction;
+  // World-first (findTableByName), so a Warden's own Facción table wins — which
+  // is also why the miss is reported by hand rather than by `generatorTable`:
+  // the lookup is wider than one compendium, and only the caller knows it came
+  // up empty everywhere. Same silent-button fix as promptNpcBackground.
   const table = tableName ? await findTableByName(tableName) : null;
-  if (!table) return actor;
+  if (!table) {
+    warnNoTable("generators", tableName);
+    return actor;
+  }
   const rows = table.results.map((r) => String(resultText(r)).trim()).filter(Boolean)
     .map((text) => ({ value: text, label: text }))
     .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));

@@ -1,4 +1,5 @@
 import { findTableItems } from "./compendium.js";
+import { marketTable, packFor, MARKET_TABLES } from "./content-packs.js";
 import { iconForTransport, TRANSPORT_KINDS } from "./icons.js";
 import { atConnectionLimit, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { formatCount } from "./utils.js";
@@ -22,22 +23,31 @@ const playerMarketClosed = () =>
  * The marketplace: a shop dialog a character opens from their Inventory tab.
  *
  * Unlike the fork's inlined price list, the catalog is a REFERENCE pack. The
- * `mondolme.marketplace` compendium holds one RollTable per category
- * ("Market: Weapons/Armor/Gear"), each a list of document results pointing at
- * items in the editable gear pool. A row's price, description, and tags are read
- * off the referenced Item at open time — so editing a pool item's cost in Foundry
- * updates the shop, and dragging an item into a table stocks it. Bundles ("Common
- * Tools (…)") are ordinary items bought generic and renamed on the sheet.
+ * Mercado compendium the Warden names in a setting holds FOUR RollTables, one
+ * per category (MARKET_TABLES — Armas, Armadura, Equipo, Contenedores), each a
+ * list of document results pointing at items in the editable gear pool. A row's
+ * price, description, and tags are read off the referenced Item at open time —
+ * so editing a pool item's cost in Foundry updates the shop, and dragging an
+ * item into a table stocks it. Bundles ("Common Tools (…)") are ordinary items
+ * bought generic and renamed on the sheet.
  *
- * NOT cached: every open re-reads the pack (`getDocuments`), so a cost edit is
- * reflected on the next open — the whole point of the reference model.
+ * FOUR NAMED TABLES, not "every table in the pack" (2026-08-29). The old shape
+ * took whatever RollTables the shipped pack happened to hold and recovered the
+ * category from the table's name by stripping a "Market: " prefix — English
+ * string surgery on content that is now the Warden's and in Spanish. Naming the
+ * four outright is what lets the shop keep an ORDER and lets the sheet keep
+ * scoping itself to the Contenedores category; a fifth table in the compendium
+ * is simply not a shop category, which is a rule a Warden can read.
+ *
+ * NOT cached: every open re-reads the tables, so a cost edit is reflected on the
+ * next open — the whole point of the reference model.
  *
  * Each item can be BOUGHT (pay its cost in coins) or TAKEN (granted free, e.g. by
  * the Warden). Cairn's slot rules stay this system's job: both refuse when the
  * item wouldn't fit; Buy additionally refuses when the character can't afford it.
  *
- * Transports & containers (mounts, wagons, packs) are stocked the same way, from
- * the editable `transports` pack. They differ only at the point of sale: buying
+ * Transports & containers (mounts, wagons, packs) are stocked the same way, off
+ * the Contenedores table. They differ only at the point of sale: buying
  * one mints a CONTAINER ACTOR keeper-linked to the buyer, not an embedded item,
  * because a thing with its own slots has to be an Actor in this system.
  */
@@ -45,13 +55,19 @@ const playerMarketClosed = () =>
 /** The catalog category holding packs, mounts and vehicles. Exported because the
  *  sheet scopes the shop by it from both directions: the Containers tab shows
  *  ONLY this category, and a container's own shop EXCLUDES it (no buying a cart
- *  to put inside a cart). */
-export const TRANSPORTS_CATEGORY = "Transports & Containers";
+ *  to put inside a cart).
+ *
+ *  It is the TABLE'S NAME, and that is now the whole of the identity — a
+ *  category has no separate English key any more, because there is no English
+ *  copy of this content to key on. `opts.only` / `opts.exclude` compare against
+ *  exactly this string, which is why both must come from here and never from a
+ *  literal at the call site. */
+export const TRANSPORTS_CATEGORY = MARKET_TABLES.containers;
 
-// Shopper-facing category order; a table whose stripped name isn't listed falls
-// to the end in pack order.
-const CATEGORY_ORDER = ["Weapons", "Armor", "Gear", TRANSPORTS_CATEGORY];
-const MARKETPLACE_PACK = "mondolme.marketplace";
+// Shopper-facing category order. MARKET_TABLES is declared in that order and is
+// the only list of what a category IS, so the order and the membership cannot
+// drift apart the way a separate CATEGORY_ORDER let them.
+const CATEGORY_NAMES = Object.values(MARKET_TABLES);
 
 /** A resolved pool document → a fresh owned-item payload; carries the item's
  *  cost/description/tags.
@@ -81,30 +97,30 @@ const ownedPayload = (doc) => ({
 });
 
 /**
- * Read the marketplace pack into shopper-facing categories. Each category's items
- * are owned-item payloads resolved from that table's pack results, in table order.
+ * Read the Mercado compendium into shopper-facing categories, in MARKET_TABLES
+ * order. Each category's items are owned-item payloads resolved from that
+ * table's results, in table order.
  *
- * `name` is the ENGLISH identity (callers filter on it via opts.only/opts.exclude,
- * and CATEGORY_ORDER sorts by it); `label` is what a heading should render.
+ * `name` is the category's identity — the table's own name — which callers
+ * filter on via opts.only/opts.exclude; `label` is what a heading renders, and
+ * the two are the same string now that the content is the Warden's and carries
+ * no prefix to strip.
+ *
+ * An UNASSIGNED compendium returns no categories in silence: openMarketplace
+ * already tells the shopper the shop is empty, and saying it twice in two
+ * different vocabularies is worse than saying it once. A compendium that IS
+ * assigned but is missing one of the four named tables does warn — through
+ * `marketTable`, once per table per session — because that one is a fixable
+ * mistake in content the Warden can see.
  * @returns {Promise<{categories: {name:string, label:string, items:object[]}[]}>}
  */
 export const getMarketplaceCatalog = async () => {
-  const pack = game.packs.get(MARKETPLACE_PACK);
-  if (!pack) return { categories: [] };
-  const tables = await pack.getDocuments();
-
-  const stripPrefix = (name) => String(name).replace(/^Market:\s*/i, "").trim();
-  const orderOf = (name) => {
-    const i = CATEGORY_ORDER.indexOf(stripPrefix(name));
-    return i === -1 ? CATEGORY_ORDER.length : i;
-  };
-  // The heading strips the table's "Market: " prefix. The strip is generic
-  // because a name carrying no prefix at all is left whole.
-  const displayName = (fullName) => String(fullName).replace(/^[^:]+:\s*/, "").trim();
-  tables.sort((a, b) => orderOf(a.name) - orderOf(b.name) || a.name.localeCompare(b.name));
+  if (!packFor("market")) return { categories: [] };
 
   const categories = [];
-  for (const table of tables) {
+  for (const name of CATEGORY_NAMES) {
+    const table = await marketTable(name);
+    if (!table) continue;
     const results = [...table.results].sort((a, b) => (a.range?.[0] ?? 0) - (b.range?.[0] ?? 0));
     // findTableItems, not a second copy of the same loop. It used to be inlined
     // here, and the two copies then had to be fixed twice for the same defect —
@@ -137,7 +153,7 @@ export const getMarketplaceCatalog = async () => {
         return false;
       })
       .map(ownedPayload);
-    if (items.length) categories.push({ name: stripPrefix(table.name), label: displayName(table.name), items });
+    if (items.length) categories.push({ name, label: name, items });
   }
   return { categories };
 };

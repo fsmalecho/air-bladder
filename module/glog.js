@@ -21,16 +21,16 @@
  * grimoire.js and item.js; this file is only the setting's reach into CONTENT.
  */
 import { SETTINGS_NS } from "./settings.js";
+import { packFor } from "./content-packs.js";
 import { formatCount } from "./utils.js";
 
-export const GLOG_PACK = "mondolme.spellbooks-glog";
-
-/**
- * The spell packs in force under GLOG: the GLOG wordings plus the custom set,
- * canon deliberately absent. "Custom" is the pack as it exists today — its
- * disposition is the user's open decision and nothing here presumes it.
- */
-export const GLOG_SPELL_PACKS = [GLOG_PACK, "mondolme.more-spellbooks"];
+// `GLOG_PACK` and `GLOG_SPELL_PACKS` stood here and are GONE (2026-08-29). They
+// named two shipped compendiums, and the system ships none: every spell — canon
+// wording or GLOG wording — is a `spellbook` Item in the ONE Objetos compendium
+// the Warden assigns. The pack-level half of the 2026-08-05 ruling ("canon
+// excluded from the pool") went with them, because a single compendium holds
+// exactly the spells its owner put in it; the FORM half (a granted spell is a
+// scroll) is unaffected and still enforced in gear.js and item.js.
 
 export const glogEnabled = () => {
   try {
@@ -62,16 +62,21 @@ export const GLOG_NAME_ALIASES = new Map([
 ]);
 
 /**
- * name (lowercased) → the GLOG wording's description, for the whole GLOG pack
+ * name (lowercased) → the spell's description, for the whole Objetos compendium
  * in ONE full load. The sweep resolves every spell in the world against this,
  * so per-name getDocument round trips would multiply by the world's inventory;
- * one getDocuments() here is the cheap direction for a bulk pass (the random
- * DRAW stays index-first — one winner — in character-generator.js).
+ * one getDocuments() here is the cheap direction for a bulk pass. Read through
+ * `packFor` rather than `documentsOfType`, which loads document by document —
+ * this is the one place in the system that genuinely wants the whole pack.
+ *
+ * Silent when no compendium is assigned: the sweep runs off a SETTING FLIP, not
+ * off something the Warden asked of the content, and its caller already says
+ * when it swapped nothing.
  * @returns {Promise<Map<string, string>>}
  */
 export const glogTextByName = async () => {
   const map = new Map();
-  const pack = game.packs.get(GLOG_PACK);
+  const pack = packFor("items");
   if (!pack) return map;
   for (const doc of await pack.getDocuments()) {
     if (doc.type === "spellbook") map.set(doc.name.toLowerCase(), doc.system.description ?? "");
@@ -116,8 +121,12 @@ export const glogConversionDiff = (item, glogText) => {
  * level: the sweep runs once per flip and loads the pack fresh, but the seam
  * runs on every spellbook creation, and `pack.getDocuments()` is a full round
  * trip per call — uncached, every compendium drag would re-download the pack.
- * The pack is a locked system pack, so the text is static for a session; the
- * setting's onChange clears the cache anyway, out of caution rather than need.
+ * The GLOG setting's onChange clears it. Its known limit, stated rather than
+ * hidden: the pack is the Warden's own now, so editing a spell's text (or
+ * re-pointing the Objetos setting) mid-session leaves this map holding the old
+ * wording until the next reload or GLOG flip. It only feeds the create seam —
+ * what a dragged-in spellbook is rewritten to — so the cost of being stale is
+ * one item carrying yesterday's words, not a wrong sweep.
  */
 let glogTextCache = null;
 export const glogTextCached = async () => (glogTextCache ??= await glogTextByName());
@@ -140,7 +149,7 @@ export const runGlogConversion = async () => {
   if (game.users.activeGM !== game.user) return;
   const glogText = await glogTextByName();
   if (!glogText.size) {
-    console.warn("mondolme | GLOG conversion: spellbooks-glog pack missing or empty — nothing swapped");
+    console.warn("mondolme | GLOG conversion: the Objetos compendium is unassigned or holds no spells — nothing swapped");
   }
   let converted = 0;
 

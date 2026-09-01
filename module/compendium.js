@@ -1,46 +1,19 @@
-
 /**
- * @param {String} compendiumString
- * @returns {Array.<String>}
+ * What is left of the pack-addressed lookups.
+ *
+ * Six helpers stood here and are GONE (2026-08-29): `compendiumInfoFromString`,
+ * `findCompendiumItem`, `drawTable`, `drawTableText`, `drawTableItem` and
+ * `resultChatText`. Every one of them took a PACK ID as its first argument, and
+ * no caller has one any more — the system ships no packs, and the four the
+ * Warden assigns are resolved in module/content-packs.js, which is the only
+ * place a pack id may live. Deleted rather than re-pointed, because a helper
+ * whose whole signature is the thing that went away cannot be rescued by a new
+ * body: `content-packs.js` `docFromPack` / `generatorText` say the same things
+ * in the vocabulary that survives.
+ *
+ * What stays are the three that were never about a pack at all: finding a table
+ * by NAME wherever it lives, and reading a drawn row.
  */
-export const compendiumInfoFromString = (compendiumString) => compendiumString.split(";");
-
-/**
- * Find one document in a pack by exact name.
- *
- * Matches in the pack INDEX (names only, kept in memory and updated live when a
- * document changes), then materializes just that document with `getDocument` —
- * which returns the already-loaded instance when there is one. `getDocuments()`
- * here loaded and constructed EVERY document in the pack to read one name off
- * each, and this is called once per lookup: opening the marketplace resolves ~77
- * compendium results, so it re-read whole packs 77 times.
- *
- * This is the same mistake `gear.js` `resolveGearItem` already documents fixing
- * ("twenty names went 34.5s -> 5.2s"); the fix is deliberately the same shape.
- *
- * Still not cached, for the same reason it is not cached there: an in-session
- * edit to a compendium item must show up on the next lookup — that is the point
- * of the editable-compendium model.
- *
- * @param {String} compendiumName
- * @param {String} itemName
- * @returns {Promise.<Item|RollTable|undefined>}
- */
-export const findCompendiumItem = async (compendiumName, itemName) => {
-  const compendium = game.packs.get(compendiumName);
-  if (!compendium) {
-    console.warn(`findCompendiumItem: Could not find compendium (${compendiumName})`);
-    return undefined;
-  }
-  const entry = (await compendium.getIndex()).find((e) => e.name === itemName);
-  if (!entry) {
-    console.warn(`findCompendiumItem: Could not find item (${itemName}) in compendium (${compendiumName})`);
-    return undefined;
-  }
-  // getDocument resolves to null (not undefined) if the index is stale; normalize,
-  // because every caller tests falsy and the JSDoc has always promised undefined.
-  return (await compendium.getDocument(entry._id)) ?? undefined;
-};
 
 /**
  * Find a RollTable by exact name — WORLD FIRST, then every RollTable pack.
@@ -49,10 +22,15 @@ export const findCompendiumItem = async (compendiumName, itemName) => {
  * pack is dead the moment the content is shared. The world collection is
  * looked at FIRST because that is the easiest thing for a Warden to make —
  * Tables tab, New Table — so a Warden's own copy always wins and their edits
- * survive a system update, which would overwrite any edit made inside a
- * shipped pack. (Generalized from character-generator.js's module-private
- * findBondsTableByName, which this replaces; the bonds path and the Faction
- * die both resolve through here.)
+ * survive the content being replaced, which would overwrite any edit made
+ * inside a pack.
+ *
+ * WIDER than content-packs.js's `generatorTable`, and both exist on purpose:
+ * this one answers "the Warden's own copy of this table, from anywhere", which
+ * is what the Faction die, the faction generator and the GLOG mishap card each
+ * promise; `generatorTable` answers "this table, in the compendium the Warden
+ * nominated", which is what generation reads and what can therefore report a
+ * missing one precisely.
  * @param {String} name
  * @returns {Promise<RollTable|null>}
  */
@@ -66,23 +44,6 @@ export const findTableByName = async (name) => {
     if (entry) return pack.getDocument(entry._id);
   }
   return null;
-};
-
-/**
- * @param {String} compendiumName
- * @param {String} tableName
- * @param {Object} options
- * @returns {Promise.<RollTableDraw|undefined>}
- */
-export const drawTable = async (compendiumName, tableName, options = {}) => {
-  // findCompendiumItem resolves to undefined on a miss (it only warns), so this
-  // used to throw "Cannot read properties of undefined" from wherever the draw
-  // was requested — mid-generation, with no mention of the missing table. The
-  // guard in damage.js `_rollScarsTable` says the same thing; this is the other
-  // call site it did not cover.
-  const table = await findCompendiumItem(compendiumName, tableName);
-  if (!table) return undefined;
-  return table.draw({ displayChat: false, ...options });
 };
 
 /**
@@ -107,50 +68,6 @@ export const resultText = (result) =>
   (result?.type === "text" ? result.description : result?.name) ?? "";
 
 /**
- * A rolled result rendered the way it would appear in chat: prose for a text row,
- * a content link for a document row.
- *
- * Replaces `TableResult#getChatText()`, deprecated `{since: 13, until: 15}`
- * (client/documents/table-result.mjs:120-124). The body is core's own expression
- * from that method, so the output is byte-identical to what shipped.
- *
- * `getHTML()` is core's nominated successor and is NOT a drop-in here. It is async,
- * it enriches to real HTML, and it wraps the result in a template — whereas this
- * value is stored on the actor as one of the eight 2e trait strings and rendered as
- * plain text. Swapping it in would put markup into `system.traits.*` on every
- * generated character, and the content-translation overlay keys on the English
- * source string, so every trait would also lose its translation.
- *
- * @param {TableResult} result
- * @returns {String}
- */
-export const resultChatText = (result) =>
-  (result?.type === CONST.TABLE_RESULT_TYPES.DOCUMENT
-    ? `@UUID[${result.documentUuid}]{${result.name}}`
-    : result?.description) ?? "";
-
-/**
- * @param {String} compendium
- * @param {String} table
- * @returns {Promise.<String>}  the drawn result's chat text, or "" if the table
- *                              is missing or empty (generation must degrade, not throw)
- */
-export const drawTableText = async (compendium, table) => {
-  const draw = await drawTable(compendium, table);
-  return resultChatText(draw?.results?.[0]);
-};
-
-/**
- * @param {String} compendium
- * @param {String} table
- * @returns {Promise.<Item[]>}
- */
-export const drawTableItem = async (compendium, table) => {
-  const draw = await drawTable(compendium, table);
-  return findTableItems(draw?.results ?? []);
-};
-
-/**
  * The documents a table's results point at.
  *
  * Resolves each row by its `documentUuid`, which is the only non-deprecated way to
@@ -159,19 +76,18 @@ export const drawTableItem = async (compendium, table) => {
  * them (common/constants.mjs:954-964) — v13 merged the "compendium" row type into
  * "document".
  *
- * That merge is why a row dragged in from the ITEMS SIDEBAR is silently missing
- * from the shop today. The type check is not what drops it: the deprecated
- * `COMPENDIUM` getter returns `"document"`, so a world row matches. It dies one line
- * later, in `findCompendiumItem(result.documentCollection, …)` — for a world
+ * That merge is why a row dragged in from the ITEMS SIDEBAR was silently missing
+ * from the shop. The type check is not what dropped it: the deprecated
+ * `COMPENDIUM` getter returns `"document"`, so a world row matches. It died one line
+ * later, in a by-name lookup keyed on `result.documentCollection` — for a world
  * document that getter returns the document NAME ("Item"), which is not a pack id,
- * so the lookup warns and returns undefined. `fromUuid` resolves both kinds.
+ * so the lookup warned and returned undefined. `fromUuid` resolves both kinds.
  *
  * Resolving by uuid also means resolving by ID, so renaming an item in a pack no
- * longer breaks every table that points at it. All 198 shipped document rows carry
- * a `documentUuid`; there is no row this cannot resolve that the name lookup could.
+ * longer breaks every table that points at it.
  *
  * A row that resolves to nothing is warned about rather than skipped in silence —
- * that is a broken content reference, and `findCompendiumItem` used to say so.
+ * that is a broken content reference.
  *
  * @param {TableResult[]} results
  * @returns {Promise.<Document[]>}

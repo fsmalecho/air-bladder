@@ -1,0 +1,94 @@
+{
+  "id": "mondolme-contenido",
+  "title": "Mondolme — Contenido",
+  "description": "Compendios de contenido para el sistema Mondolme: generadores, mercado, trasfondos y objetos. Se entrega vacío, para que lo rellenes con tu propio contenido en español.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14.365",
+    "verified": "14.365"
+  },
+  "authors": [
+    {
+      "name": "Malecho",
+      "url": "https://github.com/fsmalecho"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "mondolme",
+        "type": "system"
+      }
+    ]
+  },
+  "packs": [
+    {
+      "name": "generadores",
+      "label": "Generadores",
+      "path": "packs/generadores",
+      "type": "RollTable",
+      "system": "mondolme",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mercado",
+      "label": "Mercado",
+      "path": "packs/mercado",
+      "type": "RollTable",
+      "system": "mondolme",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "trasfondos",
+      "label": "Trasfondos",
+      "path": "packs/trasfondos",
+      "type": "Item",
+      "system": "mondolme",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "trasfondos-pnj",
+      "label": "Trasfondos PNJ",
+      "path": "packs/trasfondos-pnj",
+      "type": "Item",
+      "system": "mondolme",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "objetos",
+      "label": "Objetos",
+      "path": "packs/objetos",
+      "type": "Item",
+      "system": "mondolme",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Mondolme",
+      "sorting": "m",
+      "packs": [
+        "generadores",
+        "mercado",
+        "trasfondos",
+        "trasfondos-pnj",
+        "objetos"
+      ]
+    }
+  ]
+}

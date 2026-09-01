@@ -18,57 +18,33 @@
  */
 
 import { iconForItem, SPELLSCROLL_ICON } from "./icons.js";
-import { glogEnabled, GLOG_SPELL_PACKS, GLOG_NAME_ALIASES } from "./glog.js";
+import { glogEnabled, GLOG_NAME_ALIASES } from "./glog.js";
+import { itemByName } from "./content-packs.js";
 
-// Packs searched to resolve a gear name, in precedence order — an earlier pack
-// wins a name collision. Spellbook packs are separate (spell grants route there).
-//
-// `market-goods` is last and is still a full member: it holds real gear that only
-// the shop happened to stock (a Sedative, a Sewing Kit), and a background that
-// grants one must resolve it. Leaving it out silently split the pool in two — the
-// importer saw those items and skipped authoring them, while this list could not
-// reach them, so the grant resolved to nothing. Any pack an importer counts as
-// "already in the pool" MUST be listed here.
-export const CANONICAL_GEAR_PACKS = [
-  "mondolme.expeditionary-gear",
-  "mondolme.tools",
-  // Holds Lodestone, moved here 2026-07-29 when the one-item `extra` pack was
-  // retired -- so the three backgrounds that grant it by name still resolve.
-  "mondolme.trinkets",
-  "mondolme.weapons",
-  "mondolme.armor",
-  "mondolme.market-goods",
-  // The distinctive one-off items each background grants (Alchemical Sigils,
-  // Catring, …), consolidated out of the type packs by tools/import/background-items.mjs.
-  // Last in precedence: every name here is unique, so ordering is belt-and-braces.
-  "mondolme.background-items",
-];
-
-export const SPELL_PACKS = ["mondolme.spellbooks", "mondolme.more-spellbooks"];
+// The eight-pack precedence list that used to live here — seven gear packs plus
+// two spellbook packs, each a shipped compendium id — is GONE (2026-08-29). The
+// system ships no packs: gear and spells alike are ONE compendium the Warden
+// names in a setting, resolved by `itemByName` (module/content-packs.js). The
+// precedence rules that list encoded (which pack wins a duplicate name, whether
+// market-only goods were reachable) cannot arise inside a single compendium,
+// which is the whole reason the list could be deleted rather than re-pointed.
 
 // Genuine spelling variants — NOT mere casing (the resolver is already
 // case-insensitive). Key: lowercased grant spelling → canonical pack item name.
-export const GEAR_ALIASES = new Map([
-  ["lockpick", "Lockpicks"],
-  ["hand drill", "Hand-Drill"],
-  ["torches", "Torch"],
-  ["rope (25ft)", "Rope"],
-  ["chain (10ft)", "Chain, 10ft"],
-  ["chains (10ft)", "Chain, 10ft"],
-  ["chains", "Chain, 10ft"],
-  ["chain", "Chain, 10ft"],
-  ["pole (10ft)", "Pole, 10ft"],
-  ["pole", "Pole, 10ft"],
-  ["plate", "Plate Mail"],
-  // The pack item carries the SRD shop's plural spelling, pairing it with
-  // "Complex Instruments (Bagpipes, Fiddle, etc.)"; Jongleur grants the singular.
-  ["simple instrument (pipes, lute, etc.)", "Simple Instruments (Pipes, Lute, etc.)"],
-  ["boltcutters", "Bolt Cutters"],
-  // The shop's tent IS the pool's tent: the barebones item is already bulky
-  // with "fits 2" as its description. Without this the shop cannot see it and
-  // authors a second, identical tent as a market-only good.
-  ["tent (fits 2)", "Tent"],
-]);
+/**
+ * Spellings a grant may use that are not the item's own name.
+ *
+ * EMPTY ON PURPOSE. Every entry here mapped one English spelling in the
+ * upstream shipped content onto another ("torches" -> "Torch", "plate" ->
+ * "Plate Mail"). None of that content exists any more: items now come from the
+ * Warden's own Objetos compendium, named by the Warden, in Spanish.
+ *
+ * The mechanism is kept rather than deleted so a Warden whose backgrounds say
+ * "antorchas" while the item is "Antorcha" has somewhere to say so, without
+ * renaming either. Add pairs as `["lo que dice la concesión", "Nombre del objeto"]` —
+ * the key must be lowercase; `resolveGearItem` lowercases before it looks.
+ */
+export const GEAR_ALIASES = new Map([]);
 
 /* -------------------------------------------------------------------------- */
 /*  What a granted item IS, for ordering it                                     */
@@ -188,7 +164,7 @@ export const orderGrantedItems = (items) => {
 
 /**
  * A grant may name a spell as "Spellbook (X)", "Scroll (X)", or "X Spellbook".
- * Return the bare spell name X (to resolve against SPELL_PACKS), else null.
+ * Return the bare spell name X (the name to resolve), else null.
  */
 export const spellNameFromGrant = (name) => {
   const s = String(name).trim();
@@ -201,8 +177,8 @@ export const spellNameFromGrant = (name) => {
 
 /**
  * True when a grant names a SCROLL specifically ("Scroll (X)") rather than a book
- * ("Spellbook (X)", "X Spellbook"). Both route to the same spell in the spellbook
- * packs, but a scroll must resolve to a single-use petty item, a book to the
+ * ("Spellbook (X)", "X Spellbook"). Both route to the same spell in the Objetos
+ * compendium, but a scroll must resolve to a single-use petty item, a book to the
  * slot-taking spellbook — spellNameFromGrant deliberately erases that difference,
  * so resolveGearItem consults this to decide which to build.
  */
@@ -291,55 +267,47 @@ export const buildGearItem = (g) => {
 };
 
 /**
- * Resolve-time: find a gear item by name across the canonical packs
+ * Resolve-time: find a gear item by name in the Warden's Objetos compendium
  * (case-insensitive, honouring aliases and spell routing) and return a fresh
- * owned-item payload — a deep clone, so the pack document is never mutated — with
- * per-grant quantity/uses overrides applied. Returns null on a miss (and warns);
- * generation should degrade gracefully rather than throw.
+ * owned-item payload — never the pack document itself — with per-grant
+ * quantity/uses overrides applied. Returns null on a miss; generation degrades
+ * gracefully rather than throwing.
+ *
+ * A MISS IS NOW REPORTED TO THE WARDEN, not just to the console (2026-08-29).
+ * This is the highest-impact silent failure in the system: every background,
+ * bond, career and creation-table grant comes through here, so a compendium the
+ * Warden has not assigned — or has assigned to the wrong thing — used to produce
+ * a character with an empty inventory and no explanation anywhere the Warden
+ * would look. `itemByName` reports it, and reports it ONCE per name per session
+ * (content-packs.js dedupes), which is what makes it safe to say so from inside
+ * a loop that resolves a dozen names.
  *
  * Still not cached: the match is found in the pack INDEX (names only, kept in
  * memory and updated live when a document changes), then that one document is
  * materialized with `getDocument`. So an in-session edit to an item is reflected
  * on the next resolve — the whole point of the editable-compendium model (edit →
- * regenerate → change appears) — without loading every document in eight packs.
- *
- * This runs once per gear name, and `getDocuments()` was walking ~1,000 documents
- * across eight packs each time to read one name off each. Measured on the dev
- * world (Foundry 14.365): twenty names went 34.5s -> 5.2s, and the six a typical
- * Kettlewright character carries cost 1.8s cold (building the indexes, once per
- * session) and 0ms warm, against ~1.7s PER NAME before.
+ * regenerate → change appears) — without loading every document in the pack.
  */
 export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
   const spell = spellNameFromGrant(name);
   let targetName = spell ?? GEAR_ALIASES.get(String(name).trim().toLowerCase()) ?? name;
-  // Under GLOG only GLOG and custom spells are used (ruling 2026-08-05):
-  // spell grants resolve against the GLOG wordings and the custom set, with
-  // canon EXCLUDED — a "Spellbook (Charm)" grant must come back scaling on
-  // [dice]/[sum], not as the canon sentence. Non-spell gear is untouched.
-  // Two canon spells exist in the GLOG list under NEW names (Marble Craze,
-  // Missile Shield — see GLOG_NAME_ALIASES); the alias applies ONLY while GLOG
-  // is in force, so canon-mode resolution never sees it. glog.js is imported
-  // STATICALLY: a per-call `await import()` cost ~600ms every call in the live
-  // page — once per resolved gear NAME — and glog.js → settings.js is a leaf
-  // chain, no cycle.
+  // Under GLOG, two canon spells appear under NEW names (Marble Craze, Missile
+  // Shield — see GLOG_NAME_ALIASES); the alias applies ONLY while GLOG is in
+  // force, so canon-mode resolution never sees it. What is GONE with the shipped
+  // packs is the pack-level exclusion the 2026-08-05 ruling was expressed as
+  // ("resolve against the GLOG wordings, canon excluded"): there is one Objetos
+  // compendium now, so which wording a spell has is a property of the Warden's
+  // content and not of which pack it was read from. The FORM half of the ruling
+  // is untouched and enforced below — under GLOG every spell grant is a scroll.
+  // glog.js is imported STATICALLY: a per-call `await import()` cost ~600ms
+  // every call in the live page — once per resolved gear NAME — and glog.js →
+  // settings.js is a leaf chain, no cycle.
   const useGlog = !!spell && glogEnabled();
   if (useGlog) targetName = GLOG_NAME_ALIASES.get(targetName.toLowerCase()) ?? targetName;
-  const packs = spell
-    ? (useGlog ? GLOG_SPELL_PACKS : SPELL_PACKS)
-    : CANONICAL_GEAR_PACKS;
-  const lower = String(targetName).toLowerCase();
 
-  let found = null;
-  for (const key of packs) {
-    const pack = game.packs.get(key);
-    if (!pack) continue;
-    const entry = (await pack.getIndex()).find((e) => e.name.toLowerCase() === lower);
-    if (!entry) continue;
-    const doc = await pack.getDocument(entry._id);
-    if (doc) { found = doc; break; }
-  }
+  const found = await itemByName(targetName);
   if (!found) {
-    console.warn(`resolveGearItem: no item named "${name}" in the canonical packs`);
+    console.warn(`resolveGearItem: no item named "${name}" in the configured Objetos compendium`);
     return null;
   }
 

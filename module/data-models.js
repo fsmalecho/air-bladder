@@ -155,12 +155,12 @@ const strList = () => new fields.ArrayField(new fields.StringField(), { required
  * block (2026-08-01), so the two schemas cannot drift a key apart — the sheet
  * binds `system.traits.<key>` from ONE list of keys either way.
  *
- * The first eight are 2e's, from the tables-2e tables. `quirk` and `goal`
- * joined on 2026-08-20 for the new `npc` role, whose four traits come off the
- * Warden's Guide NPC tables — and TWO of those four are `virtue` and `vice`,
- * which already existed. Same stored keys, different SOURCE table by role: an
- * NPC's Virtue is drawn from "Warden: NPC - Virtue", a character's from
- * tables-2e "Virtue". Nothing about the field changes, so re-roling an actor
+ * The first eight are 2e's biography traits. `quirk` and `goal` joined on
+ * 2026-08-20 for the new `npc` role, whose four traits come off the NPC map —
+ * and TWO of those four are `virtue` and `vice`, which already existed. Same
+ * stored keys, and the role decides which map addresses them (config.js
+ * `characterGenerator2e.biography.items` vs `npcGenerator.traits`), so the two
+ * are free to name different tables. Nothing about the field changes, so re-roling an actor
  * never loses the value; the sheet's pick-list already keeps an off-table one
  * (its `customValue` branch).
  *
@@ -351,8 +351,8 @@ class NpcData extends CairnDataModel {
   static defineSchema() {
     return {
       ...vitals(),
-      // Role `npc`'s job, labelled "Background" on the sheet and rolled from
-      // "Warden: NPC - Background". The field is older than that use and was
+      // Role `npc`'s job, labelled "Background" on the sheet and rolled off the
+      // Trasfondo table. The field is older than that use and was
       // read by nothing on the npc side; role `hireling` keeps its own answer in
       // `profession` (labelled "Career"), so the two never contend for a key and
       // re-roling an actor loses neither.

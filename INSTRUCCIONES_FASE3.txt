@@ -1,0 +1,202 @@
+MONDOLME — Fase 3: sin compendios, con ajustes configurables
+==============================================================
+
+Sobre la fase 2 ya aplicada.
+Se eliminan los 30 compendios del sistema y aparecen los ajustes que dicen
+de dónde sacar el contenido.
+
+
+CÓMO APLICARLO (4 pasos)
+------------------------
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. En tu carpeta del repositorio, borra estas SEIS carpetas completas:
+
+     module
+     tools
+     lang
+     css
+     templates
+     src
+
+   (La carpeta "src" desaparece del todo: era donde vivían los compendios.)
+
+3. Descomprime el ZIP dentro de la carpeta del repositorio. Recreará las
+   cinco primeras y sobrescribirá system.json y package.json. Cuando Windows
+   pregunte por esos dos, marca "Hacer esto para todos los elementos
+   actuales" y elige "Reemplazar".
+
+4. En GitHub Desktop: mensaje de commit, por ejemplo
+
+     Fase 3: sin compendios propios, contenido por ajustes
+
+   "Commit to mondolme" y luego "Push origin".
+
+El módulo de contenido va en un ZIP aparte, con sus propias instrucciones.
+
+
+LOS AJUSTES NUEVOS
+------------------
+
+En Configuración general aparecen ahora, los primeros de la lista:
+
+  Compendio de generadores        las tablas de PJ, PNJ y facciones
+  Compendio del mercado           las existencias de la tienda
+  Compendio de trasfondos         los trasfondos que eligen los jugadores
+  Compendio de trasfondos de PNJ  los que usa el generador de PNJ
+  Compendio de objetos            armas, armaduras y equipo
+  Idiomas de la ambientación      tu lista de idiomas, separados por comas
+
+Los dos compendios de trasfondos pueden ser el mismo: apunta ambos ajustes al
+mismo sitio y se comporta como uno solo. El sistema busca siempre en los dos,
+y solo cambia por cuál empieza, así que un trasfondo que solo exista en uno
+también se encuentra desde el otro.
+
+La tabla de vínculos ahora se llama OBLIGACIONES. "Vínculos" queda libre para
+la pestaña de la ficha que relaciona actores entre sí.
+
+El ajuste de idiomas todavía no se ve en ninguna ficha: la lista se guarda
+ahora, y las fichas y el trasfondo la usarán en las fases 6 y 7.
+
+Escribes el nombre del compendio tal y como aparece en la barra lateral. El
+sistema también acepta el identificador completo, pero el nombre visible es
+más cómodo y sobrevive a que cambies el módulo de sitio.
+
+La ayuda de cada ajuste lleva escrita la lista de tablas que debe contener,
+para que no tengas que recordarlas.
+
+
+CÓMO QUEDÓ ORGANIZADO
+---------------------
+
+Hay un archivo nuevo, module/content-packs.js, que es el ÚNICO sitio del
+sistema que sabe de dónde sale el contenido. Los otros 26 archivos de código
+le preguntan a él. Si algún día quieres cambiar cómo se busca el contenido,
+se toca ahí y en ningún otro sitio.
+
+Se repuntaron 40 identificadores de compendio y 31 nombres de tabla.
+
+
+LO QUE SE ELIMINÓ
+-----------------
+
+Compendios: los 30, y con ellos la carpeta src/ y las herramientas que los
+compilaban. Efecto secundario bueno: ya no hay nada que compilar al publicar.
+
+Generadores: monstruo, seguidor, compañero, transporte y contenedor. Con
+ellos se fue module/monster-generator.js entero.
+
+Importación desde Kettlewright: module/kettlewright-import.js entero, su
+botón y sus estilos.
+
+IMPORTANTE — lo que NO se eliminó: los tipos de actor y sus roles siguen
+exactamente como en Air Bladder. "Seguidor" sigue siendo un tipo válido;
+monstruo, compañero, transporte y contenedor siguen siendo roles válidos; el
+selector de Rol sigue visible en la ficha de PNJ y todo lo que cambia según
+el rol sigue funcionando. Lo que se ha quitado son los generadores
+automáticos, no los conceptos: ahora esos actores se crean con "Crear actor"
+y se rellenan a mano.
+
+
+LA BARRA LATERAL DE ACTORES
+---------------------------
+
+Antes tenía nueve botones. Ahora tres:
+
+  Crear personaje    (el generador de PJ, como antes)
+  Crear pnj          (como antes)
+  Crear actor        (el botón propio de Foundry, RECUPERADO)
+
+Ese último lo eliminaba el sistema a propósito. Ahora vuelve a estar, y da lo
+que debe dar: un selector de tipo y una ficha en blanco. Aparece en la fila
+de cabecera de Foundry, justo encima de los otros dos.
+
+
+LAS FACCIONES
+-------------
+
+"Crear facción" se ha mudado a la barra lateral de DIARIOS, y ya no crea una
+entrada por facción: todas viven en una sola entrada llamada "Facciones", y
+cada facción nueva se añade como una página dentro de ella. Al crearla se
+abre por esa página.
+
+Si borras la entrada, la siguiente facción la vuelve a crear. Si la
+renombras, se crea una nueva al lado y la tuya conserva sus páginas: no se
+pierde nada en ningún caso.
+
+
+AVISOS CUANDO FALTA CONTENIDO
+-----------------------------
+
+Antes, media docena de sitios fallaban en silencio. El peor: si no se
+encontraba un objeto, el personaje se generaba con el inventario vacío y
+nadie decía nada. Ahora todos avisan por pantalla, diciendo qué falta y
+dónde se buscaba.
+
+Los avisos salen una vez por sesión, para no apilar ocho toasts iguales en
+mitad de una generación. Si corriges un nombre en los ajustes, el contador se
+reinicia y el aviso vuelve a salir la próxima vez que falle, para que sepas
+si acertaste.
+
+Nada de esto interrumpe una generación a medias: lo que no se encuentra
+simplemente no se concede.
+
+
+PALABRAS RESERVADAS, AHORA EN ESPAÑOL
+-------------------------------------
+
+En el equipo inicial de un trasfondo puedes escribir una instrucción en lugar
+del nombre de un objeto, y en vez de conceder ese objeto tira uno:
+
+    equipo adicional aleatorio
+    hechizo   (o: hechizo aleatorio)
+    pergamino de hechizo aleatorio
+
+Estaban en inglés; ahora están en español, y las inglesas se siguen
+aceptando por si alguna vez traes contenido del sistema original.
+
+
+DECISIONES QUE CONVIENE QUE REVISES
+-----------------------------------
+
+1. El kit base de PNJ concedía "Rations" y "Torch". Ahora pide "Raciones" y
+   "Antorcha", así que tu compendio de Objetos debe tener objetos con esos
+   nombres exactos, o cámbialos y dime.
+
+2. Queda un archivo, module/npc-careers-2e.json, con 19 profesiones de
+   seguidor y su equipo, todo en inglés. No lo he tocado porque esa mecánica
+   no estaba en tu lista, pero sus objetos ("Rations", "Torch"...) no
+   existirán en tu compendio en español. Se nota solo si creas un seguidor y
+   le vuelves a tirar la profesión. Dime si lo traduzco o lo elimino.
+
+3. La lista de sinónimos de equipo (GEAR_ALIASES) traducía nombres del
+   contenido antiguo ("torches" -> "Torch"). La he vaciado, pero he dejado el
+   mecanismo: si algún día tus trasfondos dicen "antorchas" y tu objeto se
+   llama "Antorcha", ahí se puede apuntar sin renombrar ninguno de los dos.
+
+4. Los ajustes "Ofrecer trasfondos de Cairn 2e" y "Ofrecer trasfondos
+   caseros" siguen existiendo, pero ya no filtran nada: ahora hay un solo
+   compendio de trasfondos y no hay canon ni casero que distinguir. Se pueden
+   quitar cuando quieras.
+
+5. El arquetipo de un trasfondo se sigue guardando en inglés (Fighter,
+   Wizard, Thief) pero se te muestra en español (Guerrero, Mago, Pícaro). Eso
+   estaba bien hecho y lo he dejado como estaba: eliges de una lista, nunca lo
+   escribes.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 133 archivos de código pasan la comprobación de sintaxis.
+- Ningún identificador de compendio sobrevive fuera de content-packs.js.
+- Los 600 textos que usa el código existen en el idioma español.
+- Todas las importaciones entre archivos apuntan a archivos que existen.
+- system.json, package.json y lang/es.json son JSON válido.
+- Las 31 tablas que busca el código están documentadas en el LEEME del
+  módulo de contenido.
+
+
+SIGUIENTE: Fase 5 — los tipos de objeto. (La fase 4, la reestructura de
+actores, queda cancelada: mantienes los tipos y roles de Air Bladder.)

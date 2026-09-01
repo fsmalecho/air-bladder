@@ -15,11 +15,17 @@
  */
 import { FATIGUE_NAME } from "./item/item.js";
 import { findTableByName } from "./compendium.js";
+import { TABLES } from "./content-packs.js";
 import { formatCount } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
 
-/** The shipped Mishaps table's stored English name (tables-glog). */
-export const MISHAPS_TABLE_NAME = "GLOG Magic: Mishaps";
+/**
+ * The Mishaps table, by NAME — the Warden's own copy first (findTableByName is
+ * world-first), then their Generadores compendium. Re-exported rather than read
+ * inline because the card names the table it could not find, and the message
+ * and the lookup must never disagree about which name that is.
+ */
+export const MISHAPS_TABLE_NAME = TABLES.mishaps;
 
 /**
  * Every Grimoire `actor` holds. A CHARACTER carries at most one — the one-book

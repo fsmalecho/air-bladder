@@ -1,9 +1,18 @@
+import { TABLES } from "./content-packs.js";
+
 /** @name CONFIG.Cairn */
 export const Cairn = {};
 
-// Cairn 2e generation config. Backgrounds, gear, and bonds come from their own
-// packs (see character-generator.js); this covers the shared biography, which
-// draws the 8 physical/personality traits from tables-2e and rolls age.
+// The tables every generator reads are NAMES ONLY. This system ships no
+// compendiums: each name below is looked up in the Warden's Generadores
+// compendium (module/content-packs.js), so the addresses here are one half of a
+// contract whose other half is the content the Warden points the system at.
+// Never a raw literal — always a TABLES key, so renaming a table is one edit in
+// content-packs.js and not a hunt through every generator.
+
+// Cairn 2e generation config. Backgrounds, gear and bonds come from their own
+// compendiums (see character-generator.js); this covers the shared biography,
+// which draws the 8 physical/personality traits and rolls age.
 // 2e drops the 1e system's Misfortune and Reputation.
 Cairn.characterGenerator2e = {
   // Cairn 2e starts every character with 3d6 coins, on top of any coins their
@@ -31,137 +40,85 @@ Cairn.characterGenerator2e = {
     // dice instead.)
     age: "2d20 + 10",
     items: {
-      physique: "mondolme.tables-2e;Physique",
-      skin: "mondolme.tables-2e;Skin",
-      hair: "mondolme.tables-2e;Hair",
-      face: "mondolme.tables-2e;Face",
-      speech: "mondolme.tables-2e;Speech",
-      clothing: "mondolme.tables-2e;Clothing",
-      vice: "mondolme.tables-2e;Vice",
-      virtue: "mondolme.tables-2e;Virtue"
+      physique: TABLES.physique,
+      skin: TABLES.skin,
+      hair: TABLES.hair,
+      face: TABLES.face,
+      speech: TABLES.speech,
+      clothing: TABLES.clothing,
+      vice: TABLES.vice,
+      virtue: TABLES.virtue,
     }
   }
 };
 
 // The two PERSON generators (2026-08-20 split). Both draw names from the same
-// table — it is the Warden's Guide NPC name list, and a hireling has no other
-// source: a 2e character takes its name from its background's name list, which
-// neither of these has an equivalent of.
+// table — a hireling has no other source: a 2e character takes its name from
+// its background's name list, which neither of these has an equivalent of.
 //
 // The HIRELING's statblock is shipped runtime data (module/npc-careers-2e.json,
 // the twelve 2e careers) rather than a table, so only the name is configurable
-// here. The NPC's four traits and Background ARE tables, and they are the
-// Warden's Guide "NPC Tables" — already shipped in warden-npcs, twenty entries
-// each, and until this split only `Name` and `Faction` had a reader.
+// here. The NPC's four traits and its Background ARE tables.
 //
-// These are the WARDEN'S tables and their drawn state must stay clean. The NAME
-// and FACTION dice take `table.roll()`, which cannot mark anything. BACKGROUND
-// and the four TRAITS go through `drawTableText` -> `table.draw()`, and that is
-// safe for TWO independent reasons, both of which have to hold: every one of
-// these tables is `replacement: true`, AND core skips the drawn-marking write
-// entirely for a table that lives in a pack (`if (!this.replacement && !this.pack)`,
-// client/documents/roll-table.mjs:109). Faction is the one that could ever be a
-// WORLD table — findTableByName resolves world-first — which is exactly why it
-// is on the roll() path and must stay there.
+// These are the WARDEN'S tables and their drawn state must stay clean. Every
+// path below rolls with `table.roll()`, which cannot mark a row drawn — the one
+// rule that outlived the shipped packs, because a Warden's own table is exactly
+// the thing a stray `draw()` would quietly exhaust over a campaign.
 Cairn.npcGenerator = {
-  name: "mondolme.warden-npcs;Warden: NPC - Name",
-  // The Faction die's table, by NAME ONLY — no pack prefix, deliberately: it
-  // resolves world-first (findTableByName), so a Warden's own RollTable named
-  // "Warden: NPC - Faction" always beats the shipped warden-npcs copy and
-  // their faction list survives a system update.
-  faction: "Warden: NPC - Faction",
+  name: TABLES.names,
+  // The Faction die's table resolves WORLD FIRST (findTableByName), so a
+  // Warden's own RollTable of this name beats the copy in their Generadores
+  // compendium — the faction list is campaign machinery and lives where they
+  // edit it most easily.
+  faction: TABLES.faction,
   // Role `npc` only. `background` answers the same question `profession` does
   // for a hireling, off a different table — which is the whole of what
   // separates the two generators.
-  background: "mondolme.warden-npcs;Warden: NPC - Background",
+  background: TABLES.background,
   // The four NPC traits. `virtue` and `vice` deliberately COLLIDE by key with
-  // the 2e biography tables above and differ by SOURCE: an NPC is "Shrewd" off
-  // the Warden's Guide list, a character "Honest" off tables-2e. Same stored
-  // key, so nothing is lost when a Warden changes an actor's role.
+  // the 2e biography tables above; for now both resolve to the same table, and
+  // the collision is kept because the SHAPE is what the sheet and the NPC
+  // generator branch on — same stored key, so nothing is lost when a Warden
+  // changes an actor's role.
   traits: {
-    quirk: "mondolme.warden-npcs;Warden: NPC - Quirk",
-    goal: "mondolme.warden-npcs;Warden: NPC - Goal",
-    virtue: "mondolme.warden-npcs;Warden: NPC - Virtue",
-    vice: "mondolme.warden-npcs;Warden: NPC - Vice",
+    quirk: TABLES.quirk,
+    goal: TABLES.goal,
+    virtue: TABLES.virtue,
+    vice: TABLES.vice,
   },
-  // Role `npc` only, and the one thing here that is NOT a Warden's Guide table
-  // (2026-08-20, user ask). A hireling's statblock comes off its career; an NPC
-  // has no career, so it is ROLLED — Cairn's own person-making dice, the same
-  // pair Barebones creation uses below and a 2e character uses above. The
-  // Warden's Guide gives NPCs no statblock at all, which is why 10/10/10 and 6
-  // HP stood here until now; a generator sitting at its schema defaults reads
-  // as broken, and a rolled stranger is the answer the table actually wanted.
+  // Role `npc` only (2026-08-20, user ask). A hireling's statblock comes off
+  // its career; an NPC has no career, so it is ROLLED — Cairn's own
+  // person-making dice, the same pair Barebones creation uses below and a 2e
+  // character uses above. A generator sitting at its schema defaults reads as
+  // broken, and a rolled stranger is the answer the table actually wanted.
   ability: "3d6",
   hitProtection: "1d6",
-  // What an NPC of each Background is CARRYING (2026-08-20, user ask). The d20
-  // table names positions in the world; the Barebones list of 100 names TRADES,
-  // and a trade is the only background in this system that carries gear — three
-  // items each. So an NPC gets the gear of its nearest Barebones counterpart,
-  // through the same resolveRefs path a Barebones PC and a 2e hireling use.
-  //
-  // Keyed on the raw ENGLISH table text `drawTableText` returns, which is what
-  // `system.background` stores.
-  //
-  // Eleven of the twenty are the same word in both lists. Seven need a
-  // translation. LORD and POLITICIAN are deliberately absent and grant nothing:
-  // every one of the 100 Barebones backgrounds is an OCCUPATION, so rank and
-  // office have no counterpart — which is exactly why those two words are on a
-  // table the Warden rolls and not in character creation. Absent, not null, so
-  // a plain lookup answers undefined and the grant is empty. Since 2026-08-21
-  // absence suppresses the KIT too, at generation (buildNpcGear) AND on the
-  // Background die or picker (applyNpcBackground): a Lord arrives with no
-  // items at all, and landing Lord on an existing NPC unpacks the bag.
-  //
-  // Thug -> Highway Robber, not Thief: Thief is already row 19 of the same
-  // table, so the obvious mapping would have collided. One takes by stealth,
-  // the other by force.
-  backgroundGear: {
-    Academic: "Scribe",
-    Assassin: "Assassin",
-    Blacksmith: "Blacksmith",
-    Farmer: "Farmer",
-    General: "Knight",
-    Gravedigger: "Gravedigger",
-    Guard: "Guard",
-    Healer: "Herbalist",
-    Jailer: "Jailer",
-    Laborer: "Gardener",
-    Merchant: "Merchant",
-    Monk: "Monk",
-    Mystic: "Hermit",
-    Outlander: "Vagabond",
-    Peddler: "Peddler",
-    Spy: "Spy",
-    Thief: "Thief",
-    Thug: "Highway Robber",
-  },
+  // `backgroundGear` — a hardcoded English map from NPC Background name to a
+  // Barebones counterpart — is GONE (2026-08-29). It keyed on the raw text of a
+  // shipped English table, and the Trasfondo table is the Warden's now and in
+  // Spanish, so every one of its eighteen keys was dead. What replaced it needs
+  // no map at all: an NPC's Background is looked up BY NAME as a `background`
+  // Item in the Trasfondos compendium and grants that background's own
+  // startingGear (character-generator.js npcBackgroundItem). A Trasfondo row
+  // with no matching Item grants nothing, which is a legitimate outcome and not
+  // an error — the same "Lord and Politician arrive empty-handed" behaviour the
+  // map used to express by omission, now expressed by the content itself.
 };
 
-// Monster generation (SRD "Creating Monsters", CC BY-SA 4.0 — the design of
-// record is docs/monster-generation.md). The eight tables ship in the
-// warden-monsters pack and they are the WARDEN'S tables: the generator rolls
-// them with table.roll(), never draw(), so their drawn state stays clean —
-// the same invariant rollNameFromTable documents for the NPC name table.
-Cairn.monsterGenerator = {
-  physique: "mondolme.warden-monsters;Warden: Monster - Appearance (Physique)",
-  feature: "mondolme.warden-monsters;Warden: Monster - Appearance (Feature)",
-  quirk: "mondolme.warden-monsters;Warden: Monster - Trait (Quirk)",
-  weakness: "mondolme.warden-monsters;Warden: Monster - Trait (Weakness)",
-  attackType: "mondolme.warden-monsters;Warden: Monster - Attack (Type)",
-  criticalDamage: "mondolme.warden-monsters;Warden: Monster - Attack (Critical Damage)",
-  abilityPower: "mondolme.warden-monsters;Warden: Monster - Ability (Power)",
-  abilityTarget: "mondolme.warden-monsters;Warden: Monster - Ability (Target)",
-};
+// `Cairn.monsterGenerator` stood here and is GONE (2026-08-29, ruled with the
+// monster generator itself): module/monster-generator.js and its directory
+// button are deleted, so the eight table addresses had no reader left. The
+// `monster` ROLE stays — a monster is made with Crear actor and written by
+// hand now.
 
 // Cairn Barebones creation. Abilities/HP/coins follow the SRD; the name comes
-// from the same Warden NPC name table the NPC generator uses, because 2e
-// dropped 1e's name tables and Barebones ships none of its own.
+// from the same NPC name table the NPC generator uses, because 2e dropped 1e's
+// name tables and Barebones ships none of its own.
 Cairn.barebonesGenerator = {
-  name: "mondolme.warden-npcs;Warden: NPC - Name",
+  name: TABLES.names,
   ability: "3d6",
   hitProtection: "1d6",
   gold: "3d6",
 };
 
 CONFIG.Cairn = Cairn;
-

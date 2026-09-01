@@ -1,0 +1,114 @@
+MONDOLME — CONTENIDO
+=======================
+
+Módulo de compendios vacíos para el sistema Mondolme. El sistema no lleva
+contenido propio: lo lee de aquí.
+
+
+INSTALACIÓN
+-----------
+
+1. Copia la carpeta entera "mondolme-contenido" dentro de la carpeta de
+   módulos de Foundry:
+
+     ...\FoundryVTT\Data\modules\mondolme-contenido
+
+2. Arranca Foundry, abre tu mundo de Mondolme y activa el módulo en
+   "Gestionar módulos".
+
+3. Ve a Configuración → Configuración del sistema → Configurar ajustes
+   generales, y escribe estos cinco nombres:
+
+     Compendio de generadores ....... Generadores
+     Compendio del mercado .......... Mercado
+     Compendio de trasfondos ........ Trasfondos
+     Compendio de trasfondos de PNJ . Trasfondos PNJ
+     Compendio de objetos ........... Objetos
+
+   Son exactamente las etiquetas que verás en la barra lateral de
+   compendios. El sistema también acepta el identificador completo
+   (mondolme-contenido.generadores), pero el nombre visible es más cómodo.
+
+4. Desbloquea cada compendio (clic derecho sobre él → Alternar bloqueo) para
+   poder añadir contenido.
+
+Si al activar el módulo los cuatro compendios no aparecen, créalos a mano
+desde la barra lateral de compendios (botón "Crear compendio") con esos
+mismos cuatro nombres y los tipos indicados abajo. El sistema los encontrará
+igual: busca por nombre, no le importa de dónde vengan.
+
+
+QUÉ VA EN CADA COMPENDIO
+------------------------
+
+GENERADORES  (tipo: Tabla aleatoria)
+  Las tablas de las que tiran los generadores de PJ, PNJ y facciones.
+  El sistema busca estas tablas POR NOMBRE EXACTO:
+
+    Descripción del personaje
+      Físico, Piel, Cabello, Rostro, Voz, Vestimenta, Defecto, Virtud
+      Cumpleaños
+
+    Personaje jugador
+      Obligaciones, Presagios, Cicatrices, Hechizos
+      Arma, Armadura, Equipo
+
+    Personaje no jugador
+      Nombres, Trasfondo, Facción, Objetivo, Peculiaridad
+
+    Facciones
+      Facción, Agente, Rasgo 1, Rasgo 2, Ventaja, Cantidad, Agenda, Obstáculo
+
+    Magia GLOG
+      Percances
+
+  Nota: Virtud, Defecto, Facción y Trasfondo los comparten el PJ, el PNJ y
+  el generador de facciones. Una sola tabla de cada una sirve para todos.
+
+MERCADO  (tipo: Tabla aleatoria)
+  Las existencias de la tienda, una tabla por categoría, en este orden:
+
+    Armas, Armadura, Equipo, Contenedores
+
+  Cada fila apunta al objeto que se pone a la venta (arrastra el objeto a la
+  fila para que quede enlazado).
+
+TRASFONDOS  (tipo: Objeto)
+  Los trasfondos que pueden elegir los jugadores. El sistema tiene en cuenta
+  todos los objetos de tipo "Trasfondo" que haya aquí dentro.
+
+TRASFONDOS PNJ  (tipo: Objeto)
+  Los trasfondos que usa el generador de PNJ. Pueden ser los mismos que los de
+  los jugadores (apunta los dos ajustes al mismo compendio) o unos aparte, más
+  simples. El sistema busca en los dos, así que un trasfondo que solo exista en
+  uno también se encuentra desde el otro.
+
+OBJETOS  (tipo: Objeto)
+  Las armas, armaduras y equipo. El sistema los busca POR NOMBRE cada vez que
+  un trasfondo, una obligación o una profesión conceden un objeto, así que el
+  nombre que escribas en la concesión debe coincidir con el nombre del objeto.
+  Da igual mayúsculas o minúsculas.
+
+
+SI FALTA ALGO
+-------------
+
+El sistema avisa por pantalla cuando no encuentra un compendio o una tabla,
+diciendo cuál falta y en qué compendio la buscaba. No se rompe nada: lo que
+no encuentra, simplemente no lo genera.
+
+Los avisos salen una vez por sesión para no repetirse en mitad de una
+tirada. Si corriges un nombre en los ajustes, el aviso vuelve a salir la
+próxima vez que falle, para que sepas si acertaste.
+
+
+PALABRAS RESERVADAS EN EL EQUIPO INICIAL
+----------------------------------------
+
+En el equipo inicial de un trasfondo puedes escribir, en lugar del nombre de
+un objeto, una de estas instrucciones. En vez de conceder un objeto concreto,
+tiran uno:
+
+    equipo adicional aleatorio
+    hechizo               (o: hechizo aleatorio)
+    pergamino de hechizo aleatorio

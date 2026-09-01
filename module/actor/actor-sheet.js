@@ -1,8 +1,8 @@
 import { regenerateActor, canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula } from "../character-generator.js";
-import { promptMonsterTier, regenerateMonster } from "../monster-generator.js";
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
 import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
 import { resultText } from "../compendium.js";
+import { generatorTable, TABLES } from "../content-packs.js";
 import { SETTINGS_NS } from "../settings.js";
 import { CONTAINER_ART_CHOICES, CONTAINER_CLASSES } from "../icons.js";
 import { NPC_ROLES, PERSON_ROLES } from "../data-models.js";
@@ -99,44 +99,61 @@ const initialTabId = (doc) => {
 };
 
 /**
- * Memoized compendium reads for the sheet's static pick-lists (traits, scars, omens).
+ * Memoized table reads for the sheet's static pick-lists (traits, scars, omens).
  *
  * `_prepareContext` runs on EVERY render, and `submitOnChange` is on — so every
- * field edit, every item add/remove and every damage application re-read a pack and
- * constructed all 11 tables-2e RollTables from scratch.
+ * field edit, every item add/remove and every damage application would otherwise
+ * re-resolve ten trait tables plus Cicatrices from the compendium.
  *
- * These are shipped tables that do not change during play. The hooks below cover the
- * one case that isn't true: a Warden unlocking the pack and editing a table.
+ * Cached BY TABLE NAME rather than by pack (2026-08-29). It used to load a whole
+ * shipped pack and search the result; the tables are the Warden's now and come
+ * out of one compendium `generatorTable` resolves a single document from, so a
+ * name is both the finer key and the only one this file still knows.
  *
- * The PROMISE is cached, so concurrent renders share a single round-trip, and what
- * it resolves to is the RAW documents — translation stays per-render, so switching
- * language still re-localizes for free.
+ * The PROMISE is cached, so concurrent renders share a single round-trip, and
+ * what it resolves to is the RAW document — translation stays per-render, so
+ * switching language still re-localizes for free. A missing table caches as
+ * `null`, and the Warden is told about it once (generatorTable warns, and
+ * content-packs dedupes per session) rather than once per render.
  */
-const PACK_DOC_CACHE = new Map();
+const TABLE_CACHE = new Map();
 
-const cachedPackDocuments = (packName) => {
-  if (!PACK_DOC_CACHE.has(packName)) {
-    const pack = game.packs.get(packName);
+/**
+ * @param {String} name
+ * @param {Object} [opts]
+ * @param {Boolean} [opts.quiet]  for the ONE caller that has its own message —
+ *   the Omen die, whose CAIRN.OmenTableMissing predates this and names the
+ *   button that was pressed. Everything else takes content-packs' warning,
+ *   which is the only word the pick-lists get.
+ */
+const cachedGeneratorTable = (name, { quiet = false } = {}) => {
+  if (!TABLE_CACHE.has(name)) {
     // Drop a rejection rather than caching it forever; the caller sees the same
     // error it would have seen before, and the next render retries.
-    const p = pack
-      ? pack.getDocuments().catch((err) => { PACK_DOC_CACHE.delete(packName); throw err; })
-      : Promise.resolve([]);
-    PACK_DOC_CACHE.set(packName, p);
+    const p = generatorTable(name, { quiet })
+      .catch((err) => { TABLE_CACHE.delete(name); throw err; });
+    TABLE_CACHE.set(name, p);
   }
-  return PACK_DOC_CACHE.get(packName);
+  return TABLE_CACHE.get(name);
 };
 
 // TableResult as well as RollTable: adding a row to a table fires ONLY
 // createTableResult — the parent RollTable is not updated — so a Warden who
-// unlocked the pack and added a Scar, an Omen or a trait watched the sheet's
-// pick-lists keep serving the cached table for the rest of the session. Editing
-// or deleting a row is the same story.
+// added a Scar, an Omen or a trait watched the sheet's pick-lists keep serving
+// the cached table for the rest of the session. Editing or deleting a row is the
+// same story.
+//
+// `updateSetting` joins them (2026-08-29) and closes the trap the settings
+// created: which compendium these tables come from is now a setting, so pointing
+// it at the right one mid-session used to leave every pick-list empty — and a
+// MISS is cached like a hit — until the browser reloaded. Clearing on any
+// setting write is bluntly wider than needed and costs one re-resolve.
 for (const hook of [
   "createRollTable", "updateRollTable", "deleteRollTable",
   "createTableResult", "updateTableResult", "deleteTableResult",
+  "updateSetting",
 ]) {
-  Hooks.on(hook, () => PACK_DOC_CACHE.clear());
+  Hooks.on(hook, () => TABLE_CACHE.clear());
 }
 
 /* -------------------------------------------- */
@@ -1235,8 +1252,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // the 2e one is simply never reached.
     //
     // The rows a role does not use are ABSENT rather than blank, which is what
-    // keeps an NPC from showing an empty "Physique" it can never fill and a
-    // character from showing a "Goal". A value already stored under a key the
+    // keeps an NPC from showing an empty Físico it can never fill and a
+    // character from showing an Objetivo. A value already stored under a key the
     // current role does not list stays in the document untouched — nothing here
     // writes — so re-roling an actor and re-roling it back loses nothing.
     const biography2e = CONFIG.Cairn?.characterGenerator2e?.biography?.items ?? {};
@@ -1247,22 +1264,25 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         ...npcTraits,
       }
       : biography2e;
-    const byPack = {};
-    for (const ref of Object.values(mapping)) {
-      const [packName] = ref.split(";");
-      if (!(packName in byPack)) byPack[packName] = await cachedPackDocuments(packName);
-    }
-    context.traitRows = Object.entries(mapping).map(([key, ref]) => {
-      const [packName, tableName] = ref.split(";");
-      const table = (byPack[packName] ?? []).find((tbl) => tbl.name === tableName);
+    // The mapping's values are BARE TABLE NAMES now — one compendium, so there
+    // is no pack half to split off — and each resolves to one document rather
+    // than to a whole pack that is then searched. Resolved in parallel because
+    // ten sequential awaits on every render is ten round trips the first time
+    // and ten cache hits after; `Promise.all` makes the cold case one wait.
+    const names = Object.values(mapping);
+    const tables = new Map(await Promise.all(
+      [...new Set(names)].map(async (name) => [name, await cachedGeneratorTable(name)])
+    ));
+    context.traitRows = Object.entries(mapping).map(([key, tableName]) => {
+      const table = tables.get(tableName) ?? null;
       const value = this.actor.system.traits?.[key] ?? "";
       const texts = table ? table.results.map(resultText).sort() : [];
       return {
         key,
-        // A tables-2e trait's label IS its table name (Physique, Skin…). The
-        // four NPC tables cannot use theirs: they are named "Warden: NPC -
-        // Quirk", which is a table name a Warden browses by and a terrible
-        // label to put beside a select. Those take a UI key instead.
+        // A biography trait's label IS its table name (Físico, Piel…). The four
+        // NPC traits take a UI key instead: their tables are the Warden's to
+        // name, so the label beside the select cannot depend on what they called
+        // them.
         label: NPC_TRAIT_LABELS[key] && key in npcTraits
           ? game.i18n.localize(NPC_TRAIT_LABELS[key])
           : tableName,
@@ -1280,11 +1300,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.traitSentence = this._buildTraitSentence(this.actor.system.traits, this.actor.system.age);
     context.traitsCollapsed = this._traitsCollapsed ?? true;
 
-    // Scars pick-list from the same tables-2e pack. Neither Omen nor Scar is
+    // Scars pick-list, off the SAME Cicatrices table the damage flow draws from
+    // (damage.js _rollScarsTable) — one table, so a scar taken in play and a
+    // scar ticked by hand are drawn from the same list. Neither Omen nor Scar is
     // generated: a player ticks the field's checkbox to enable it, then rolls
     // (Omen) or checks scars. Both are descriptive only.
-    const tables2e = byPack["mondolme.tables-2e"] ?? (await cachedPackDocuments("mondolme.tables-2e"));
-    const scarTable = tables2e.find((tbl) => tbl.name === "Scars");
+    const scarTable = await cachedGeneratorTable(TABLES.scars);
     const selectedScars = this.actor.system.scars ?? [];
     context.scarOptions = scarTable
       ? scarTable.results.map((r) => {
@@ -2329,11 +2350,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       : career ? game.i18n.format("CAIRN.PrintRoleCareer", { role: roleLabel, career }) : roleLabel;
     // "Custom" is MEMBERSHIP, not a stored source (the recorded definition:
     // not in the Player's Guide, nothing more — a custom character still
-    // stores contentSource "2e"). A 2e background resolved from anywhere but
-    // the canon pack — the shipped custom pack, the world compendium, a
-    // module, a bare world item — prints the custom label (user ruling
-    // 2026-08-08).
-    const isCustomBg = !!bg && sys.contentSource === "2e" && bg.pack !== "mondolme.backgrounds-2e";
+    // stores contentSource "2e"). The test used to be "resolved from anywhere
+    // but the canon pack", and with no canon pack left to compare against it is
+    // constantly true: every background in a world is one the Warden supplied,
+    // so a 2e character with a background always prints the custom label. The
+    // branch is gone rather than kept as a comparison that can only answer one
+    // way (user ruling 2026-08-08, unchanged — it is the WORLD that changed).
+    const isCustomBg = !!bg && sys.contentSource === "2e";
 
     // The footer credits the art actually ON the page (user ruling
     // 2026-08-08): the portrait's PATH picks its attribution line, so an
@@ -2582,14 +2605,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this._rerolling) return;
     this._rerolling = true;
     try {
-      // A monster-role npc re-rolls as a MONSTER. The tier picker IS the ask-first
-      // dialog here: it is dismissible (null = cancel, touch nothing) and its
-      // wording is monster-specific — so the Gorilla-into-Alchemist path above is
-      // closed without stacking two dialogs in front of one button.
+      // A monster-role npc has NOTHING to re-roll since the monster generator
+      // was deleted (2026-08-29): this branch used to open the tier picker and
+      // hand off to `regenerateMonster`. The guard STAYS, as a refusal rather
+      // than a fall-through, because falling through is the bug — the branches
+      // below key on `npcRole === "npc"`, so a monster would take the HIRELING
+      // path, have every item deleted and come back as an Alchemist with a day
+      // rate. That is precisely the Gorilla-into-Alchemist path this handler's
+      // docblock records as closed, and deleting the generator must not reopen
+      // it. A monster is written by hand now, so the button says so and stops.
       if (this.actor.npcRole === "monster") {
-        const tier = await promptMonsterTier({ regenerate: true });
-        if (!tier) return;
-        await regenerateMonster(this.actor, tier);
+        ui.notifications.info(game.i18n.localize("CAIRN.Notify.MonsterNoGenerator"));
         return;
       }
       const isNpc = ["hireling", "npc"].includes(this.actor.type);
@@ -2749,9 +2775,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Faction-only die: fill system.faction from the world-first
-   * "Warden: NPC - Faction" table. Touches nothing else — a side is not a
-   * statblock.
+   * Faction-only die: fill system.faction from the world-first Facción table.
+   * Touches nothing else — a side is not a statblock.
    * @this {CairnActorSheet}
    */
   static async #onRollFaction(event) {
@@ -3495,8 +3520,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static async #onRollOmen(event) {
     event.preventDefault();
     if (!this.actor.system.omenEnabled) return;
-    const tables = await cachedPackDocuments("mondolme.tables-2e");
-    const omenTable = tables.find((tbl) => tbl.name === "Omens");
+    const omenTable = await cachedGeneratorTable(TABLES.omens, { quiet: true });
     if (!omenTable) {
       ui.notifications.warn(game.i18n.localize("CAIRN.OmenTableMissing"));
       return;

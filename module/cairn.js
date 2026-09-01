@@ -3,14 +3,10 @@ import { CairnActor } from "./actor/actor.js";
 import { CairnActorSheet } from "./actor/actor-sheet.js";
 import { CairnItem, FATIGUE_NAME, SPELLSCROLL_NAME } from "./item/item.js";
 import { CairnItemSheet } from "./item/item-sheet.js";
-import { createCharacter, createNpc, createHireling, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard } from "./character-generator.js";
+import { createCharacter, createNpc, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard } from "./character-generator.js";
 import * as characterGenerator from "./character-generator.js";
-import { createMonster } from "./monster-generator.js";
-import * as monsterGenerator from "./monster-generator.js";
 import { generateFaction } from "./faction-generator.js";
 import { reseedSpellTable } from "./spell-tables.js";
-import { importKettlewrightCharacter } from "./kettlewright-import.js";
-import * as kettlewrightImport from "./kettlewright-import.js";
 import { Cairn } from "./config.js";
 import { CairnCombat, CairnCombatTracker, registerCombatOrderGuard } from "./combat.js";
 import { createCairnMacro, rollItemMacro } from "./macros.js";
@@ -29,8 +25,6 @@ Hooks.once("init", async function () {
     CairnItem,
     config: Cairn,
     characterGenerator: characterGenerator,
-    monsterGenerator: monsterGenerator,
-    kettlewrightImport: kettlewrightImport,
     rollItemMacro,
   };
 
@@ -1718,12 +1712,13 @@ Hooks.on("renderDialogV2", function abSpellscrollTypeOption(dialog, element) {
    retired `hireling` TYPE from core's Create Actor dialog by surgery on the
    rendered DOM — necessary while core's type-picker rendered at all, because a
    registered subtype is always offered and there is no manifest flag to hide
-   one. `CairnActor.createDialog` (actor.js) replaces that dialog with the role
-   SWITCHBOARD now, so core's picker never renders on the world path and there
-   is no option to remove; the one fallback that still shows it (a compendium
-   target) is restricted to real types, which excludes hireling structurally.
-   The type itself stays registered and aliased to NpcData — ids are immutable
-   — exactly as before. */
+   one. It was dropped when `CairnActor.createDialog` replaced core's picker
+   with a role SWITCHBOARD; that override is itself GONE (2026-08-29) and core's
+   own picker is back, so `hireling` is offered there again. Left offered on
+   purpose: `hireling` is a registered, supported Actor type aliased to NpcData
+   (ids are immutable), and an actor minted under it reads role `hireling`
+   through `npcRole` exactly as a role-hireling npc does. Nothing is broken by
+   picking it; do not re-add DOM surgery to hide it without a ruling. */
 
 /**
  * Make the four settings SUBMENU buttons searchable by what they hold.
@@ -1760,13 +1755,17 @@ Hooks.on("renderSettingsConfig", (app, element) => {
 });
 
 Hooks.on("renderActorDirectory", (app, html) => {
-  // Core's own Create Actor button goes (2026-08-02, ruled: "unnecessary and
-  // an invitation for trouble") — every creation path below carries a complete
-  // workflow instead of core's bare type-picker. The folder "+" STAYS: it
-  // routes through CairnActor.createDialog, which is the role switchboard now.
-  // Removal runs per-render on THIS directory root, so the docked and
-  // popped-out instances are both covered.
-  html.querySelector(".directory-header .create-entry")?.remove();
+  // Core's own Create Actor button is BACK (2026-08-29, ruled). A line here
+  // used to delete it — `html.querySelector(".directory-header .create-entry")
+  // ?.remove()` — on the reasoning that every creation path carried a complete
+  // workflow of its own. Those workflows are gone (the monster, hireling,
+  // companion, transport and container generators, and with them the
+  // `CairnActor.createDialog` role switchboard), so core's button and core's
+  // own type-picker are the plain "make me a blank actor" route again: pick a
+  // type, get an empty sheet, set the Rol by hand. Nothing is injected for it
+  // — core renders it, in core's own header, and core gates it on
+  // ACTOR_CREATE. Do not re-add the removal.
+  //
   // The Warden's switch for the player-facing Generate PC button
   // (allow-player-generate, flipped live by its shipped macro). GM always
   // keeps the button — the OR is what makes "off" mean players only.
@@ -1784,8 +1783,8 @@ Hooks.on("renderActorDirectory", (app, html) => {
     // Scope the "already injected?" test to THIS directory, not the document.
     // Foundry renders a second, independent ActorDirectory when the tab is
     // popped out, and a document-wide getElementById sees the docked one's
-    // button and skips injection -- so the popped-out window had no Generate,
-    // NPC or Import buttons at all. The id is duplicated across the two
+    // button and skips injection -- so the popped-out window had no Generate
+    // or NPC button at all. The id is duplicated across the two
     // windows by design; the class is what the click handlers below bind to.
     if (!html.querySelector("#cairn-character-gen-button")) {
       const section = document.createElement("header");
@@ -1803,13 +1802,6 @@ Hooks.on("renderActorDirectory", (app, html) => {
           <button class="create-npc-button"><i class="fas fa-user-plus"></i>${game.i18n.localize(
           "CAIRN.CreateNpc"
         )}</button>
-          <button class="create-hireling-button"><i class="fas fa-hand-holding-dollar"></i>${game.i18n.localize("CAIRN.CreateHireling")}</button>
-          ${game.user.isGM ? `<button class="create-monster-button"><i class="fas fa-dragon"></i>${game.i18n.localize("CAIRN.CreateMonster")}</button>` : ""}
-          <button class="create-mount-button"><i class="fas fa-horse"></i>${game.i18n.localize("CAIRN.CreateCompanion")}</button>
-          <button class="create-transport-button"><i class="fas fa-cart-flatbed"></i>${game.i18n.localize("CAIRN.CreateTransport")}</button>
-          <button class="create-container-button"><i class="fas fa-box-open"></i>${game.i18n.localize("CAIRN.CreateContainer")}</button>
-          ${game.user.isGM ? `<button class="create-faction-button"><i class="fas fa-flag"></i>${game.i18n.localize("CAIRN.CreateFaction")}</button>` : ""}
-          ${game.user.isGM ? `<button class="import-kettlewright-button"><i class="fas fa-file-import"></i>${game.i18n.localize("CAIRN.KWImport.Button")}</button>` : ""}
         </div>
         `
       );
@@ -1819,58 +1811,14 @@ Hooks.on("renderActorDirectory", (app, html) => {
           const actor = await createCharacter();
           if (actor) actor.sheet.render(true);
         });
-      // The two person roles get a button each (2026-08-20). Two buttons rather
-      // than one that asks: a Warden knows which they are making before they
-      // reach for the mouse, and the tier picker on Generate Monster is a
-      // dialog because the tier is a real CHOICE about the thing being made,
-      // not a fork in which thing.
-      for (const [cls, make] of [
-        ["create-npc-button", createNpc],
-        ["create-hireling-button", createHireling],
-      ]) {
-        section.querySelector(`.${cls}`)?.addEventListener("click", async () => {
-          const actor = await make();
-          if (actor) actor.sheet.render(true);
-        });
-      }
-      // The three thing roles share one name+Type workflow
-      // (CairnActor.createThing): pre-filtered kinds plus Other, minting an
-      // unconnected npc of that role. ACTOR_CREATE-gated like Create NPC —
-      // players who may create actors may create the things they own.
-      for (const [cls, role] of [
-        ["create-container-button", "container"],
-        ["create-mount-button", "companion"],
-        ["create-transport-button", "transport"],
-      ]) {
-        section.querySelector(`.${cls}`)?.addEventListener("click", async () => {
-          const actor = await CairnActor.createThing(role);
-          if (actor) actor.sheet.render(true);
-        });
-      }
-      // Warden-only: monsters are the Warden's to mint. The tier picker inside
-      // createMonster is dismissible, and a dismiss creates nothing.
-      section
-        .querySelector(".create-monster-button")
-        ?.addEventListener("click", async () => {
-          const actor = await createMonster();
-          if (actor) actor.sheet.render(true);
-        });
-      // Warden-only: one click, one faction dossier (a JournalEntry — a
-      // faction is campaign machinery, not an Actor). No confirm: creating a
-      // journal is non-destructive, and nothing is ever overwritten.
-      section
-        .querySelector(".create-faction-button")
-        ?.addEventListener("click", async () => {
-          const entry = await generateFaction();
-          if (entry) entry.sheet.render(true);
-        });
-      // GM-only: import a Kettlewright character export into a new Actor.
-      section
-        .querySelector(".import-kettlewright-button")
-        ?.addEventListener("click", async () => {
-          const actor = await importKettlewrightCharacter();
-          if (actor) actor.sheet.render(true);
-        });
+      // Crear pnj is the only generator button left beside Generate PC
+      // (2026-08-29): the hireling, monster, companion, transport and container
+      // generators are deleted, and blank actors of any role come from core's
+      // own Create Actor button in the header below.
+      section.querySelector(".create-npc-button")?.addEventListener("click", async () => {
+        const actor = await createNpc();
+        if (actor) actor.sheet.render(true);
+      });
     }
   } else if (allowGen && !html.querySelector("#cairn-character-gen-button")) {
     // A player with no ACTOR_CREATE at all still gets Generate PC — the one
@@ -1920,6 +1868,46 @@ Hooks.on("renderActorDirectory", (app, html) => {
     // (2026-08-02, by ruling): every container actor is always listed.
     const containerLine = actor.isThing || actor.npcRole === "companion";
     a.classList.toggle('cairn-grayscale-portrait', containerLine);
+  });
+});
+
+/**
+ * "Crear facción" — Warden-only, in the JOURNAL sidebar (moved there
+ * 2026-08-29; it sat in the actor directory until then, which put a button that
+ * makes a JournalEntry among the buttons that make Actors).
+ *
+ * The injection follows renderActorDirectory's pattern line for line, and the
+ * two guards it documents are the ones that matter here too: the section is NOT
+ * a template part, so a re-render leaves the old one in the DOM — hence the
+ * remove-then-rebuild, which also re-binds the listener onto live nodes — and
+ * the "already injected?" test is scoped to THIS `html` root rather than the
+ * document, because Foundry renders a SECOND, independent JournalDirectory when
+ * the tab is popped out and a document-wide lookup would see the docked one's
+ * button and skip the popped-out window entirely.
+ */
+Hooks.on("renderJournalDirectory", (app, html) => {
+  html.querySelector("#cairn-faction-button")?.closest("header.character-generator")?.remove();
+  if (!game.user.isGM) return;
+  if (html.querySelector("#cairn-faction-button")) return;
+  const dirHeader = html.querySelector(".directory-header");
+  if (!dirHeader) return;
+  const section = document.createElement("header");
+  section.classList.add("character-generator");
+  section.classList.add("directory-header");
+  dirHeader.parentNode.insertBefore(section, dirHeader);
+  section.insertAdjacentHTML(
+    "afterbegin",
+    `
+    <div class="header-actions action-buttons flexrow" id="cairn-faction-button">
+      <button class="create-faction-button"><i class="fas fa-flag"></i>${game.i18n.localize("CAIRN.CreateFaction")}</button>
+    </div>
+    `
+  );
+  // No confirm: generating a faction is non-destructive — it only ever ADDS a
+  // page to the "Facciones" entry, and nothing is ever overwritten.
+  section.querySelector(".create-faction-button")?.addEventListener("click", async () => {
+    const made = await generateFaction();
+    if (made) made.entry.sheet.render(true, { pageId: made.page.id });
   });
 });
 

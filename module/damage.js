@@ -1,4 +1,5 @@
-import { findCompendiumItem, resultText } from './compendium.js'
+import { resultText } from './compendium.js'
+import { generatorTable, TABLES } from './content-packs.js'
 import { SETTINGS_NS } from './settings.js'
 import { evaluateFormula, askDamageTargets, concealmentWhisper } from './utils.js'
 import { postStatusCard } from './actor/actor.js'
@@ -559,12 +560,14 @@ export class Damage {
      * @param {TokenDocument|null} [token]  who was scarred
      */
     static async _rollScarsTable(damage, token = null) {
-        // findCompendiumItem resolves to undefined on a miss (it only warns to the
-        // console), so this dereference used to throw mid-damage-resolution if the
-        // pack were absent, renamed, or the table deleted from the world copy.
-        // Failing loudly but harmlessly is right here: the Warden asked for a scar
-        // and needs to know it did not happen.
-        const table = await findCompendiumItem("mondolme.utils", "Scars");
+        // The Cicatrices table out of the Warden's Generadores compendium — the
+        // SAME table the sheet's scar checklist reads, so a scar taken in play
+        // and a scar ticked by hand can never come off two different lists.
+        // `quiet`: content-packs would warn about the missing table itself, and
+        // this flow has its own message below — the Warden asked for a scar and
+        // needs to know it did not happen, said once and in the words of the
+        // thing they clicked.
+        const table = await generatorTable(TABLES.scars, { quiet: true });
         if (!table) {
             ui.notifications?.warn(game.i18n.localize("CAIRN.Notify.NoScarsTable"));
             return;

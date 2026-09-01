@@ -1,5 +1,6 @@
 import { Cairn } from "./config.js";
 import { registerSettingMenus } from "./settings-menus.js";
+import { clearPackWarnings } from "./content-packs.js";
 
 /**
  * The namespace every game setting is registered under.
@@ -27,6 +28,11 @@ export const SETTINGS_NS = "mondolme";
  */
 export const SETTING_KEYS = [
   // General
+  // The four content compendiums. This system ships no packs of its own, so
+  // these name where every table, background and item comes from — see
+  // content-packs.js, which is the only file allowed to resolve them.
+  "pack-generators", "pack-market", "pack-backgrounds", "pack-npc-backgrounds",
+  "pack-items", "languages",
   "use-panic", "use-cairn-dice-notation", "use-item-icons", "show-grant-tags",
   "show-grant-tags-print", "show-omens",
   "use-warden-title", "change-log", "auto-record-scars", "enable-glog-magic",
@@ -162,6 +168,8 @@ export const SETTING_GROUPS = [
     hint: "CAIRN.Settings.GroupGeneralHint",
     icon: "fa-solid fa-gears",
     keys: [
+      "pack-generators", "pack-market", "pack-backgrounds", "pack-npc-backgrounds",
+      "pack-items", "languages",
       "use-panic", "use-cairn-dice-notation", "use-item-icons", "show-grant-tags",
       "show-grant-tags-print", "show-omens", "use-warden-title", "change-log",
       "auto-record-scars",
@@ -368,6 +376,50 @@ export const registerSettings = () => {
   // re-localizes name/hint at display time (settings/config.mjs:126-127), which
   // is what the key is for. Do NOT wrap these in game.i18n.localize().
   // ---- General -------------------------------------------------------------
+
+  // The four content compendiums.
+  //
+  // `onChange` clears the once-per-session warning set so that fixing a wrong
+  // name makes the next miss speak up again — without it a Warden who corrects
+  // a typo gets silence either way and cannot tell whether it worked.
+  //
+  // No `requiresReload`: every read goes through content-packs.js at the moment
+  // it is needed, so a corrected name takes effect on the next roll.
+  for (const [key, name, hint] of [
+    ["pack-generators", "CAIRN.Settings.PackGenerators.label", "CAIRN.Settings.PackGenerators.hint"],
+    ["pack-market", "CAIRN.Settings.PackMarket.label", "CAIRN.Settings.PackMarket.hint"],
+    ["pack-backgrounds", "CAIRN.Settings.PackBackgrounds.label", "CAIRN.Settings.PackBackgrounds.hint"],
+    ["pack-npc-backgrounds", "CAIRN.Settings.PackNpcBackgrounds.label", "CAIRN.Settings.PackNpcBackgrounds.hint"],
+    ["pack-items", "CAIRN.Settings.PackItems.label", "CAIRN.Settings.PackItems.hint"],
+  ]) {
+    game.settings.register(SETTINGS_NS, key, {
+      name,
+      hint,
+      scope: "world",
+      config: false,
+      type: String,
+      default: "",
+      requiresReload: false,
+      onChange: () => clearPackWarnings(),
+    });
+  }
+
+  // The languages of the setting, as one comma-separated line.
+  //
+  // Free text rather than a fixed set: the languages of a world are the
+  // Warden's invention, and a list they can retype in one field is the whole
+  // feature. Everything that offers a language to pick reads it through
+  // `languages()` in content-packs.js, so the splitting lives in one place.
+  game.settings.register(SETTINGS_NS, "languages", {
+    name: "CAIRN.Settings.Languages.label",
+    hint: "CAIRN.Settings.Languages.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+    requiresReload: false,
+  });
+
   game.settings.register(SETTINGS_NS, "use-panic", {
     name: "CAIRN.Settings.UsePanic.label",
     scope: "world",

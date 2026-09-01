@@ -21,6 +21,8 @@
  * (tools/import/spell-tables.mjs) writes, so a reseeded world copy and the
  * shipped table agree row-for-row over identical content.
  */
+import { packFor } from "./content-packs.js";
+
 /**
  * Rebuild `table`'s rows from `pack`'s index. Returns the number of rows
  * written, or 0 if the pack held no spellbooks (the table is left untouched).
@@ -84,6 +86,12 @@ export const reseedSpellTable = async () => {
   }
   const esc = foundry.utils.escapeHTML;
   const packs = game.packs.filter((p) => p.metadata.type === "Item");
+  // Every Item compendium is still offered — reseeding from a one-off spell
+  // collection is a legitimate thing to want — but the one PRE-SELECTED is the
+  // Objetos compendium the rest of the system resolves against, because that is
+  // where this world's spells live. Null (nothing assigned) simply selects
+  // nothing, leaving the browser's own first-option default.
+  const defaultPack = packFor("items")?.collection ?? null;
   const content = `
     <div class="form-group">
       <label>${L("CAIRN.ReseedTablePick")}</label>
@@ -94,7 +102,7 @@ export const reseedSpellTable = async () => {
     <div class="form-group">
       <label>${L("CAIRN.ReseedSourcePack")}</label>
       <select name="pack">
-        ${packs.map((p) => `<option value="${esc(p.collection)}"${p.collection === "mondolme.spellbooks" ? " selected" : ""}>${esc(p.title)}</option>`).join("")}
+        ${packs.map((p) => `<option value="${esc(p.collection)}"${p.collection === defaultPack ? " selected" : ""}>${esc(p.title)}</option>`).join("")}
       </select>
     </div>`;
   const picked = await foundry.applications.api.DialogV2.wait({
