@@ -31,6 +31,12 @@
  */
 const NS = () => game.system?.id ?? "mondolme";
 
+/* The one reader of a drawn row's text — imported AND re-exported, so callers
+   that reach for it through this file (the shop, the generators) keep working
+   and there is only ever one implementation. See the note further down. */
+import { resultText } from "./compendium.js";
+export { resultText };
+
 /**
  * The four settings, and the localization key naming each one in a warning.
  *
@@ -234,11 +240,15 @@ export const generatorText = async (name) => {
   }
 };
 
-/** The visible text of one drawn row, whatever result type it is. */
-export const resultText = (result) => {
-  if (!result) return "";
-  return String(result.description ?? result.text ?? result.name ?? "").trim();
-};
+/* `resultText` is defined in compendium.js and re-exported here (2026-09-02) —
+   see the import at the top of this file. It used to be a SECOND implementation
+   (`description ?? text ?? name`, no type test and no de-HTML pass), which is
+   why a «Cabello» table read through THIS file rendered "<p>Albino</p>" onto
+   the sheet while the same table read through compendium.js came out clean.
+   Two readers of the same field, one of them wrong. Every importer keeps its
+   spelling; `export { resultText }` sits beside the import above, because a
+   bare `export … from` would re-export without binding the name in THIS
+   module — and `generatorText` right above calls it. */
 
 /**
  * Every Item of a given type in one of the two Item packs.

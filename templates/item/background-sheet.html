@@ -144,6 +144,17 @@
                     </div>
                     <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.AgeFormulaHint' formula=defaultAgeFormula }}</p>
 
+                    {{!-- The coin dice, same shape and same rules as the age dice
+                          above: blank means the system default, which the
+                          placeholder and the hint both name outright. --}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.GoldFormula' }}</h3>
+                    <div class="bg-edit-row">
+                        <label for="{{@root.idp}}-system.goldFormula">{{ localize 'CAIRN.BgAuthor.GoldFormulaLabel' }}</label>
+                        <input type="text" id="{{@root.idp}}-system.goldFormula" name="system.goldFormula"
+                            value="{{system.goldFormula}}" placeholder="{{defaultGoldFormula}}" />
+                    </div>
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.GoldFormulaHint' formula=defaultGoldFormula }}</p>
+
                     <h3>{{ localize 'CAIRN.BgAuthor.Tables' }}</h3>
                     <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.TablesHint' max=maxTables }}</p>
                     {{#each editTables}}

@@ -52,7 +52,6 @@
   header.pc img.portrait { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 2px solid #000; }
   header.pc h1 { font-size: 2rem; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; }
   header.pc .background { font-size: 1.05rem; letter-spacing: 0.12em; text-transform: uppercase; color: #333; }
-  header.pc .pronouns { font-size: 0.9rem; color: #444; font-style: italic; }
   section { margin-bottom: 1.3rem; break-inside: avoid; }
   h2 {
     font-size: 0.95rem; letter-spacing: 0.14em; text-transform: uppercase;
@@ -173,7 +172,6 @@
   <div class="who">
     <h1>{{ name }}</h1>
     {{#if subtitle}}<div class="background">{{ subtitle }}</div>{{/if}}
-    {{#if pronouns}}<div class="pronouns">{{ pronouns }}</div>{{/if}}
   </div>
   {{#if compatBadge}}<img class="compat" src="{{ compatBadge }}" alt="{{ localize 'CAIRN.CompatibleAlt' }}">{{/if}}
 </header>

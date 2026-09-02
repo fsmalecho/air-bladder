@@ -614,7 +614,9 @@ export const rollAbilities = async (formula) => ({
 export const rollHitProtection = async (formula) => evaluateFormula(formula);
 
 /** @param {String} formula @returns {Promise<Roll>} */
-export const rollGold = async (formula) => evaluateFormula(formula);
+/* `rollGold` stood here and is GONE (2026-09-02). It was a one-line alias for
+   `evaluateFormula`, and its one caller now goes through `rollBackgroundGold`,
+   which asks the background first. */
 
 /**
  * Roll an age from the BACKGROUND's own `ageFormula`, falling back to the
@@ -687,11 +689,52 @@ export const rollAge = async (bg, fallback) => {
  *   `configured` is the background's trimmed formula (blank when unset), for
  *   the warning.
  */
-export const effectiveAgeFormula = (bg, fallback) => {
-  const configured = String(bg?.system?.ageFormula ?? "").trim();
+export const effectiveAgeFormula = (bg, fallback) =>
+  effectiveFormula(bg?.system?.ageFormula, fallback);
+
+/**
+ * The shared body of `effectiveAgeFormula` and `effectiveGoldFormula`: a
+ * background's own dice when it states usable ones, else the system default.
+ *
+ * Extracted 2026-09-02, when the gold formula joined the age formula on the
+ * background. The `@`-reference refusal and everything the comment above says
+ * about why `Roll.validate` cannot be trusted alone apply identically to both,
+ * and a copy of that reasoning is a copy that can be fixed on one side only.
+ * @param {String|undefined} configuredRaw  the background's field
+ * @param {String} fallback
+ * @returns {{formula:String, configured:String, usable:Boolean}}
+ */
+const effectiveFormula = (configuredRaw, fallback) => {
+  const configured = String(configuredRaw ?? "").trim();
   const candidate = configured || String(fallback ?? "");
   const usable = !candidate.includes("@") && Roll.validate(candidate);
   return { formula: usable ? candidate : fallback, configured, usable };
+};
+
+/**
+ * The coin dice a character built on this background rolls: its own
+ * `goldFormula` when set and usable, else the system default (`3d6`).
+ * @param {CairnItem|null} bg @param {String} fallback
+ * @returns {{formula:String, configured:String, usable:Boolean}}
+ */
+export const effectiveGoldFormula = (bg, fallback) =>
+  effectiveFormula(bg?.system?.goldFormula, fallback);
+
+/**
+ * Roll a character's starting coins off its background.
+ *
+ * The gold twin of `rollAge`, and it reports a bad formula the same way: a
+ * silent fallback would have the Warden believing the "4d6" they typed is what
+ * the dice threw.
+ * @param {CairnItem|null} bg @param {String} fallback
+ * @returns {Promise<Roll>}  the Roll itself — the generation card animates it
+ */
+export const rollBackgroundGold = async (bg, fallback) => {
+  const { formula, configured, usable } = effectiveGoldFormula(bg, fallback);
+  if (!usable && configured) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.BadGoldFormula", { formula: configured }));
+  }
+  return evaluateFormula(formula);
 };
 
 /**
@@ -1043,6 +1086,11 @@ export const previewBackground = async (bg, n = 10) => {
   if (ageFormula && !effectiveAgeFormula(bg, Cairn.characterGenerator2e.biography.age).usable) {
     problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintBadAge", { formula: ageFormula }) });
   }
+  // …and the same for the coin dice, which fail the same silent way.
+  const goldFormula = String(sys.goldFormula ?? "").trim();
+  if (goldFormula && !effectiveGoldFormula(bg, Cairn.characterGenerator2e.gold).usable) {
+    problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintBadGold", { formula: goldFormula }) });
+  }
 
   const gear = [];
   for (const ref of sys.startingGear ?? []) {
@@ -1125,9 +1173,14 @@ export const previewBackground = async (bg, n = 10) => {
     ...Object.fromEntries(BG_ABILITY_KEYS.map((k) => [k, Number(sa[k]) || 0])),
   };
   const ageFormulaEffective = effectiveAgeFormula(bg, Cairn.characterGenerator2e.biography.age).formula;
+  const goldFormulaEffective = effectiveGoldFormula(bg, Cairn.characterGenerator2e.gold).formula;
   const bgLanguages = (sys.languages ?? []).filter((s) => String(s).trim());
 
-  return { name: bg.name, gear, tables, sampling, problems, startingAbilities, ageFormula: ageFormulaEffective, languages: bgLanguages };
+  return {
+    name: bg.name, gear, tables, sampling, problems, startingAbilities,
+    ageFormula: ageFormulaEffective, goldFormula: goldFormulaEffective,
+    languages: bgLanguages,
+  };
 };
 
 /* -------------------------------------------------------------------------- */
@@ -1566,7 +1619,7 @@ export const generate2eCharacter = async (chosenBg = null) => {
   // below still reads `choices.gold` / `choices.abilities` and simply adds zero.
   const choices = emptyChoiceTables(bg);
 
-  const goldRoll = await rollGold(Cairn.characterGenerator2e.gold);
+  const goldRoll = await rollBackgroundGold(bg, Cairn.characterGenerator2e.gold);
 
   // THE STARTING NUMBERS. A background that states its own four supplies them
   // outright and NOTHING is rolled for them — no 3d6, no 1d6, and no Roll
@@ -2394,26 +2447,27 @@ export const changeBackground = async (actor, newBg = null) => {
     : { str: abilityRolls.STR.total, dex: abilityRolls.DEX.total, wil: abilityRolls.WIL.total, hp: hpRoll.total };
   const start = withAbilityBonuses(baseAbilities, choices.abilities);
 
-  // Trade the old questions' coins for the new ones'.
-  const oldQGold = (actor.system.questions ?? []).reduce((n, q) => n + (q.gold ?? 0), 0);
-  // …and their ABILITY bonuses, the same trade in the same place: take back what
-  // the old answers granted, apply what the new ones grant. The character's own
-  // base numbers are NOT touched — a swap has never re-rolled 3d6 and does not
-  // start now, so a background that fixes its starting abilities changes only
-  // the characters GENERATED on it, never one it is swapped onto.
-  const oldQBonus = (actor.system.questions ?? []).reduce((acc, q) => {
-    for (const k of BG_ABILITY_KEYS) acc[k] += q.abilities?.[k] ?? 0;
-    return acc;
-  }, noAbilityBonuses());
+  // THE COINS, on the same rule (2026-09-02, user ruling: "igual que las
+  // características"). The background's own `goldFormula` when it states one,
+  // else the system default — and ABSOLUTE, not a trade against what the
+  // character was carrying. That is the deliberate cost of the ruling: a
+  // background swap mints a starting character, purse included, so coins earned
+  // in play do not survive one.
+  //
+  // The old line traded the OLD answers' bonus gold out and the new (zero) one
+  // in, which only ever made sense while the base purse was left alone. With
+  // the purse re-rolled there is nothing to trade against — `choices.gold` is
+  // nought on a swap anyway — so the whole `oldQGold` arithmetic went with it.
+  const goldRoll = await rollBackgroundGold(bg, Cairn.characterGenerator2e.gold);
+
   const update = {
     "system.background": bg.name,
     "system.backgroundUuid": bg.uuid,
     "system.questions": choices.questions,
-    "system.gold": Math.max(0, (actor.system.gold ?? 0) - oldQGold + choices.gold),
+    "system.gold": Math.max(0, goldRoll.total + choices.gold),
     // ABSOLUTE, not the signed delta this line used to carry: `start` above is
     // already the whole answer, question bonuses included, so a delta on top
-    // would apply them twice. `oldQBonus` survives as the GOLD trade's twin
-    // above and is deliberately not read here.
+    // would apply them twice.
     "system.abilities.STR.value": start.str, "system.abilities.STR.max": start.str,
     "system.abilities.DEX.value": start.dex, "system.abilities.DEX.max": start.dex,
     "system.abilities.WIL.value": start.wil, "system.abilities.WIL.max": start.wil,
@@ -2427,13 +2481,23 @@ export const changeBackground = async (actor, newBg = null) => {
   // was no roll to report — and `postGenerationRolls` itself obeys the
   // show-generation-rolls switch, so this asks the question once, where the
   // generator asks it.
-  if (abilityRolls) {
-    await postGenerationRolls(actor, {
-      hp: start.hp,
-      abilities: { STR: start.str, DEX: start.dex, WIL: start.wil },
-      rolls: { hp: hpRoll, STR: abilityRolls.STR, DEX: abilityRolls.DEX, WIL: abilityRolls.WIL },
-    }, null, { waitForDice: false });
-  }
+  // The coins are ALWAYS a throw, so the card is always posted; the four
+  // ability lines join it only when they were rolled (a background that FIXES
+  // them threw no dice, and the card says so by showing the values without
+  // claiming a roll). `postGenerationRolls` itself obeys the
+  // show-generation-rolls switch, so the question is asked once, where the
+  // generator asks it.
+  await postGenerationRolls(actor, {
+    hp: start.hp,
+    gold: goldRoll.total + choices.gold,
+    abilities: { STR: start.str, DEX: start.dex, WIL: start.wil },
+    rolls: {
+      ...(abilityRolls
+        ? { hp: hpRoll, STR: abilityRolls.STR, DEX: abilityRolls.DEX, WIL: abilityRolls.WIL }
+        : {}),
+      gold: goldRoll,
+    },
+  }, null, { waitForDice: false });
 };
 
 /* -------------------------------------------------------------------------- */
@@ -2897,13 +2961,9 @@ export const generateHireling = async () => {
     // biography trait tables. `rollAge` takes NULL for the background: a
     // hireling has a career, not a background Item, so there is no `ageFormula`
     // to honour and the system default is the whole answer.
-    // PRONOUNS ARE NEVER ROLLED (2026-08-20, user ruling). They were a uniform
-    // pick of three from 2026-08-01 until now, on the reasoning that a
-    // generated stranger needs an answer on arrival. They do not: pronouns are
-    // not a trait off a table and there is no table for them, so the dice were
-    // deciding something no die should. Stated blank rather than omitted, so a
-    // full re-roll — a whole new person — clears the last one's.
-    pronouns: "",
+    // The `pronouns` field went entirely on 2026-09-02 (user ask), having
+    // never been rolled since 2026-08-20 — there is no table for it, so the
+    // dice were deciding something no die should.
     age: String(await rollAge(null, Cairn.characterGenerator2e.biography.age)),
     traits: await rollTextItems(Cairn.characterGenerator2e.biography.items),
     items: orderGrantedItems(await buildHirelingItems(h)),
@@ -2921,7 +2981,7 @@ export const generateHireling = async () => {
 
 /**
  * Full re-roll of an existing NPC: a fresh random statblock (new profession,
- * day-rate, abilities, HP and gear) AND a fresh biography (pronouns, age,
+ * day-rate, abilities, HP and gear) AND a fresh biography (age,
  * traits) — this is a whole new person. Keeps the name, portrait and free-form
  * notes -- the update omits them.
  * @param {CairnActor} actor
@@ -2949,7 +3009,6 @@ export const regenerateHireling = async (actor) => {
       // The biography re-rolls with everything else: a regenerate is a whole
       // new person. The PARTIAL re-rolls below keep all three by OMISSION —
       // profession and name are not identity, so do not add these there.
-      pronouns: h.pronouns,
       age: h.age,
       traits: h.traits,
       critical: false,
@@ -2974,7 +3033,7 @@ export const regenerateHireling = async (actor) => {
  * Profession re-roll: swap to a different example statblock and adopt the whole
  * of it -- Profession, day-rate, abilities, HP and granted gear (a 2e career's
  * stats ARE its profession). Keeps the name, portrait, notes, any GM-added
- * items, and the biography (pronouns/age/traits) — identity fields, kept by
+ * items, and the biography (age/traits) — identity fields, kept by
  * OMISSION from the update; a new job is not a new person.
  * @param {CairnActor} actor
  * @returns {Promise<CairnActor>}
@@ -3292,9 +3351,7 @@ export const generateNpc = async () => {
     // Same paths a hireling's biography uses, so the two cannot diverge on
     // anything that is not the point of the split: rollAge takes null for the
     // background (an NPC's Background is a line of TEXT off a table, not a
-    // background Item, so it carries no age formula), and pronouns are left
-    // BLANK for the Warden to state — see generateHireling for the ruling.
-    pronouns: "",
+    // background Item, so it carries no age formula).
     age: String(await rollAge(null, Cairn.characterGenerator2e.biography.age)),
     traits: await rollNpcTraits(),
     items: orderGrantedItems(await buildNpcGear(background)),
@@ -3312,7 +3369,6 @@ const npcToActorData = (n) => ({
     background: n.background ?? "",
     abilities: personAbilityData(n.abilities),
     hp: { value: n.hp, max: n.hp },
-    pronouns: n.pronouns ?? "",
     age: n.age ?? "",
     traits: n.traits ?? {},
     gold: 0,
@@ -3356,7 +3412,7 @@ export const createNpc = async ({ folder = null } = {}) => {
 
 /**
  * Full re-roll of an existing NPC: a new Background, a new statblock, a new set
- * of traits and a new pronouns/age — a whole new person. Keeps the name,
+ * of traits and a new age — a whole new person. Keeps the name,
  * portrait and free-form notes by OMISSION, exactly as regenerateHireling does.
  *
  * Items: everything GENERATION gave — the Background's gear and the kit alike —
@@ -3386,7 +3442,6 @@ export const regenerateNpc = async (actor) => {
       // full rather than carrying the last one's damage on a new maximum.
       abilities: personAbilityData(n.abilities),
       hp: { value: n.hp, max: n.hp },
-      pronouns: n.pronouns,
       age: n.age,
       traits: n.traits,
       critical: false,

@@ -68,8 +68,9 @@ const renderPreviewReport = (r) => {
     ? `<p class="bg-preview-start">${BG_ABILITY_KEYS.map((k) => `${L(ABILITY_LABELS[k])} <strong>${Number(sa[k]) || 0}</strong>`).join(" · ")}</p>`
     : `<p class="bg-preview-start bg-preview-rolled">${L("CAIRN.BgAuthor.StartingAbilitiesRolled")}</p>`);
   parts.push(`<p class="bg-preview-start">${esc(game.i18n.format("CAIRN.BgAuthor.PreviewAge", { formula: r.ageFormula ?? "" }))}</p>`);
+  parts.push(`<p class="bg-preview-start">${esc(game.i18n.format("CAIRN.BgAuthor.PreviewGold", { formula: r.goldFormula ?? "" }))}</p>`);
   parts.push(`<p class="bg-preview-start">${esc(game.i18n.format("CAIRN.BgAuthor.PreviewLanguages", {
-    list: r.languages?.length ? r.languages.join(", ") : game.i18n.localize("CAIRN.NoneYet"),
+    list: r.languages?.length ? r.languages.join(", ") : game.i18n.localize("CAIRN.LanguagesNone"),
   }))}</p>`);
 
   if (r.gear.length) {
@@ -517,6 +518,8 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // "leave it blank" is a statement rather than a guess. Off the config's one
     // copy, which is what rollAge falls back to.
     context.defaultAgeFormula = CONFIG.Cairn?.characterGenerator2e?.biography?.age ?? "";
+    // Same for the coin dice, off the same one copy in the config.
+    context.defaultGoldFormula = CONFIG.Cairn?.characterGenerator2e?.gold ?? "";
 
     context.maxTables = BG_MAX_TABLES;
     const tables = this.item.system.tables ?? [];

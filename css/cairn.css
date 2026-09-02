@@ -1125,6 +1125,16 @@
     padding-left: 8px;
 }
 
+/* The same notice inside an INVENTORY ROW's expanded panel (2026-09-02), where
+   the gate now reaches too. The panel is already indented and already italic,
+   so the stripe would be a second frame inside a frame: it keeps the lock icon
+   and the quiet italics and drops the rule and the bottom margin. */
+.item-description .book-language-locked {
+    border-left: none;
+    margin: 0;
+    padding-left: 0;
+}
+
 .weapon-desc-divider {
     font-style: italic;
 }
@@ -1669,7 +1679,7 @@
 }
 
 /******************************************************************************
- * Description tab: traits (pronouns/age/sentence/pick-lists), Omen, Scars.
+ * Description tab: traits (age/sentence/pick-lists), Omen, Scars.
  ******************************************************************************/
 .character-traits {
     display: flex;
@@ -1768,9 +1778,8 @@
     margin-bottom: 0;
 }
 
-/* Pronouns, Birthday and Age hug their fields instead of reserving the 96px
-   column — three short labels over three short fields. */
-.character-traits .pronouns-row .trait-label,
+/* Birthday and Age hug their fields instead of reserving the 96px column —
+   two short labels over two short fields. */
 .character-traits .birthday-row .trait-label,
 .character-traits .age-row .trait-label {
     min-width: auto;

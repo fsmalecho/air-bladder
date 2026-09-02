@@ -51,12 +51,21 @@
         </div>
     </div>
 
-    <!-- Quantity -->
+    <!-- Grimorio. The Cantidad field stood here and is GONE (2026-09-02, user
+         ask): a book's quantity is pinned to 1 (BOOK_PINNED in
+         module/item/item.js), because two books of one title hold different
+         words on their three pages — they are two rows, never a ×2.
+         In its place, the flag that says those three pages are SPELLS: tick it
+         and the book can be cast from, its row carries the cast control, and the
+         inventory calls it «Grimorio — » instead of «Libro — ». Untick it and the
+         same three pages are still there to read and to write in; they are just
+         not magic. -->
     <div class="resource-counter long-counter">
-        <label class="large-resource-label" for="{{@root.idp}}-system.quantity">{{ localize 'CAIRN.Quantity' }}</label>
+        <label class="large-resource-label" for="{{@root.idp}}-system.grimoire"
+            data-tooltip="{{ localize 'CAIRN.GrimoireTip' }}">{{ localize 'CAIRN.Grimoire' }}</label>
         <div class="resource-input-wrapper">
-            <input type="text" name="system.quantity" id="{{@root.idp}}-system.quantity" value="{{system.quantity}}"
-                data-dtype="Number" />
+            <input type="checkbox" id="{{@root.idp}}-system.grimoire" name="system.grimoire"
+                {{checked system.grimoire}} value="{{system.grimoire}}" data-dtype="Boolean" />
         </div>
     </div>
 

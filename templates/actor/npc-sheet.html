@@ -377,15 +377,21 @@
                       most ONE keeper, and that fact is the header's connection
                       line — which now says what this actor IS to that keeper
                       («Contacto de X»), the same sentence the keeper's own
-                      Vínculos list prints. The tab still reads "Vínculos y
-                      notas", the one name both sheets use. --}}
-                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{ localize 'CAIRN.LinksAndNotes' }}</a>
+                      Vínculos list prints.
+
+                      The tab is «Notas» here and «Vínculos y notas» on the
+                      character sheet (2026-09-02, user ask), because that is
+                      what each one HOLDS: the vínculos LIST is the keeper's, and
+                      a PNJ is never a keeper — its side of the relationship is
+                      the one line in the header above. A tab promising a list it
+                      cannot render was the old name's whole problem. --}}
+                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{ localize 'CAIRN.Notes' }}</a>
             </nav>
             <section class="content">
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
                     <div class="description">
                         {{!-- A PERSON (role npc or hireling) gets the character's biography
-                              block — pronouns, age, traits, scars. Gated by
+                              block — age, traits, scars. Gated by
                               showBiography, so a monster or a crate renders
                               none of it; Omen stays a player-character thing
                               (showOmen false inside). --}}
@@ -393,53 +399,53 @@
                         {{> "systems/mondolme/templates/parts/bio-block.html"}}
                         {{/if}}
                         {{!-- The Features list rendered here until 2026-08-09
-                              (always shown, unlike the character sheet's gated
-                              copy) and went with the Features UI (user ruling).
-                              A monster's attacks and abilities are ITEMS, which
-                              is where the shipped monsters keep them;
-                              `system.features` survives on the document,
-                              unrendered. --}}
-                        {{!-- ONE editor on this tab, and it is the description --
-                              the monster/NPC prose that 204 of the 205 shipped
-                              monsters carry. There used to be a second, unlabelled
-                              `system.biography` editor above it, guarded by
-                              `system.showBio`; that guard was written when
-                              `biography` could be undefined, and under a
-                              TypeDataModel it initialises to "" and so is
-                              PERMANENTLY true. Two identical boxes, one of which no
-                              shipped NPC has ever used. Free-form notes belong on
-                              the Notes tab; the field survives in NpcData, so
-                              anything typed into it before is still on the doc. --}}
-                        {{!-- NO heading over this editor (2026-08-20, user ask). The tab
-                              is called Description and this is the only editor on it,
-                              so the word was printed twice a centimetre apart. It was
-                              added when a SECOND, unlabelled editor sat above this one;
-                              that one went on 2026-08-09 and the label outlived its
-                              reason. --}}
+                              and went with the Features UI (user ruling). A
+                              monster's attacks and abilities are ITEMS, which is
+                              where they belong; `system.features` survives on the
+                              document, unrendered. --}}
+                        {{!-- THE DESCRIPTION EDITOR, on the EXACT COMPLEMENT of the
+                              biography block above (2026-09-02, refined the same
+                              day it was removed outright).
+
+                              The complaint it answers: a PERSON — role npc or
+                              hireling — carried TWO free-text boxes, this one and
+                              the Notas tab's, and a Warden had to remember which
+                              of the two they had typed into. So the box comes off
+                              the sheets that have somewhere else to put prose.
+
+                              A MONSTER, a COMPAÑERO or a CONTENEDOR has no
+                              biography block at all, and taking the editor from
+                              them too left the tab standing empty. They keep it:
+                              a monster's statblock prose is the whole point of
+                              its Description tab, and it has no rasgos, no
+                              cicatrices and no idiomas to fill the tab with
+                              instead.
+
+                              `{{#unless showBiography}}` is exactly that split and
+                              is deliberately the SAME condition, negated, rather
+                              than a second list of roles — a role added to
+                              PERSON_ROLES tomorrow must not end up with both
+                              boxes because two lists drifted.
+
+                              TOGGLED, like the notes editors: a toggled editor
+                              carries TWO inputs — the `value` attribute is the
+                              submitted source, the light-DOM child is
+                              display-only — so the enriched copy renders while
+                              nothing enriched can reach a submit (activation
+                              swaps in `value`, prosemirror-editor.mjs:204).
+
+                              The empty-state hint is a real element IN the
+                              display half, for the reason the Notas editor's is
+                              (2026-08-20, user: it "does not show up until you
+                              hover over it"): an inactive toggled editor with
+                              nothing in it renders NOTHING, and core reveals its
+                              pencil only on hover. --}}
+                        {{#unless showBiography}}
                         <div class="npc-description-section">
-                            {{!-- TOGGLED, like the notes editors, and joining the seven item
-                                  templates' shape on their reasoning: a toggled editor carries TWO
-                                  inputs — the `value` attribute is the submitted English source,
-                                  the light-DOM child is display-only — so the enriched, TRANSLATED
-                                  copy renders while nothing translated can reach a submit
-                                  (activation swaps in `value`, prosemirror-editor.mjs:204). This
-                                  was the statblock prose of 204 monsters rendering raw `value` in
-                                  every language, with @UUID links as literal text. This sheet's
-                                  Notes editor joined the toggled shape on 2026-08-02, and the
-                                  character sheet's did later the SAME DAY — this comment said
-                                  that one kept an always-active decision until 2026-08-20, by
-                                  which time it had been toggled for eighteen days. --}}
-                            {{!-- The empty-state hint is the same real element the Notes
-                                  editor carries, for the same reason (2026-08-20, user:
-                                  "does not show up until you hover over it"). An inactive
-                                  toggled editor with nothing in it renders NOTHING, and
-                                  core reveals its pencil only on hover — so an NPC with no
-                                  prose had a Description tab that looked empty of even a
-                                  field. Never enriched or translated: it is a UI string,
-                                  and it is swapped out by activation before any submit. --}}
                             <prose-mirror name="system.description" value="{{system.description}}" toggled collaborate relative
                                 data-document-uuid="{{actor.uuid}}">{{#if system.description}}{{{enrichedDescription}}}{{else}}<p class="cairn-editor-placeholder">{{descriptionPlaceholder}}</p>{{/if}}</prose-mirror>
                         </div>
+                        {{/unless}}
                     </div>
                 </div>
                 <div class="tab {{tabs.items.cssClass}}" data-group="primary" data-tab="items">

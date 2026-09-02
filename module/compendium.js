@@ -61,11 +61,37 @@ export const findTableByName = async (name) => {
  * reading `.text` — and a helper nobody can find in the module they are editing is
  * how that happens.
  *
+ * PLAIN TEXT since 2026-09-02 (user report: a «Cabello» table rolling
+ * "<p>Albino</p>" onto the character sheet). `description` is a ProseMirror
+ * field and Foundry's table editor wraps every row in `<p>…</p>` on save, so
+ * the stored string carries markup even for one bare word — and every consumer
+ * of this writes it into a DATA field rendered with `{{ }}`, which escapes it.
+ * ONE implementation, here; `content-packs.js` re-exports it.
+ *
  * @param {TableResult} result
  * @returns {String}
  */
 export const resultText = (result) =>
-  (result?.type === "text" ? result.description : result?.name) ?? "";
+  stripTableHtml((result?.type === "text" ? result.description : result?.name) ?? "");
+
+/**
+ * Markup out of a table row's stored prose.
+ *
+ * `<br>` and the closing block tags become a SPACE rather than nothing, so a
+ * two-paragraph row reads "uno dos" and not "unodos". The five XML entities are
+ * decoded because ProseMirror stores `&amp;` for a typed ampersand, and a trait
+ * reading "Pelirrojo &amp; canoso" is the same bug wearing a different mask.
+ * @param {String} raw @returns {String}
+ */
+export const stripTableHtml = (raw) => String(raw ?? "")
+  .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])\s*\/?>/gi, " ")
+  .replace(/<[^>]*>/g, "")
+  .replace(/&nbsp;/gi, " ")
+  .replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+  .replace(/&quot;/gi, '"').replace(/&#0?39;|&apos;/gi, "'")
+  .replace(/&amp;/gi, "&")
+  .replace(/\s+/g, " ")
+  .trim();
 
 /**
  * The documents a table's results point at.

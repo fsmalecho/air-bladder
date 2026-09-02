@@ -8,10 +8,11 @@
       `_prepareBiographyContext` plus the flags each caller sets.
 
       REORDERED 2026-09-02 (user ruling): the SENTENCE opens the tab, and
-      everything that writes it — the eight pick-lists, Pronombres, the
-      Cumpleaños die and the Edad die — moved inside the collapsed «Rasgos»
-      panel below it. Pronouns and Age used to sit ABOVE the sentence, which is
-      the one place the tab may not open on. --}}
+      everything that writes it — the eight pick-lists, the Edad die and the
+      Cumpleaños die — moved inside the collapsed «Rasgos»
+      panel below it. Age used to sit ABOVE the sentence, which is the one
+      place the tab may not open on. (Pronombres rode in that panel too until
+      2026-09-02, when the field was removed altogether.) --}}
                         {{#if traitRows}}
                         <div class="character-traits">
                             {{!-- The portrait, in the actor's own voice. ONE
@@ -55,18 +56,11 @@
                                       as a rolled one — and Pronombres rides along, since it
                                       is the last editable line the sentence does not use. --}}
                                 <div class="bio-generators">
-                                    <div class="trait-row pronouns-row">
-                                        <label class="trait-label">{{ localize 'CAIRN.Pronouns' }}</label>
-                                        <input class="trait-input" type="text" name="system.pronouns"
-                                            value="{{system.pronouns}}" maxlength="20" />
-                                    </div>
-                                    <div class="trait-row birthday-row">
-                                        <label class="trait-label">{{ localize 'CAIRN.Birthday' }}</label>
-                                        <input class="trait-input" type="text" name="system.birthday" value="{{system.birthday}}" />
-                                        {{#if generationEnabled}}
-                                        <a class="birthday-roll" data-action="rollBirthday" title="{{ localize 'CAIRN.RollBirthday' }}"><i class="fas fa-dice-d20"></i></a>
-                                        {{/if}}
-                                    </div>
+                                    {{!-- EDAD FIRST since 2026-09-02 (user ask): the
+                                          Pronombres row stood here and is gone —
+                                          field, schema and printed line — and Edad
+                                          took its place rather than leaving a hole
+                                          at the head of the block. --}}
                                     {{#if showAge}}
                                     <div class="trait-row age-row">
                                         <label class="trait-label">{{ localize 'CAIRN.Age' }}</label>
@@ -76,6 +70,13 @@
                                         {{/if}}
                                     </div>
                                     {{/if}}
+                                    <div class="trait-row birthday-row">
+                                        <label class="trait-label">{{ localize 'CAIRN.Birthday' }}</label>
+                                        <input class="trait-input" type="text" name="system.birthday" value="{{system.birthday}}" />
+                                        {{#if generationEnabled}}
+                                        <a class="birthday-roll" data-action="rollBirthday" title="{{ localize 'CAIRN.RollBirthday' }}"><i class="fas fa-dice-d20"></i></a>
+                                        {{/if}}
+                                    </div>
                                 </div>
                                 {{/unless}}
                             </div>
@@ -166,7 +167,11 @@
                                         {{/each}}
                                     </div>
                                     {{else}}
-                                    <span class="scar-display">{{#if languageDisplay}}{{languageDisplay}}{{else}}{{ localize 'CAIRN.NoneYet' }}{{/if}}</span>
+                                    {{!-- Its own key, not the scars' «AÚN NINGUNA»
+                                          (2026-09-02, user ask): the two lines are
+                                          feminine and masculine in Spanish, so one
+                                          string cannot serve both. --}}
+                                    <span class="scar-display">{{#if languageDisplay}}{{languageDisplay}}{{else}}{{ localize 'CAIRN.LanguagesNone' }}{{/if}}</span>
                                     {{/unless}}
                                 {{/if}}
                             </div>

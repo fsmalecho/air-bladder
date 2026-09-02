@@ -91,15 +91,13 @@ const RELATIONSHIP_GROUPS = [
 const relationshipGroupFor = (role) => (RELATIONSHIP_KEYS[role] ? role : "other");
 
 /** Tab labels by id. The nav itself is hand-written in each template, because
- *  the labels carry live data (slot counts, connection counts). ONE name per
- *  tab across both sheets since 2026-09-02 — the per-role "Notes" / "Background
- *  & Notes" split is gone with the merge, and both sheets read
- *  CAIRN.LinksAndNotes. */
+ *  the labels carry live data (slot counts, connection counts) — so these are
+ *  what `_getTabsConfig` declares, and each template's nav must say the same
+ *  words. */
 const TAB_LABELS = {
   items: "CAIRN.Items",
   description: "CAIRN.Description",
-  // CHARACTER ONLY: the background's question tables and the character's
-  // obligations, which used to sit at the head of the Notes tab.
+  // CHARACTER ONLY: the background's question tables.
   background: "CAIRN.Background",
   // The old `containers` tab MERGED INTO THIS ONE (2026-09-02, user ruling):
   // the connections list first, the free-form notes editor below it. What a
@@ -107,6 +105,21 @@ const TAB_LABELS = {
   // and the tab id stays `notes` because it is the tab that survived.
   notes: "CAIRN.LinksAndNotes",
 };
+
+/**
+ * The `notes` tab's label, which is the ONE label that differs by actor type
+ * (2026-09-02, user ask). A CHARACTER keeps «Vínculos y notas»: the vínculos
+ * list is the top half of that tab. A PNJ gets plain «Notas», because a PNJ is
+ * never a keeper — its side of the relationship is one line in the sheet header
+ * — so the list half never renders there and the name promised something the
+ * tab could not show.
+ *
+ * A function rather than a second TAB_LABELS map: one tab differs, and a
+ * parallel map is two things to keep in step.
+ * @param {String} id @param {CairnActor} actor @returns {String} a lang key
+ */
+const tabLabel = (id, actor) =>
+  (id === "notes" && actor?.type !== "character") ? "CAIRN.Notes" : TAB_LABELS[id];
 
 /** Which tabs each actor type shows, in order.
  *
@@ -515,7 +528,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const config = foundry.utils.deepClone(super._getTabsConfig(group));
     if (!config) return config;
     const ids = TAB_IDS[this.actor.type] ?? ["items"];
-    config.tabs = ids.map((id) => ({ id, label: TAB_LABELS[id] }));
+    config.tabs = ids.map((id) => ({ id, label: tabLabel(id, this.actor) }));
     // The group's initial is ROLE-aware (`initialTabId`), not the static TABS
     // default ("items") and not blindly the list head: a person-role sheet and
     // a character open on Items, a monster on Description. The vanished-tab
@@ -898,8 +911,27 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.connectionRows = context.system.containerObjects.map((c) => ({
       uuid: c.uuid,
       name: c.name,
-      slotsUsed: c.system.slotsUsed,
-      slots: c.system.slots,
+      // COMPUTED HERE, not read off the prepared copy (2026-09-02, user report:
+      // "no se corresponden con el inventario real de los pnjs. Algunos
+      // directamente aparecen como 0/0"). Two separate faults wore one symptom:
+      //
+      //   - the DENOMINATOR was `system.slots`, which is the AUTHORED OVERRIDE
+      //     and reads 0 whenever the Warden did not set one. Every connected
+      //     actor on the default capacity therefore showed "…/0". The
+      //     denominator a reader means is the effective maximum, which is what
+      //     `calcCurrentMaxSlots` answers and what the actor's own sheet shows.
+      //   - the NUMERATOR came from `c.system.slotsUsed`, a value derived in the
+      //     OTHER actor's prepareDerivedData. This list is rebuilt on the
+      //     keeper's render precisely because nothing re-prepares the keeper
+      //     when a child changes — and the same reasoning applies one level
+      //     down: a child whose items changed while this sheet was open could
+      //     hand over a stale count. Calling the method costs one pass over
+      //     that actor's items and cannot be stale by construction.
+      //
+      // Both are the actor's own methods, so a connection row and the sheet it
+      // points at can no longer disagree.
+      slotsUsed: c.calcSlotsUsed(),
+      slotsMax: c.calcCurrentMaxSlots(),
       canUnlink: game.user.isGM || (this.actor.isOwner && c.isOwner),
       // What this actor IS to the character keeping it, from the CHILD's role
       // — the same sentence the child's own sheet header prints, through the
@@ -983,11 +1015,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       context.kindCustomValue = context.kindIsCustom ? cls : "";
       context.professionDisplay = this.actor.system.profession;
       context.backgroundDisplay = this.actor.system.background;
-      // `notesTabLabel` lived here and is RETIRED (2026-09-02): both sheets
-      // read one static key, CAIRN.LinksAndNotes, straight from their nav. The
-      // per-role split it carried ("Notes" on an NPC against the character's
-      // "Background & Notes") had nothing left to distinguish once the two tabs
-      // merged under one name.
+      // `notesTabLabel` lived here and is RETIRED (2026-09-02): each sheet
+      // reads ONE static key straight from its own nav — CAIRN.LinksAndNotes on
+      // the character, CAIRN.Notes here — and `tabLabel` says the same thing to
+      // `_getTabsConfig`. The DYNAMIC, data-driven rename it carried stays dead:
+      // two actors of one type must not disagree on what their tabs are called.
       // The connection line under the header (2026-08-02): the child end's ONE
       // upward edge, expressed as a field rather than a tab — any child role
       // has at most one keeper, so the Connections tab this sheet used to carry
@@ -1080,11 +1112,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
        gesture, because a Libro's three pages are its own fields, typed on its
        own sheet. */
     if (this.actor.type === "character") {
-      // EVERY Libro gets its own control, keyed on its own id — the `[0]` guess
-      // that offered the cast on the first book only is gone, and with it the
-      // question of which book "the" control meant. Two conditions, both
-      // re-derived in castFromBook: the book has at least one written page, and
-      // the carrier can READ it (module/magic.js `canReadBook` — a book in a
+      // EVERY Grimorio gets its own control, keyed on its own id — the `[0]`
+      // guess that offered the cast on the first book only is gone, and with it
+      // the question of which book "the" control meant. THREE conditions now,
+      // all re-derived in castFromBook: the Libro is marked Grimorio
+      // (`booksOn` filters on the flag since 2026-09-02 — an unmarked book is a
+      // book, not a spell list), it has at least one written page, and the
+      // carrier can READ it (module/magic.js `canReadBook` — a book in a
       // language this character does not know is a closed book).
       const castable = new Map(booksOn(this.actor).map((b) =>
         [b.id, canReadBook(b, this.actor) && bookPages(b).length > 0]));
@@ -1146,11 +1180,16 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // documented un-translation hazard (#onRollActor's precedent).
       context.notesPlaceholder = game.i18n.localize(
         this.actor.npcRole === "monster" ? "CAIRN.NotesPlaceholderMonster" : "CAIRN.NotesPlaceholder");
-      // The Description editor got the same hint on 2026-08-20 (user: it "does
-      // not show up until you hover over it"). ONE key, deliberately not the
-      // notes pair's role branch: this sheet serves six roles and the other
-      // four are a cart, a crate, a mount and a monster, so any wording that
-      // names what it is describing is wrong for most of them.
+      // The empty-state hint for the Description editor, which since 2026-09-02
+      // renders only on a role with NO biography block — a monster, a compañero,
+      // a contenedor. ONE key, deliberately not the notes pair's role branch:
+      // those three are a creature, a companion and a crate, so any wording that
+      // names what it is describing is wrong for two of them.
+      //
+      // Set for every npc-type actor rather than only for those three: it is a
+      // localize call, the template decides whether to render it, and a context
+      // key that appears and disappears by role is how a template ends up
+      // rendering `undefined`.
       context.descriptionPlaceholder = game.i18n.localize("CAIRN.DescriptionPlaceholder");
     }
 
@@ -1190,10 +1229,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // `document.limited` is core's own "highest ownership is exactly LIMITED",
       // so the Warden and any observer-or-better viewer never see this branch.
       context.limitedView = this.document.limited;
-      // A PERSON gets the character's biography block — pronouns, age, the
+      // A PERSON gets the character's biography block — age, the
       // traits, scars — on the Description tab (2026-08-01). EITHER person role
       // since the 2026-08-20 split: a monster, companion, transport or
-      // container has no pronouns, and showBiography false keeps the whole
+      // container has no biography, and showBiography false keeps the whole
       // partial out of the render. Omen stays a player-character thing — it is
       // the youngest PARTY member's burden, and no npc is one.
       context.showBiography = PERSON_ROLES.includes(this.actor.npcRole);
@@ -1467,11 +1506,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // input.
     context.hasGeneratedBackground = !!this.actor.system.backgroundUuid;
     // `showBackgroundNotesLabel` lived here (the Notes tab renamed itself once
-    // a background was attached). Retired 2026-08-01, and the per-role static
-    // variants that replaced it are gone too (2026-09-02): both sheets now read
-    // one key, TAB_LABELS.notes / CAIRN.LinksAndNotes, and a character's
-    // background has a tab of its own. The DYNAMIC, data-driven rename stays
-    // dead: two characters must not disagree on what their own tabs are called.
+    // a background was attached). Retired 2026-08-01, and the DYNAMIC,
+    // data-driven rename stays dead: two characters must not disagree on what
+    // their own tabs are called. The label is per TYPE now (`tabLabel`), which
+    // is a fact about the sheet, not about the document's contents.
     // Scars and Age are never generated — a player fills each in by hand after
     // the fact.
     context.showScars = true;
@@ -1940,17 +1978,34 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Empty pages are skipped by `bookPages`, so a one-spell book shows one
     // line rather than two blanks.
     //
+    // THE LANGUAGE GATE APPLIES HERE TOO (2026-09-02, user report: "solo
+    // funciona en la tarjeta del objeto, pero en el texto que se despliega en
+    // el equipo del personaje, sigue apareciendo el contenido de 1, 2 y 3").
+    // This panel was the LAST way in: the item sheet withholds the pages, the
+    // cast picker refuses the book, and this expanded row printed all three
+    // spells to anyone who clicked the name. Not merely hidden — the lines are
+    // never built, so nothing reaches the DOM for an inspector to find, which
+    // is the same standard `_prepareBook` holds on the sheet.
+    //
+    // The locked row SAYS so, with the sheet's own sentence: a book that simply
+    // rendered no page lines reads as a book with nothing written in it, which
+    // is a different (and wrong) fact about the object.
+    //
     // The spell's NAME goes through the same cleanDescription sink the two
     // lines above use, and for the same reason: it is player-authored text
     // reaching innerHTML. It is plain text in the schema, so cleaning it is
     // belt-and-braces rather than the only wall — but this panel is the one
     // place a book's page names are rendered, and the rule here is that
     // nothing reaches innerHTML unwashed.
-    const pages = item.type === "book"
-      ? bookPages(item).map((p) =>
-        `<div><i class="fa-regular fa-bookmark"></i> <i>${p.n}. `
-        + `${cleanDescription(p.name)}: ${cleanDescription(p.text)}</i></div>`).join("")
-      : "";
+    let pages = "";
+    if (item.type === "book") {
+      pages = canReadBook(item, this.actor)
+        ? bookPages(item).map((p) =>
+          `<div><i class="fa-regular fa-bookmark"></i> <i>${p.n}. `
+          + `${cleanDescription(p.name)}: ${cleanDescription(p.text)}</i></div>`).join("")
+        : `<div class="book-language-locked"><i class="fa-solid fa-lock"></i> `
+          + `<i>${game.i18n.localize("CAIRN.BookLanguageLocked")}</i></div>`;
+    }
     const div = document.createElement("div");
     div.className = "item-description";
     const desc = item.system.description;
@@ -2148,10 +2203,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * of somebody with no hair. It is a localization key rather than a literal so
    * a translator can choose their own blank.
    *
-   * Pronoun-accurate wording ("Es alto" / "Es alta") is NOT done, though the
-   * pronouns are right there on the document: Spanish adjectives agree in
-   * gender, so per-pronoun variants would multiply the translator's work by
-   * three for the whole sentence.
+   * Pronoun-accurate wording ("Es alto" / "Es alta") is NOT done: Spanish
+   * adjectives agree in gender, so per-pronoun variants would multiply the
+   * translator's work by three for the whole sentence. (The `pronouns` field
+   * that might have driven it is gone as of 2026-09-02.)
    *
    * The printed character page shares this builder (`traitsProse`), so the
    * ruling reaches paper with no second change — blanks included, which is what
@@ -2297,7 +2352,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // THROUGH the registered helper, so the two surfaces cannot drift —
       // idempotence included: a stored name already carrying a prefix gets no
       // second one.
-      const prefix = Handlebars.helpers.spellNamePrefix(it.name, it.type, it.system.scroll);
+      const prefix = Handlebars.helpers.spellNamePrefix(it.name, it.type, it.system);
       return { name: `${prefix}${name}`, notes: notes.join(" ") };
     });
 
@@ -2400,7 +2455,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
          (2026-09-02): one named the edition under the character's background —
          there is one edition — and the other was the Barebones flourish. Their
          two blocks came out of character-print.html with them. */
-      pronouns: sys.pronouns,
       stats: {
         str: sys.abilities.STR.value, strMax: sys.abilities.STR.max,
         dex: sys.abilities.DEX.value, dexMax: sys.abilities.DEX.max,
@@ -2589,7 +2643,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // that "everything it is carrying will be deleted" and that "abilities,
       // HP, career and day rate will be replaced", which is exactly
       // regenerateHireling and none of regenerateNpc — an NPC keeps its gear
-      // and its statblock and gets a new Background, traits, pronouns and age.
+      // and its statblock and gets a new Background, traits and age.
       // A Warden who cancelled to save gear that was never at risk was talked
       // out of the feature by its own dialog.
       //
@@ -3932,7 +3986,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // once that has actually succeeded. The old order created-then-decremented
     // unconditionally: a refused create (typically a permissions wall) threw AND
     // still decremented the source, so the item vanished.
-    const foundItem = this.actor.items.find(
+    // A LIBRO NEVER STACKS (2026-09-02): its quantity is pinned to 1
+    // (BOOK_PINNED), so bumping a found stack would write 1 over 1 while the
+    // source below still gave up a unit — the book would simply vanish. It is
+    // also the right answer on its own terms: two books of the same title hold
+    // different words on their three pages, so they are two rows, not a ×2.
+    const foundItem = originalItem.type === "book" ? null : this.actor.items.find(
       (it) => it.name === originalItem.name && it.type === originalItem.type
         // A stack is only a stack when the flag-shaped discriminators agree:
         // a Hechizo and its Pergamino share name AND type (gear.js stores a

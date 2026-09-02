@@ -1,0 +1,208 @@
+MONDOLME — Ajustes 2: las ocho correcciones de tu lista
+========================================================
+
+Sobre los Ajustes 1 ya aplicados.
+18 archivos modificados. Ninguno nuevo, ninguno eliminado.
+
+
+CÓMO APLICARLO
+--------------
+
+Esta vez NO hay que borrar nada: solo se modifican archivos.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. Descomprime este ZIP dentro de la carpeta del repositorio, encima de lo que
+   ya hay. Cuando Windows pregunte, marca "Hacer esto para todos los elementos
+   actuales" y elige "Reemplazar".
+
+3. Commit y push, por ejemplo:
+
+     Ajustes 2: oro del trasfondo, grimorios, HTML de las tablas
+
+4. Etiqueta y publica: History -> clic derecho en el commit -> Create Tag...
+
+     2.0.2
+
+   (La 2.0.1 fueron los Ajustes 1. Si aún no la subiste, usa 2.0.1 aquí.)
+   Push origin, espera a que Actions salga en verde, y en Foundry:
+   Configuración -> Sistemas de juego -> actualizar Mondolme.
+
+
+LOS OCHO PUNTOS, UNO A UNO
+--------------------------
+
+1. FÓRMULA DE ORO EN EL TRASFONDO.
+   Campo nuevo en el objeto Trasfondo, justo debajo de la fórmula de edad y con
+   las mismas reglas: «Dados de oro». Escribe 4d6, o 2d6+10, o lo que quieras.
+   Déjalo vacío y se usa la del sistema (3d6).
+
+   Se tira en los mismos momentos que las características, como pediste: al
+   crear el personaje y cada vez que se le asigna un trasfondo.
+
+   OJO, es la otra cara de esa decisión: asignarle un trasfondo a un personaje
+   que ya lleva jugado le vuelve a fijar el oro, así que pierde lo que hubiera
+   ganado. Antes esta operación solo ajustaba el oro de las preguntas; ahora
+   tira la bolsa entera.
+
+   Si escribes algo que no sea una tirada válida, se usa la predeterminada y se
+   te avisa — y el botón «Probar ×10» del trasfondo te lo dice antes, en rojo.
+
+2. FUERA PRONOMBRES, LA EDAD EN SU SITIO.
+   El campo Pronombres ha desaparecido: de la pestaña Descripción, del
+   personaje, del PNJ y de la hoja impresa. La Edad ocupa su lugar, arriba del
+   Cumpleaños.
+
+   No lo usaba nada más: la frase en primera persona de la pestaña Descripción
+   nunca lo leyó (el castellano concuerda en género y habría triplicado el
+   texto), y ningún generador lo tiraba desde agosto.
+
+3. EL LIBRO: FUERA CANTIDAD, ENTRA GRIMORIO.
+   La Cantidad ya no está en la ficha, y queda fijada en 1 por dentro — no solo
+   escondida. Dos libros del mismo título tienen palabras distintas en sus tres
+   páginas, así que son dos filas, nunca un «×2». Arrastrar un segundo ejemplar
+   a la misma mochila ahora crea su propia fila en vez de sumar cantidad.
+
+   En su hueco está la casilla «Grimorio». Marcada:
+
+     - el libro se puede lanzar desde el inventario (el botón de lanzar solo
+       aparece en los grimorios),
+     - el desplegable de lanzar ofrece sus páginas 1, 2 y 3,
+     - y el inventario lo llama «Grimorio — Nombre» en vez de «Libro — Nombre».
+
+   Sin marcar, es un libro normal: sus tres páginas siguen ahí para leerlas y
+   escribirlas, simplemente no son magia.
+
+   Es una casilla y no un tipo de objeto a propósito: Foundry no deja cambiar el
+   tipo de un documento una vez creado, así que un libro que resulta ser un
+   grimorio sería imposible de representar — y eso es justo lo que suele pasar
+   en la ficción.
+
+   El candado de idioma no cambia: sigue valiendo para cualquier libro, grimorio
+   o no.
+
+4. LOS PNJ: PESTAÑA «NOTAS», Y LA DESCRIPCIÓN SOLO DONDE HACE FALTA.
+   La pestaña se llama «Notas» en las fichas de PNJ y sigue llamándose
+   «Vínculos y notas» en la del PJ, porque es lo que cada una contiene de
+   verdad: la lista de vínculos es del que los tiene, y un PNJ nunca los tiene
+   — su lado de la relación es la línea de la cabecera.
+
+   El editor de texto de la pestaña Descripción se queda SOLO en los actores que
+   no tienen bloque de biografía: monstruos, compañeros y contenedores. Un PNJ
+   o un seguidor — que sí tienen rasgos, edad, cicatrices e idiomas — lo pierde,
+   porque en su ficha era el segundo cuadro de texto libre y había que acordarse
+   de en cuál de los dos habías escrito. Esos escriben en Notas.
+
+   Un monstruo lo conserva: la prosa de su estadillo ES su pestaña Descripción,
+   y no tiene rasgos ni cicatrices con los que llenarla.
+
+   La condición es literalmente la misma que decide el bloque de biografía, del
+   revés — no una segunda lista de roles — para que un rol nuevo no acabe con
+   los dos cuadros porque las dos listas se desincronizaron.
+
+   Lo que ya estuviera escrito en la descripción de un PNJ o un seguidor sigue
+   guardado en el documento: no se ve, pero no se ha borrado. La vista limitada
+   que ve un jugador al abrir un PNJ que no controla sigue mostrándola.
+
+5. IDIOMAS: «NINGUNO».
+   Antes compartía texto con las cicatrices, que en castellano son femeninas
+   («AÚN NINGUNA»). Ahora son dos textos distintos y los idiomas dicen
+   «Ninguno». Las cicatrices se quedan como estaban.
+
+6. LOS ESPACIOS DE LOS VÍNCULOS — ARREGLADO.
+   Eran dos fallos con un mismo síntoma:
+
+     - El DENOMINADOR era el campo «Espacios» del PNJ, que es un valor manual y
+       vale 0 mientras no lo escribas. Por eso salía «0/0» en todos los que no
+       lo tenían puesto. Ahora es la capacidad efectiva — la que muestra la
+       ficha del propio PNJ, con el ajuste del mundo cuando no hay valor
+       manual.
+     - El NUMERADOR se leía de una copia preparada del otro actor, que podía
+       quedarse atrás. Ahora se calcula en el momento, con el mismo método que
+       usa la ficha del PNJ. Una fila de vínculo y la ficha a la que apunta ya
+       no pueden decir cosas distintas.
+
+7. EL «<p>Albino</p>» DE LAS TABLAS — ARREGLADO.
+   El editor de tablas de Foundry es un editor de texto enriquecido: cuando
+   guardas una fila, la envuelve en <p>…</p> aunque solo hayas escrito una
+   palabra. El sistema leía esa cadena tal cual y la metía en un campo de datos
+   (un rasgo, un nombre, un objeto que buscar), y al pintarla se escapaban las
+   etiquetas y salían a la vista.
+
+   Ahora las etiquetas se quitan al LEER la fila, que es el único sitio donde
+   arreglarlo lo arregla para todos: los rasgos, la frase en primera persona,
+   los nombres, el cumpleaños, los presagios, las cicatrices, los percances y
+   los objetos que una tabla concede.
+
+   Había además DOS lectores distintos de ese campo — uno en compendium.js y
+   otro en content-packs.js — y solo uno hacía bien el trabajo, que es
+   exactamente por qué unas tablas salían limpias y otras no. Ahora hay uno.
+
+   NO tienes que reescribir tus tablas: se leen limpias tal y como están.
+   Los personajes que ya tengan un rasgo guardado con etiquetas seguirán
+   mostrándolo así hasta que vuelvas a tirar ese rasgo.
+
+8. EL CANDADO DE IDIOMA, EN EL INVENTARIO TAMBIÉN.
+   Faltaba una puerta. La ficha del libro retiraba sus páginas, el desplegable
+   de lanzar rechazaba el libro… y el panel que se despliega al pulsar el nombre
+   del objeto en el equipo imprimía los tres hechizos enteros a quien fuera.
+
+   Ahora ese panel obedece la misma regla: si el personaje que lleva el libro no
+   conoce su idioma, las líneas de las páginas no se construyen — no están
+   escondidas, no llegan a existir — y en su lugar sale la misma frase que ya
+   salía en la ficha, con un candado delante.
+
+   Igual que en la ficha: para escribir o corregir un libro, ábrelo en el
+   compendio o en la barra lateral de objetos, no la copia que lleva encima un
+   personaje.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 26 archivos de código del sistema pasan la comprobación de sintaxis.
+- Las dos comprobaciones que ejecuta GitHub al publicar: ambas pasan.
+- Ningún import apunta a algo que ya no exista.
+- El limpiador de etiquetas, probado a mano con siete entradas: "<p>Albino</p>"
+  -> "Albino", dos párrafos -> una frase con espacio entre medias, "&amp;"
+  -> "&", y una palabra suelta sin etiquetas se queda igual.
+- Buscadas las demás salidas del texto de las páginas de un libro: la ficha, el
+  panel del inventario, el selector de lanzar y la hoja impresa. Las cuatro
+  quedan cubiertas — la hoja impresa nunca imprimió las páginas.
+- Idiomas: 677 claves, 11 nuevas (grimorio, fórmula de oro, «Ninguno») y una
+  retirada (pronombres). Ninguna clave que use el código falta del español.
+- Las 16 plantillas tienen sus bloques {{#if}} / {{#each}} bien cerrados.
+- El CSS cierra sus 451 llaves.
+- system.json, package.json y lang/es.json son JSON válido.
+
+
+DOS TRAMPAS QUE HE TENIDO QUE CERRAR DE PASO
+--------------------------------------------
+
+Ninguna se ve, pero las dos habrían perdido datos:
+
+- Fijar la cantidad del libro en 1 sin más habría hecho DESAPARECER un libro
+  arrastrado de un personaje a otro que ya tuviera uno igual: el destino sumaba
+  cantidad (y el 1 se volvía a escribir encima), pero el origen sí perdía su
+  ejemplar. Los libros ya no se apilan nunca.
+
+- La tarjeta de tiradas del chat imprimía siempre una línea de oro. Al tirar
+  solo características en un cambio de trasfondo no hay tirada de oro, así que
+  la línea ahora se omite si no la hay, en vez de escribir «undefined».
+
+
+QUÉ MIRAR PRIMERO
+-----------------
+
+  1. Un trasfondo con «Dados de oro» a 4d6, arrástralo a un PJ: la bolsa debe
+     quedar entre 4 y 24, y la tarjeta del chat debe enseñar la tirada.
+  2. Un libro con la casilla Grimorio marcada y otro sin marcar, en la misma
+     mochila: solo el primero tiene botón de lanzar, y solo él se llama
+     «Grimorio — …».
+  3. Tira el rasgo Cabello en la pestaña Descripción: debe salir «Albino», no
+     «<p>Albino</p>».
+  4. Conecta un PNJ con objetos a un PJ y mira la fracción en «Vínculos y
+     notas»: debe coincidir con la que muestra la ficha del PNJ.
+  5. Un libro en un idioma que el personaje no conoce: pulsa su nombre en el
+     equipo. Debe salir la descripción y la frase del candado, y ninguna
+     página.

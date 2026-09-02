@@ -35,16 +35,24 @@ import { formatCount } from "./utils.js";
 export const MISHAPS_TABLE_NAME = TABLES.mishaps;
 
 /**
- * Every Libro `actor` holds.
+ * Every GRIMORIO `actor` holds — a Libro with `system.grimoire` ticked.
  *
- * A type test, not a flag test: `book` is an item TYPE, and nothing limits a
- * character to one of them — which is why every caller below either takes the
- * book it was pointed at or offers ALL of them, and none reaches for `[0]`.
+ * BOTH tests since 2026-09-02 (user ask). `book` is the TYPE and nothing limits
+ * a character to one of them — which is why every caller below either takes the
+ * book it was pointed at or offers ALL of them, and none reaches for `[0]`. The
+ * FLAG is what says those three pages are spells: a Libro without it is a book,
+ * readable and writable exactly as before, and simply not a thing anyone casts
+ * from.
+ *
+ * The filter lives HERE, in the one helper every magic path starts from, rather
+ * than at each of the three call sites: the sheet's per-row affordance, the
+ * whole-inventory picker and `castFromBook`'s own re-derivation all ask this
+ * function what a caster has to work with.
  * @param {CairnActor|null} actor
  * @returns {CairnItem[]}
  */
 export const booksOn = (actor) =>
-  actor ? actor.items.filter((i) => i.type === "book") : [];
+  actor ? actor.items.filter((i) => i.type === "book" && i.system?.grimoire) : [];
 
 /**
  * THE LANGUAGE GATE. A Libro is written in one language (`system.language`,
@@ -385,6 +393,14 @@ const askCast = async (maxDice, { title, before = "" }) => {
  */
 export const castFromBook = async (actor, book = null) => {
   if (actor?.type !== "character") return null;
+  // A named book is re-checked, not trusted: the row's cast control is drawn
+  // from the same flag, but a sheet rendered before the Warden unticked
+  // Grimorio must not be a way in — the affordance/enforcement split this repo
+  // keeps everywhere else.
+  if (book && !book.system?.grimoire) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotAGrimoire", { name: book.name }));
+    return null;
+  }
   const all = book ? [book] : booksOn(actor);
   if (!all.length) return null;
 

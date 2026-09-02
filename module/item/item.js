@@ -50,7 +50,7 @@ const SCROLL_PINNED = { weightless: true, bulky: false, equipped: false, "uses.m
 const SPELL_PINNED = { weightless: false, bulky: false, "uses.max": 0, "uses.value": 0 };
 
 /**
- * A Libro: ALWAYS bulky, two slots, whatever wrote it.
+ * A Libro: ALWAYS bulky, two slots, and ALWAYS a single copy.
  *
  * Same shape and same reasoning as SCROLL_PINNED — a pinned value, not a schema
  * default the user can untick — and the sheet renders the Bulky box disabled so
@@ -58,8 +58,15 @@ const SPELL_PINNED = { weightless: false, bulky: false, "uses.max": 0, "uses.val
  * other half: the two flags are mutually exclusive everywhere else in this
  * system (the item sheet's `exclusive` pair), so pinning one without the other
  * would leave "bulky AND petty" reachable by API.
+ *
+ * `quantity: 1` joined them 2026-09-02 (user ask), and the Cantidad field came
+ * off the sheet with it. A book is a specific object with specific words in it
+ * — three pages somebody wrote — so "×3" was never a stack of anything, and the
+ * slot arithmetic multiplied its two slots by it. Pinned rather than merely
+ * hidden, because the drop path stacks by name+type: dropping a second copy of
+ * the same book used to bump the quantity, and now it lands as its own row.
  */
-const BOOK_PINNED = { bulky: true, weightless: false };
+const BOOK_PINNED = { bulky: true, weightless: false, quantity: 1 };
 
 /**
  * A Libro's non-empty pages, in tab order, ready to render or to cast from.

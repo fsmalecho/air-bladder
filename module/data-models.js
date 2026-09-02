@@ -76,7 +76,7 @@ export const NPC_ROLES = ["npc", "hireling", "monster", "companion", "transport"
 export const THING_ROLES = ["transport", "container"];
 
 /**
- * The roles that are a PERSON: somebody with pronouns, an age, a biography and
+ * The roles that are a PERSON: somebody with an age, a biography and
  * a name a player will remember. Two of them since the 2026-08-20 split.
  *
  * A list rather than two `||`s at each site, because the sites are many and
@@ -296,7 +296,6 @@ class CharacterData extends CairnDataModel {
       description: html(),
       notes: html(),
       questions: objList(),
-      pronouns: str(),
       omenEnabled: bool(),
       omen: str(),
       scarEnabled: bool(),
@@ -408,7 +407,7 @@ class NpcData extends CairnDataModel {
       forHire: bool(true),
       // --- a person is a person (2026-08-01) ---------------------------------
       // An npc with role `npc` is an innkeeper, a rival captain, a hired guard —
-      // and the PC sheet gives a person pronouns, an age, eight descriptive
+      // and the PC sheet gives a person an age, eight descriptive
       // traits and scars, while this model gave them none of that, purely
       // because the sheet grew out of the old hireling sheet. These close the
       // gap. Only the two PERSON roles ever SHOW them (the sheet's
@@ -419,7 +418,6 @@ class NpcData extends CairnDataModel {
       // text, deliberately — an HTMLField would need declaring in system.json's
       // htmlFields or it ships as an XSS hole (see CLAUDE.md, Testing).
       faction: str(),
-      pronouns: str(),
       age: str(),
       // Same field, same rules, as CharacterData's — a person has a birthday
       // whichever sheet draws them, and the biography block is shared between
@@ -765,6 +763,17 @@ class BookData extends CairnDataModel {
       // list the Warden has since re-worded must still load rather than fail
       // enum validation on a value nobody can now type.
       language: str(),
+      // GRIMORIO (2026-09-02, user ask). A Libro is a book: three pages of
+      // whatever its author wrote. Ticking this says those pages are SPELLS and
+      // the book can be cast from — the affordance on the inventory row, the
+      // cast picker, and the «Grimorio — » prefix in place of «Libro — ».
+      //
+      // A FLAG and not a type, on the reliquary's reasoning (see relicFields):
+      // a grimoire carries no field a book does not, and Foundry treats a
+      // document's `type` as immutable — so a type would make "this book turns
+      // out to be a grimoire" unrepresentable, which is exactly the discovery
+      // the fiction is about.
+      grimoire: bool(),
       pages: new fields.SchemaField(Object.fromEntries(
         BOOK_PAGE_KEYS.map((k) => [k, new fields.SchemaField({
           // The SPELL's name, not the page's — a page is only where the spell
@@ -890,6 +899,13 @@ class BackgroundData extends CairnDataModel {
       // not here: `rollAge` refuses an `@` reference and anything
       // `Roll.validate` rejects, warns naming the text, and falls back.
       ageFormula: str(),
+      // The coin dice for a character built on this background. Empty means the
+      // system default (CONFIG.Cairn.characterGenerator2e.gold, RAW `3d6`).
+      // Same shape and same rules as `ageFormula` beside it, deliberately —
+      // one field the author fills in the same way, validated at roll time by
+      // the same guard (`effectiveFormula`), which refuses an `@` reference and
+      // anything `Roll.validate` rejects, warns naming the text, and falls back.
+      goldFormula: str(),
       // The languages a character built on this background starts knowing.
       // Plain names out of the Warden's own list (`languages()` in
       // content-packs.js), stored by NAME for the same reason

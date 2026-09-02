@@ -31,7 +31,7 @@
       {{/if}}
       <a class="cairn-item-title" data-action="itemDescription">
         {{#markItemUsed item}}
-        {{#boldIf item.system.equipped}}{{ spellNamePrefix item.name item.type item.system.scroll }}{{item.name}}{{/boldIf}}
+        {{#boldIf item.system.equipped}}{{ spellNamePrefix item.name item.type item.system }}{{item.name}}{{/boldIf}}
         {{/markItemUsed}}
       </a>
       {{!-- The grant tag says how the CARRIER came by an item. Its bound-page

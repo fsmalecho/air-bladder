@@ -2149,10 +2149,10 @@ const configureHandleBar = () => {
     return bare ? [prefix, `${bare} (`, `${bare}(`] : [];
   };
 
-  // THREE kinds now, keyed on the item's TYPE plus the one flag — where it used
-  // to be one type plus two flags. A Libro says what it is because a book of
-  // three spells is not one of them; a Pergamino says so because the row is
-  // otherwise indistinguishable from the Hechizo it was a tick ago.
+  // Keyed on the item's TYPE plus the one flag — where it used to be one type
+  // plus two flags. A Libro says what it is because a book of three spells is
+  // not one of them; a Pergamino says so because the row is otherwise
+  // indistinguishable from the Hechizo it was a tick ago.
   //
   // ONE helper for both surfaces, and that is the point: the inventory row and
   // the printed sheet both call it (actor-sheet.js), so the two cannot drift —
@@ -2161,14 +2161,31 @@ const configureHandleBar = () => {
   // A type with no prefix answers "" rather than being guarded at the call
   // site: the template then needs no `{{#if}}` around it, so a new type that
   // should carry a prefix is added HERE and both surfaces get it at once.
-  Handlebars.registerHelper("spellNamePrefix", function (name, type, scroll) {
+  //
+  // FOUR kinds since 2026-09-02: a Libro that is a Grimorio says so. `flag` is
+  // whichever boolean the type in hand splits on — `scroll` for a spell,
+  // `grimoire` for a book — one parameter rather than one per type, because
+  // every caller passes the item it is rendering and the helper knows which
+  // field that type splits on.
+  //
+  // The de-duplication list carries ALL FOUR prefixes, which is what stops a
+  // book renamed by a Warden while it was a plain Libro ("Libro — Cantos")
+  // coming out as "Grimorio — Libro — Cantos" the moment the box is ticked.
+  Handlebars.registerHelper("spellNamePrefix", function (name, type, system) {
     const n = String(name ?? "");
     if (type !== "book" && type !== "spell") return "";
-    const key = type === "book" ? "CAIRN.BookPrefix"
-      : scroll ? "CAIRN.SpellscrollPrefix" : "CAIRN.SpellPrefix";
+    // The whole `system` object, not one pre-picked boolean: which flag splits
+    // the type is this helper's business, and a template that had to know
+    // ("pass `scroll` for a spell, `grimoire` for a book") is a template that
+    // gets it wrong on the next type. `?.` because the printed sheet builds its
+    // rows by hand and a row without a system object must still resolve.
+    const key = type === "book"
+      ? (system?.grimoire ? "CAIRN.GrimoirePrefix" : "CAIRN.BookPrefix")
+      : system?.scroll ? "CAIRN.SpellscrollPrefix" : "CAIRN.SpellPrefix";
     const localized = game.i18n.localize(key);
     const localizedForms = [
       ...prefixForms(game.i18n.localize("CAIRN.BookPrefix")),
+      ...prefixForms(game.i18n.localize("CAIRN.GrimoirePrefix")),
       ...prefixForms(game.i18n.localize("CAIRN.SpellPrefix")),
       ...prefixForms(game.i18n.localize("CAIRN.SpellscrollPrefix")),
     ];
