@@ -184,7 +184,7 @@ const traits = () => new fields.SchemaField({
 
 /**
  * A list of records whose interior shape varies by content and is not worth
- * pinning: bonds, questions, features, a background's starting gear and its two
+ * pinning: questions, features, a background's starting gear and its two
  * d6 tables. ObjectField preserves whatever the generator and the importers put
  * there; over-specifying these is how fields go missing.
  */
@@ -265,7 +265,11 @@ class CharacterData extends CairnDataModel {
   static defineSchema() {
     return {
       ...vitals(),
-      contentSource: str("2e"),
+      /* `contentSource` and `failedCareer` stood here and are GONE (2026-09-02):
+         the first named which of two generators made this character, the second
+         was a Barebones-only flourish. One generator, no flourish, no fields.
+         Stored values on existing actors are pruned on the next write, which is
+         the intent — nothing reads them. */
       // OFF by default since 2026-08-02 (user ask): a sheet opens quiet, with
       // no per-field dice, and the header toggle is the way in. A schema
       // initial is retroactive — any actor that never stored the flag reads
@@ -273,10 +277,8 @@ class CharacterData extends CairnDataModel {
       // pins its own value. The generators run regardless (the flag gates
       // only what the SHEET renders) and their creations land Off.
       generationEnabled: bool(),
-      failedCareer: str(),
       backgroundUuid: str(),
       background: str(),
-      bonds: objList(),
       age: str(),
       // The day this character was born, as the «Cumpleaños» table words it
       // ("en pleno invierno", "durante la cosecha"). PLAIN TEXT rather than a
@@ -845,14 +847,15 @@ export const bgTableDie = (table) => {
 };
 
 /**
- * A 2e background. Mirrors Kettlewright's content-library schema, which is why
+ * A background. Mirrors Kettlewright's content-library schema, which is why
  * `startingGear`, `containers` and `tables` are free-form records rather than
  * pinned sub-schemas — they round-trip that source verbatim.
  */
 class BackgroundData extends CairnDataModel {
   static defineSchema() {
     return {
-      source: str("2e"),
+      /* `source` stood here and is GONE (2026-09-02). It named which of two
+         editions a background belonged to; there is one. */
       archetype: str(),
       description: html(),
       names: strList(),
@@ -907,19 +910,9 @@ class BackgroundData extends CairnDataModel {
       // negative. Free-form, like the rest of this file's `objList()`s, so
       // none of those keys is individually declared.
       tables: objList(),
-      // "This background grants a second bond." A real field, because the shipped 2e
-      // backgrounds express it in PROSE — Fieldwarden's description says "roll a
-      // second time on the bonds table" and `mentionsSecondBond` regexes for that
-      // sentence. A custom background cannot rely on matching an English sentence,
-      // so authors get a checkbox. Both are honoured, and counted as ONE extra
-      // rather than summed, so ticking the box on a background that also says the
-      // sentence does not hand out three bonds.
-      secondBond: bool(),
-      // The NAME of a RollTable this background draws its bonds from; empty means the
-      // shipped 2e Bonds table. A name, not a uuid, so a shared background still
-      // resolves in the recipient's world — the same portability rule the by-name gear
-      // references follow. Such a table is narrative-only; see drawBond.
-      bondsTable: str(),
+      /* `secondBond` and `bondsTable` stood here and are GONE (2026-09-02) with
+         obligations themselves: one said "this background grants a second
+         obligation", the other named the table it drew them from. */
     };
   }
 }

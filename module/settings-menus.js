@@ -159,11 +159,10 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
     // Sub-options are meaningless unless their master is on, so grey them out
     // (and disable them) while it is off. When the master checkbox is in THIS
     // app it is followed live, as it is toggled, before anything is saved;
-    // when it lives in another submenu (the Barebones failed career sits under
-    // Hacks while "Offer Barebones sheets" is Character Generation's) the
-    // STORED value decides, read at render. (Was the Barebones sub-option
-    // rule in the old renderSettingsConfig hook; same behaviour, declared on
-    // the group.)
+    // when it lives in another submenu the STORED value decides, read at
+    // render. NO GROUP DECLARES `subOptions` TODAY (2026-09-02): the last pair
+    // that used it went with the Barebones settings. The machinery is generic
+    // and stays for the next master/sub pair rather than being rewritten then.
     if (subOptions) {
       const master = root.querySelector(`[name="${ns}.${subOptions.master}"]`);
       const masterOn = () => (master ? !!master.checked : !!game.settings.get(ns, subOptions.master));
@@ -180,7 +179,9 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
       sync();
     }
 
-    // Bold a phrase within a label (the content-source row names its product).
+    // Bold a phrase within a label. NO GROUP DECLARES `boldPhrases` TODAY
+    // (2026-09-02) — its one carrier named a product this system no longer has.
+    // Generic and kept, like `subOptions` above.
     // The phrase is LOCALIZED, not an English literal (review #6):
     // the label searched is the translated setting name, so an English phrase
     // only ever matched where a translator kept the product name verbatim. A
@@ -219,13 +220,11 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
     let requiresClientReload = false;
     let requiresWorldReload = false;
     // ON before OFF. The writes land one `set` at a time, and a per-key
-    // `onChange` that enforces an invariant over SEVERAL keys — the content-
-    // source floor in settings.js, "at least one background source stays on"
-    // — reads the committed state between them. In form order, unticking 2e
-    // and ticking Barebones in one Save wrote `2e=false` first, the floor saw
-    // all three off and switched 2e back on with its toast, and the Warden
-    // ended with both editions on and a false warning (review #18; the flat
-    // list saved the same way). Writing every value being switched ON before
+    // `onChange` that enforces an invariant over SEVERAL keys reads the
+    // committed state between them — so in form order, switching one key off
+    // and its partner on in a single Save let the invariant see an
+    // intermediate state neither the Warden nor the form ever asked for
+    // (review #18). Writing every value being switched ON before
     // any being switched OFF means each intermediate state's set of true keys
     // is a SUPERSET of the final state's, so any such invariant that holds at
     // the end holds at every step — and when the final state itself breaks

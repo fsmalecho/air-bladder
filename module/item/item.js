@@ -369,10 +369,10 @@ export class CairnItem extends Item {
     }
     this.system.isFatigue = this.name === FATIGUE_NAME;
 
-    // Grant-source chip (Background / Bond / Question) shown beside the item's
+    // Grant-source chip (Background / Question) shown beside the item's
     // other tags, so the three sources are distinguishable. Starting gear and
     // bought items get none. The source rides on the item as
-    // flags.mondolme.grantSource ("background" / "bond:<id>" / "question:<i>"),
+    // flags.mondolme.grantSource ("background" / "question:<i>"),
     // set at generation; the re-roll/replacement machinery keys off it, so the
     // display-only "show-grant-tags" setting never affects the flag itself.
     // A container that a background/question rolled, but recorded as a plain

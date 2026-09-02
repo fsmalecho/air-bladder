@@ -2,8 +2,8 @@
  * Shared gear resolution for Mondolme.
  *
  * Gear is the single editable source of truth: it lives in Item compendia that a
- * Warden can unlock and edit. Character generation (2e AND Barebones), hireling
- * loadouts, bonds, and the marketplace all reference an item BY NAME and resolve
+ * Warden can unlock and edit. Character generation, hireling
+ * loadouts and the marketplace all reference an item BY NAME and resolve
  * it here — so editing a pack item once flows everywhere it is granted.
  *
  * This is the resolve-time half. The author-time half (turning an inline
@@ -275,7 +275,7 @@ export const buildGearItem = (g) => {
  *
  * A MISS IS NOW REPORTED TO THE WARDEN, not just to the console (2026-08-29).
  * This is the highest-impact silent failure in the system: every background,
- * bond, career and creation-table grant comes through here, so a compendium the
+ * career and creation-table grant comes through here, so a compendium the
  * Warden has not assigned — or has assigned to the wrong thing — used to produce
  * a character with an empty inventory and no explanation anywhere the Warden
  * would look. `itemByName` reports it, and reports it ONCE per name per session

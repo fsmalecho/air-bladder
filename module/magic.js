@@ -52,7 +52,7 @@ export const booksOn = (actor) =>
  * list of them (`system.languages`). Someone who does not know a book's
  * language cannot reach its pages — not on the sheet, not in a cast.
  *
- * Three deliberate exemptions, each an answer to "who is being kept out":
+ * Two deliberate exemptions, each an answer to "who is being kept out":
  *
  *   - A book with NO language set is readable by everyone. An unset field is a
  *     book nobody has decided about, not a locked one, and every book authored
@@ -61,10 +61,17 @@ export const booksOn = (actor) =>
  *   - A book owned by NO actor — sitting in a compendium, the sidebar, or a
  *     drop preview — shows everything. There is nobody to test against; the
  *     gate is a fact about a reader, and without one there is no question to
- *     answer.
- *   - The Warden sees everything, the way they see every other sheet. The gate
- *     is a rule for players; a GM who cannot read the book they are running is
- *     no rule at all.
+ *     answer. This is also where the Warden authors and edits a book: open the
+ *     one in the compendium, not the copy in a character's pack.
+ *
+ * THE WARDEN EXEMPTION IS GONE (2026-09-02, user report: "si el personaje porta
+ * un libro cuyo idioma no conoce, sigue viendo el contenido de Descripción, 1, 2
+ * y 3. Quiero que solo vea la descripción"). It read `game.user.isGM` and so
+ * answered about WHO WAS LOOKING rather than about the character holding the
+ * book — which made the feature untestable from the only seat that can test it,
+ * and made a GM-run character able to read anything. The gate now asks one
+ * question, the same one for everybody: does the actor carrying this book know
+ * its language?
  *
  * @param {CairnItem} book         a `book` item
  * @param {CairnActor|null} [actor] the reader; defaults to the book's owner
@@ -73,7 +80,6 @@ export const booksOn = (actor) =>
 export const canReadBook = (book, actor = book?.parent ?? null) => {
   const language = String(book?.system?.language ?? "").trim();
   if (!language) return true;
-  if (game.user?.isGM) return true;
   if (actor?.documentName !== "Actor") return true;
   return (actor.system?.languages ?? [])
     .some((known) => String(known).trim() === language);

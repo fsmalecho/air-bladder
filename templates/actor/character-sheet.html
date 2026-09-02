@@ -18,9 +18,6 @@
             </div>
             <div class="background-line">
                 {{#if hasGeneratedBackground}}
-                {{#if isBarebonesBackground}}
-                <span class="background-label">{{ localize 'CAIRN.BackgroundLabel' }}</span>
-                {{/if}}
                 <span class="background-name">{{backgroundName}}</span>
                 {{#if generationEnabled}}
                 <a class="background-roll" data-action="rollBackground" title="{{ localize 'CAIRN.RollBackground' }}"><i class="fas fa-dice-d20"></i></a>
@@ -30,33 +27,12 @@
                 <input class="background-input" type="text" name="system.background" value="{{system.background}}"
                     placeholder="{{ localize 'CAIRN.Background' }}" />
                 {{/if}}
-                {{#if system.contentSource}}
-                <span class="content-source-label">({{ localize 'CAIRN.Source' }} {{contentSourceLabel}})</span>
-                {{/if}}
             </div>
-            {{! Row 3 of the name grid: 2e carries the background's description
-                here, Barebones the failed-career line. The two never coexist. }}
+            {{! Row 3 of the name grid: the background's description. The source
+                label above it and the failed-career block that stood here both
+                went with Barebones (2026-09-02). }}
             {{#if backgroundDescription}}
             <div class="background-description">{{{backgroundDescription}}}</div>
-            {{/if}}
-            {{#if showFailedCareer}}
-            <div class="failed-career-block">
-                <div class="failed-career-line">
-                    <span class="failed-career-label">{{ localize 'CAIRN.FailedCareerLabel' }}</span>
-                    <span class="failed-career-name">{{failedCareer}}</span>
-                    {{#if generationEnabled}}
-                    <a class="failed-career-roll" data-action="rollFailedCareer" title="{{ localize 'CAIRN.RollFailedCareer' }}"><i class="fas fa-dice-d20"></i></a>
-                    <a class="failed-career-pick" data-action="pickFailedCareer" title="{{ localize 'CAIRN.ChangeFailedCareer' }}"><i class="fas fa-magnifying-glass"></i></a>
-                    {{/if}}
-                </div>
-                <div class="failed-career-item-line">
-                    <span class="failed-career-item-label">{{ localize 'CAIRN.FailedCareerItemLabel' }}</span>
-                    <span class="failed-career-item-name">{{failedCareerItem}}</span>
-                    {{#if generationEnabled}}
-                    <a class="failed-career-item-roll" data-action="rollFailedCareerItem" title="{{ localize 'CAIRN.RollFailedCareerItem' }}"><i class="fas fa-dice-d20"></i></a>
-                    {{/if}}
-                </div>
-            </div>
             {{/if}}
             <div class="resource-counter hp-counter {{#if hpLow}}low{{/if}}">
                 <label for="{{@root.idp}}-system.hp.value" data-tooltip="{{ localize 'CAIRN.HitProtectionTip' }}">{{ localize 'CAIRN.HitProtection' }}</label>
@@ -219,21 +195,28 @@
                         </div>
                     </div>
                 </div>
-                {{!-- TRASFONDO (2026-09-02): the background's question tables and
-                      the character's obligations, both of which used to head the
-                      Notes tab. NOTHING here is rolled at generation any more —
-                      each slot arrives empty and its own die fills it, applying
-                      that answer's gold, item and ability bonuses at that moment
-                      (see emptyChoiceTables in character-generator.js). One
-                      control per slot, wearing a "roll" or "re-roll" tooltip by
-                      `filled`: both go to the same handler, because rolling an
-                      empty slot is a re-roll with nothing to swap out. --}}
+                {{!-- TRASFONDO (2026-09-02): the background's question tables,
+                      which used to head the Notes tab. NOTHING here is rolled at
+                      generation — each slot arrives empty and its own die fills
+                      it, applying that answer's gold, item and ability bonuses at
+                      that moment (see emptyChoiceTables in
+                      character-generator.js). One control per slot, wearing a
+                      "roll" or "re-roll" tooltip by `filled`: both go to the same
+                      handler, because rolling an empty slot is a re-roll with
+                      nothing to swap out.
+
+                      The «Preguntas del trasfondo» heading that stood above the
+                      list is GONE (user ask): the questions are the tab, and a
+                      heading naming the tab it is already inside says nothing.
+                      What headings there are now come from the BACKGROUND — one
+                      per group of questions, authored on the Trasfondo item, in
+                      the manner of a Beyond the Wall playbook. A question with
+                      no heading simply follows the one above it. --}}
                 <div class="tab {{tabs.background.cssClass}}" data-group="primary" data-tab="background">
-                    {{#if is2eBackground}}
-                    {{#if questions.length}}
-                    <h3 class="background-section-heading">{{ localize 'CAIRN.BackgroundQuestions' }}</h3>
-                    {{/if}}
                     {{#each questions}}
+                    {{#if this.heading}}
+                    <h3 class="background-group-heading">{{this.heading}}</h3>
+                    {{/if}}
                     <div class="question-block">
                         <p class="question-line"><strong>{{this.question}}</strong>{{#if ../generationEnabled}}<a class="question-reroll" data-action="rerollQuestion"
                                 data-index="{{@index}}" data-filled="{{#if this.filled}}true{{else}}false{{/if}}" title="{{#if this.filled}}{{ localize 'CAIRN.RerollQuestion' }}{{else}}{{ localize 'CAIRN.RollQuestion' }}{{/if}}"><i
@@ -245,27 +228,6 @@
                         {{/if}}
                     </div>
                     {{/each}}
-                    {{/if}}
-                    {{#if showBonds}}
-                    <h3 class="background-section-heading">{{ localize 'CAIRN.Obligations' }}</h3>
-                    {{#each bonds}}
-                    <div class="bond-block">
-                        <p class="bond-line"><strong>{{ localize 'CAIRN.Bond' }}:</strong>{{#if ../generationEnabled}}<a class="bond-reroll" data-action="rerollBond"
-                                data-bond-id="{{this.id}}" data-filled="{{#if this.filled}}true{{else}}false{{/if}}" title="{{#if this.filled}}{{ localize 'CAIRN.RerollBond' }}{{else}}{{ localize 'CAIRN.RollBond' }}{{/if}}"><i
-                                    class="fas fa-dice-d20"></i></a>{{#if @index}}<a class="bond-remove" data-action="removeBond"
-                                data-bond-id="{{this.id}}" title="{{ localize 'CAIRN.RemoveBond' }}"><i
-                                    class="fas fa-xmark"></i></a>{{/if}}{{/if}}</p>
-                        {{#if this.filled}}
-                        <p class="bond-answer">{{this.description}}</p>
-                        {{else}}
-                        <p class="bond-answer unrolled">{{ localize 'CAIRN.NotRolledYet' }}</p>
-                        {{/if}}
-                    </div>
-                    {{/each}}
-                    {{#if generationEnabled}}{{#if canAddBond}}
-                    <a class="bond-add" data-action="addBond" title="{{ localize 'CAIRN.AddBond' }}"><i class="fas fa-plus"></i> {{ localize 'CAIRN.AddBond' }}</a>
-                    {{/if}}{{/if}}
-                    {{/if}}
                     {{#if backgroundTabEmpty}}
                     <div class="container-empty">
                         <p>{{ localize 'CAIRN.BackgroundTabEmpty' }}</p>

@@ -6,7 +6,7 @@
   connected holder) on the left; the background's description then Traits on
   the right (2026-08-21) — then full-width: the background's Q&A as
   separate paragraphs (KW smushes them into one blob, ruled against
-  2026-08-08), Description, Bonds, Omen, Scars, Notes, and a
+  2026-08-08), Description, Omen, Scars, Notes, and a
   small-type credits footer. Empty sections are OMITTED
   where KW prints placeholders — Notes included since 2026-08-11 (that was
   the one exception: 2026-08-08 ruled its header always prints as pencil
@@ -86,9 +86,6 @@
   /* The source parenthetical is its OWN line under the background name (user
      ask 2026-08-16, once the badge took the space beside it), and must not
      shout with the uppercase line above. */
-  .bg-source { font-style: italic; text-transform: none; letter-spacing: normal; font-size: 0.85rem; color: #444; }
-  header.pc .failed-career { font-size: 0.95rem; color: #333; }
-  header.pc .failed-career .fc-label { font-style: italic; }
   p.q { margin-top: 0.55rem; }
   p.qa { margin-bottom: 0.35rem; }
   /* Content links print as plain text — an anchor is useless on paper. */
@@ -108,7 +105,7 @@
      body class. */
   body.pc-print section.notes-section { break-inside: avoid; min-height: 2.2cm; }
   /* Pagination policy (user rulings 2026-08-10): an ENTRY prints whole or
-     moves whole to the next page — an inventory row, a bond, a scar, a
+     moves whole to the next page — an inventory row, a scar, a
      question WITH its answer — and a heading never strands
      alone at a page bottom. The white-space cost of an atomic move is
      bounded by the entry's own height, never a near-empty page. */
@@ -133,7 +130,7 @@
      last line pass under the strip rather than through it. Print-only —
      the popup stays readable on screen with the footer in flow. */
   /* The running page frame (user report 2026-08-11: with the @page margins
-     at 0, BONDS moved whole to page 2 and sat flush on the paper's TOP
+     at 0, a section moved whole to page 2 and sat flush on the paper's TOP
      edge). A real <table> wraps everything: Chromium repeats its thead at
      the top of every printed page — a BLANK 9mm strip, the page's roof (a
      name strip was tried and rejected within the hour, user ruling
@@ -176,8 +173,6 @@
   <div class="who">
     <h1>{{ name }}</h1>
     {{#if subtitle}}<div class="background">{{ subtitle }}</div>{{/if}}
-    {{#if subtitleSource}}<div class="bg-source">({{ subtitleSource }})</div>{{/if}}
-    {{#if failedCareer}}<div class="failed-career"><span class="fc-label">{{ localize "CAIRN.PrintFailedCareer" }}</span> {{ failedCareer }}</div>{{/if}}
     {{#if pronouns}}<div class="pronouns">{{ pronouns }}</div>{{/if}}
   </div>
   {{#if compatBadge}}<img class="compat" src="{{ compatBadge }}" alt="{{ localize 'CAIRN.CompatibleAlt' }}">{{/if}}
@@ -256,7 +251,7 @@
 {{/if}}
 
 {{!-- No Connections section: REMOVED 2026-08-13 by user ruling. Every connected
-      actor was already printed twice over — the question or bond that granted it
+      actor was already printed twice over — the question that granted it
       states what it is under its own heading, and anything it carries prints as
       its own inventory section above. A third copy of the same prose is what the
       Talon sheet showed. --}}
@@ -282,15 +277,6 @@
 <section>
   <h2>{{ localize "CAIRN.Description" }}</h2>
   <div class="prose">{{{ description }}}</div>
-</section>
-{{/if}}
-
-{{#if bonds.length}}
-<section>
-  <h2>{{ localize "CAIRN.PrintBonds" }}</h2>
-  <ul class="plain">
-    {{#each bonds}}<li>{{ this }}</li>{{/each}}
-  </ul>
 </section>
 {{/if}}
 

@@ -3,7 +3,7 @@ import { CairnActor } from "./actor/actor.js";
 import { CairnActorSheet } from "./actor/actor-sheet.js";
 import { CairnItem, FATIGUE_NAME } from "./item/item.js";
 import { CairnItemSheet } from "./item/item-sheet.js";
-import { createCharacter, createNpc, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard } from "./character-generator.js";
+import { createCharacter, createNpc, requestPcGeneration, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard } from "./character-generator.js";
 import * as characterGenerator from "./character-generator.js";
 import { generateFaction } from "./faction-generator.js";
 import { reseedSpellTable } from "./spell-tables.js";
@@ -426,16 +426,12 @@ Hooks.once("init", () => {
         // ask again: the lock was clear, but they had no reason to press
         // anything. The comment below already called that outcome unacceptable
         // for the null case; a throw is the same outcome by a worse route.
-        // The wire names a content source (the player answered the picker on
-        // their own client — a prompt HERE would hang their request on this
-        // screen's modal), but the wire is not trusted: anything not currently
-        // enabled clamps to the only enabled source, or to 2e under the same
-        // everything-off kindness promptContentSource applies. A source is
-        // always passed, so generateCharacter never prompts on this client.
-        const enabled = enabledContentSources().map((s) => s.key);
-        const source = enabled.includes(msg.source) ? msg.source : (enabled[0] ?? "2e");
+        // The wire carries NO content source since 2026-09-02 — there is one
+        // generator, so there was nothing left for the player to choose. What
+        // the player answered on their own client is the roll CONFIRM
+        // (requestPcGeneration), and `createCharacter` asks nothing here
+        // because this runs on the Warden's.
         const actor = await createCharacter({
-          source,
           ownership: { [senderId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
           // The generation chat card is headed by the ROLLER's name, and the
           // roller is the PLAYER who asked -- this branch runs on the Warden's
@@ -443,9 +439,9 @@ Hooks.once("init", () => {
           // rolled with the Warden's name instead.
           roller: user,
         });
-        // A null actor is a real outcome (the Warden dismissed the
-        // content-source picker); answer anyway, or the player's "rolling
-        // your character…" toast is the last they ever hear of it.
+        // A null actor is a real outcome (generation found nothing to roll on);
+        // answer anyway, or the player's "rolling your character…" toast is the
+        // last they ever hear of it.
         if (actor) {
           ui.notifications.info(game.i18n.format("CAIRN.Notify.PcGeneratedFor", {
             name: actor.name, player: user.name,
@@ -1175,7 +1171,7 @@ const migrateMountToCompanion = async () => {
  * 2026-08-16: "I want this gone").
  *
  * Generation used to write one line onto a character's Background & Notes for
- * each thing a background, question or bond granted them — "Companion: Raven
+ * each thing a background or question granted them — "Companion: Raven
  * [Question] — A Raven Familiar…" — and keep a LEDGER of exactly what it wrote
  * in `flags.mondolme.grantNotes` so a deleted beast could take its own line
  * away again. The feature is gone; the granted Actors are NOT, and are not

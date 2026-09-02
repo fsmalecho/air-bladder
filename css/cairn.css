@@ -241,13 +241,13 @@
     display: grid;
     column-gap: 8px;
     row-gap: 2px;
-    /* name / background line / background description (or failed career) /
-       HP + Gold. The third row is 1fr so it ABSORBS any slack when the section
-       is stretched to the portrait's 140px (a Barebones character has no
-       description), pushing the HP/Gold counters down to sit flush with the
-       portrait's bottom edge instead of leaving a floating gap below them. A 2e
-       description sizes the row to its own content (fr's auto minimum) and grows
-       row 1 of the outer grid to match. */
+    /* name / background line / background description / HP + Gold. The third
+       row is 1fr so it ABSORBS any slack when the section is stretched to the
+       portrait's 140px (a background may carry no description), pushing the
+       HP/Gold counters down to sit flush with the portrait's bottom edge
+       instead of leaving a floating gap below them. A description sizes the
+       row to its own content (fr's auto minimum) and grows row 1 of the outer
+       grid to match. */
     grid-template-rows: 46px 24px 1fr min-content;
     align-content: start;
     grid-template-columns: 1fr 1fr;
@@ -521,70 +521,8 @@
     margin-bottom: 0;
 }
 
-/* Barebones "Failed career:" line. Sits in the same row-3 slot the 2e background
-   description occupies -- the two never coexist -- so it renders directly under
-   the Background line. All three header lines (Background / Failed Career /
-   Failed Career Item) render at ONE size, 17px, matching .background-name:
-   the earlier 15px/13px "quieting" was overruled 2026-08-08 by the user with
-   all three on screen -- they read as one block, so they size as one. The
-   greyed labels keep the label/value distinction. */
-.failed-career-block {
-    grid-column: 1 / 3;
-    grid-row: 3;
-    align-self: start;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.failed-career-line,
-.failed-career-item-line {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    min-width: 0;
-}
-
-.failed-career-label {
-    flex: 0 0 auto;
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
-    font-size: 17px;
-    font-variant: small-caps;
-    color: var(--ab-muted);
-}
-
-.failed-career-name {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
-    font-size: 17px;
-    font-variant: small-caps;
-}
-
-/* Keepsake-item line: same size as the lines above it, per the one-size ruling
-   in the block comment at the top of this section. */
-.failed-career-item-label {
-    flex: 0 0 auto;
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
-    font-size: 17px;
-    font-variant: small-caps;
-    color: var(--ab-muted);
-}
-
-.failed-career-item-name {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
-    font-size: 17px;
-    font-variant: small-caps;
-}
+/* The «Carrera fallida» header block stood here and is GONE (2026-09-02)
+   with the Barebones flourish it belonged to. */
 
 /* Roll Character is always rendered so the Randomization toggle can show/hide it
    in place; Foundry has renamed the header-button element across versions, so
@@ -690,7 +628,6 @@
     font-family: "Alegreya", Times, "Times New Roman", Georgia, serif !important;
     font-size: 17px !important;
     font-variant: small-caps;
-    /* Fill the background line so the content-source note sits at its end. */
     flex: 1 1 auto;
     min-width: 0;
     height: auto !important;
@@ -1157,8 +1094,22 @@
     margin-bottom: 6px;
 }
 
+/* The page's TITLE, not a labelled field (2026-09-02): bigger, borderless and
+   underlined, so the spell's name reads as the heading of the text below it.
+   The border returns on focus, so it is still discoverably an input. */
 .book-page-name input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--ab-edge);
+    border-radius: 0;
     flex: 1;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 2px 0;
+}
+
+.book-page-name input:focus {
+    border-bottom-color: var(--ab-accent);
 }
 
 /* The language gate's notice on a Libro's Descripción tab (book-sheet.html):
@@ -1938,9 +1889,11 @@ textarea.omen-input {
  * Trasfondo tab: the background's questions and the character's obligations.
  * (Both lived at the head of the Notes tab until 2026-09-02.)
  ******************************************************************************/
-/* One heading per section — «Preguntas del trasfondo», «Obligaciones». Sized
-   down from a browser h3, which is a display heading and dwarfs the question
-   text it introduces. */
+/* One heading per section. Sized down from a browser h3, which is a display
+   heading and dwarfs the question text it introduces. NOTHING renders this on
+   the character sheet any more (2026-09-02: «Preguntas del trasfondo» was
+   dropped and «Obligaciones» went with obligations); the background item's
+   read-only Details tab is the last consumer. */
 .background-section-heading {
     margin: 12px 0 6px 0;
     font-size: 1em;
@@ -1952,38 +1905,56 @@ textarea.omen-input {
     margin-top: 0;
 }
 
+/* The AUTHOR'S OWN heading over a group of background questions (2026-09-02,
+   user ask): the Trasfondo tab should read like a Beyond the Wall playbook,
+   where a heading gathers the tables under it. Deliberately LARGER than the
+   questions it introduces — that size difference is the whole request — and
+   ruled underneath so a group reads as a group even when it holds one
+   question. Shown on the character sheet and on the background's own
+   read-only Details tab, from the same class. */
+.background-group-heading {
+    margin: 16px 0 8px 0;
+    padding-bottom: 3px;
+    border: none;
+    border-bottom: 1px solid var(--ab-rule);
+    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
+    font-size: 1.35em;
+    font-variant: small-caps;
+    font-weight: bold;
+    letter-spacing: 0.02em;
+}
+
+.background-group-heading:first-child {
+    margin-top: 0;
+}
+
+/* The heading's INPUT on the authoring form: sized to hint at what it will look
+   like on the sheet without pretending to be a heading itself. */
+.bg-table-heading {
+    width: 100%;
+    margin-bottom: 6px;
+    font-size: 1.1em;
+    font-variant: small-caps;
+    font-weight: bold;
+}
+
 /* An answer nobody has rolled yet: the same muted italic the Omen and Scars
    placeholders use, so "not filled in" reads the same everywhere. */
-.question-answer.unrolled,
-.bond-answer.unrolled {
+.question-answer.unrolled {
     color: var(--ab-muted);
     font-style: italic;
 }
 
-.bond-block,
 .question-block {
     margin: 0 0 8px 0;
 }
 
-.bond-line,
 .question-line {
     margin: 0;
 }
 
-.bond-answer,
 .question-answer {
     margin: 2px 0 0 0;
-}
-
-.bond-remove {
-    margin-left: 6px;
-    cursor: pointer;
-}
-
-.bond-add {
-    display: inline-block;
-    margin: 0 0 8px 0;
-    cursor: pointer;
 }
 
 /* A bare <hr> is drawn from core LITERALS, not from the palette: a #b5b3a4 top
@@ -2000,7 +1971,6 @@ textarea.omen-input {
     background: none;
 }
 
-.bond-reroll,
 .question-reroll {
     margin-left: 6px;
     cursor: pointer;
@@ -2010,8 +1980,7 @@ textarea.omen-input {
 /******************************************************************************
  * Header polish, status banners, critical damage, armor override.
  ******************************************************************************/
-/* 2e background: name reads as a header; the content source note sits at the
-   right of the same line. */
+/* The background's name reads as a header. */
 .background-line {
     /* Spans BOTH columns of the name grid and is pinned to row 2. Without this
        it is a single-column auto-flow item, which pushes HP up beside it into
@@ -2038,23 +2007,9 @@ textarea.omen-input {
     font-variant: small-caps;
 }
 
-/* Barebones: a "Background:" label precedes the (pickable) background name. */
-.background-label {
-    flex: 0 0 auto;
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
-    font-size: 17px;
-    font-variant: small-caps;
-    color: var(--ab-muted);
-}
-
-.content-source-label {
-    flex: 0 0 auto;
-    margin-left: auto;
-    white-space: nowrap;
-    font-size: 12px;
-    font-variant: small-caps;
-    color: var(--ab-muted);
-}
+/* `.background-label` and `.content-source-label` stood here and are GONE
+   (2026-09-02): one prefixed the background name on a Barebones sheet, the
+   other named the edition at the right of the same line. */
 
 /* Dice + magnifier beside the background name: re-roll it, or open the picker.
    Sit tight against the name so they read as controls on it, not on the line. */
@@ -2073,9 +2028,9 @@ textarea.omen-input {
 }
 
 /* ---- the background picker (DialogV2) ----
-   Two columns for a source with prose (2e: list + live description); one wide
-   column for a source without it (Barebones), where each row already shows the
-   gear and a panel would only repeat it. */
+   Two columns when the backgrounds carry prose (list + live description); one
+   wide column when they do not, where each row already shows the gear and a
+   panel would only repeat it. */
 .bg-picker {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2174,24 +2129,6 @@ textarea.omen-input {
     overflow-y: auto;
     max-height: 380px;
     padding-right: 4px;
-}
-
-/* Re-roll / pick controls on the failed-career line. Dimmed to match the label
-   they follow -- this is flavour, and should not compete with the background
-   controls above it. */
-.failed-career-roll,
-.failed-career-pick,
-.failed-career-item-roll {
-    flex: 0 0 auto;
-    cursor: pointer;
-    opacity: 0.55;
-    font-size: 12px;
-}
-
-.failed-career-roll:hover,
-.failed-career-pick:hover,
-.failed-career-item-roll:hover {
-    opacity: 1;
 }
 
 /* Attribute-loss status banners: one coloured bar per active condition. The
@@ -2459,7 +2396,7 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 /******************************************************************************
  * Grant-source chip + inventory drag-to-reorder.
  ******************************************************************************/
-/* Grant-source tag (Background / Bond / Question): a monochrome chip in
+/* Grant-source tag (Background / Question): a monochrome chip in
    small-caps with a darker border so a source reads distinctly from the
    mechanical tags (Bulky, Armor, Damage) without using colour. */
 /* Grant tags share the mechanical tags' text colour (inherited) and are set apart
@@ -3048,8 +2985,8 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     border-bottom: none;
 }
 
-/* A sub-option greyed out because its master toggle is off (the Barebones
-   failed-career row while Barebones sheets are not offered). */
+/* A sub-option greyed out because its master toggle is off. No group declares
+   one today — see settings-menus.js. */
 .ab-settings-menu .form-group.cairn-setting-disabled {
     opacity: 0.45;
 }
@@ -3166,7 +3103,7 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 }
 
 /* "Compatible with Cairn" badge + CC BY-SA attribution at the foot of the
-   Description tab (both 2e and Barebones sheets). The badge is self-bordered
+   Description tab. The badge is self-bordered
    black-on-white, so it reads on either sheet theme. */
 .cairn-compat-footer {
     margin-top: 18px;
@@ -3676,8 +3613,4 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     color: var(--ab-warn);
 }
 
-.bg-source-fixed {
-    font-weight: bold;
-    align-self: center;
-}
 

@@ -1,7 +1,7 @@
 {
   "id": "mondolme",
   "title": "Mondolme",
-  "description": "Mondolme — a game system for Cairn 2nd Edition and Barebones, the OSR RPG by Yochai Gal, on Foundry VTT. Cairn character generation, backgrounds, marketplace, and Warden tables; descended from Into the Odd. A companion system compatible with Cairn — not the official Cairn system.",
+  "description": "Mondolme — un sistema de juego para Foundry VTT, en español, derivado de Air Bladder y compatible con Cairn 2.ª edición, el juego OSR de Yochai Gal. Generación de personajes, trasfondos, mercado y tablas del Guardián; el contenido lo aporta el Guardián desde sus propios compendios. Un sistema compañero compatible con Cairn — no es el sistema oficial de Cairn.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14.365",

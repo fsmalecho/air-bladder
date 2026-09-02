@@ -1,0 +1,194 @@
+MONDOLME — Ajustes 1: los ocho arreglos de tu lista
+====================================================
+
+Sobre la fase 8 ya aplicada.
+17 archivos modificados, 1 eliminado. Ninguno nuevo.
+
+
+CÓMO APLICARLO
+--------------
+
+Esta vez SÍ hay que borrar antes: se elimina un archivo, y descomprimir
+encima no borra nada.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. Borra estas CINCO carpetas completas:
+
+     module
+     templates
+     css
+     lang
+     tools
+
+3. Descomprime este ZIP dentro de la carpeta del repositorio. Cuando Windows
+   pregunte por system.json y package.json, marca "Hacer esto para todos los
+   elementos actuales" y elige "Reemplazar".
+
+4. Commit y push, por ejemplo:
+
+     Ajustes 1: fuera obligaciones y Barebones, características del trasfondo,
+     encabezados de preguntas, vínculos, idioma de los libros
+
+5. En Foundry: recarga el mundo (F5). No hace falta reinstalar el sistema
+   mientras trabajes con la carpeta; si ya publicaste una versión, sube una
+   etiqueta nueva (0.1.1) cuando quieras que la Release se actualice.
+
+
+LOS OCHO PUNTOS, UNO A UNO
+--------------------------
+
+1. FUERA LAS OBLIGACIONES.
+   Ha desaparecido el concepto entero, no solo la sección: el campo del
+   personaje, la tabla «Obligaciones», la casilla «segunda obligación» y el
+   campo «tabla de obligaciones» del objeto Trasfondo, el apartado de la
+   pestaña Trasfondo, los tres botones (tirar / añadir / quitar), la línea de
+   la hoja impresa y la etiqueta «Obligación» de los objetos concedidos.
+
+   Ya NO necesitas una tabla llamada «Obligaciones» en tu compendio de
+   Generadores: el sistema busca 28 tablas ahora, no 29. Si la tienes, puedes
+   borrarla o dejarla ahí; el sistema no la mira.
+
+   Las obligaciones que tengan tus personajes actuales dejan de mostrarse y se
+   pierden la próxima vez que se guarde la ficha. Si alguna te interesa,
+   cópiala a las notas antes de recargar.
+
+2. LAS CARACTERÍSTICAS DEL TRASFONDO — ARREGLADO.
+   Lo que pasaba: arrastrar un trasfondo a un PJ nunca tocaba las
+   características. Los 10/10/10 y 6 que veías no eran un cálculo: son los
+   valores con los que nace un actor en blanco, y ahí se quedaban. La casilla
+   «Características iniciales» del trasfondo solo la miraba el generador
+   completo («Crear personaje»), nunca el arrastre.
+
+   Ahora, CADA VEZ que se le pone un trasfondo a un PJ — arrastrándolo, con el
+   dado o con la lupa — se fijan las cuatro cifras:
+
+     - Si el trasfondo tiene marcada «Características iniciales», se aplican
+       sus cuatro valores tal cual.
+     - Si no, se tiran 3d6 para FUE, DES y VOL, y 1d6 de Puntos de Gracia.
+
+   Las bonificaciones de las respuestas del trasfondo se suman encima, igual
+   que en la generación. Y cuando hay dados, sale la tarjeta de tiradas en el
+   chat, para que se vea la tirada que ha producido los números.
+
+   Ojo con la otra cara de esto, que elegiste a propósito: cambiar de trasfondo
+   a un personaje ya jugado le vuelve a tirar las características.
+
+3. FUERA EL TÍTULO «PREGUNTAS DEL TRASFONDO».
+   Era un encabezado que nombraba la pestaña en la que ya estabas.
+
+4. ENCABEZADOS DE GRUPO EN LAS PREGUNTAS.
+   En el objeto Trasfondo, cada tabla de preguntas tiene ahora un campo nuevo
+   encima de la pregunta: «Encabezado del grupo (opcional)».
+
+   Lo que escribas ahí sale en la pestaña Trasfondo del personaje, sobre esa
+   pregunta, con letra más grande, versalitas y una raya debajo — a la manera
+   de los playbooks de Beyond the Wall. Déjalo en blanco y esa pregunta
+   simplemente sigue a la anterior, así que para agrupar de tres en tres basta
+   con poner encabezado en la primera de cada grupo.
+
+   El encabezado se lee EN VIVO del trasfondo: si lo cambias, cambia en todos
+   los personajes construidos sobre él sin tener que volver a tirar nada.
+
+5. LOS VÍNCULOS YA APARECEN.
+   No era un fallo del código: el autor original había dejado la interfaz de
+   vínculos "aparcada" tras un interruptor interno mientras se replanteaba la
+   función. En Air Bladder eso escondía una pestaña entera; aquí, como los
+   vínculos son la mitad de arriba de «Vínculos y notas», escondía media
+   pestaña y dejaba solo el editor de notas.
+
+   El interruptor está encendido. Vuelven: la lista de vínculos agrupada por
+   relación, el botón de conectar, el de desvincular, y la línea de vínculo en
+   la cabecera de la ficha de PNJ.
+
+6. FUERA CAIRN BAREBONES.
+   Una sola generación de personaje. Se han eliminado el segundo generador
+   entero, el diálogo que preguntaba «¿2e o Barebones?», el ajuste «Ofrecer
+   hojas de personaje Cairn Barebones», el ajuste de la «carrera fallida» y
+   el menú de configuración «Reglas opcionales» que la contenía (se quedaba
+   vacío), la línea «(Fuente: …)» de la cabecera de la ficha, la fila
+   «Fuente» del objeto Trasfondo y la de la hoja impresa.
+
+   Lo que SÍ se conserva: la pregunta de confirmación que se le hace a un
+   jugador antes de crearle un personaje. La llevaba aquel diálogo de segundas,
+   y sin él no habría quedado nada entre un clic accidental y un actor nuevo.
+
+   Cairn 2e se sigue nombrando donde toca — el sello de compatibilidad, la
+   tabla de pago de seguidores, la nota de los presagios — porque ese es el
+   reglamento del que desciende esto, no un generador.
+
+7. EL IDIOMA DE LOS LIBROS — ARREGLADO.
+   El candado tenía una excepción: «el Guardián lo ve todo». Como tú juegas
+   desde la silla del Guardián, veías las cuatro pestañas de cualquier libro y
+   parecía que el candado no existía.
+
+   Esa excepción ha desaparecido. Ahora la pregunta es una sola, la misma para
+   todos: ¿el actor que lleva este libro conoce su idioma? Si no, su ficha es
+   la pestaña Descripción y nada más — las páginas 1, 2 y 3 no están ocultas,
+   directamente no se envían a la pantalla.
+
+   CONSECUENCIA QUE TE VA A IMPORTAR: para escribir o corregir un libro, ábrelo
+   en el compendio o en la barra lateral de objetos, no la copia que lleva
+   encima un personaje. Un libro sin dueño no tiene a quién examinar, así que
+   se ve entero — ahí es donde se redacta. (Un libro sin idioma asignado
+   también se lee siempre; el candado solo actúa cuando has elegido idioma.)
+
+8. FUERA «NOMBRE DEL HECHIZO».
+   La etiqueta ya no está. El campo sí, porque es lo que el desplegable de
+   lanzar y la tarjeta del chat usan para nombrar el hechizo; sin él todos se
+   llamarían «Página 2». Ahora se presenta como el título de la página: letra
+   más grande, sin recuadro, con una raya fina debajo que se marca al escribir.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 26 archivos de código del sistema pasan la comprobación de sintaxis.
+- Las dos comprobaciones que ejecuta GitHub al publicar: ambas pasan.
+- Ningún import apunta a algo que ya no exista: se ha comprobado nombre por
+  nombre entre los 26 archivos.
+- Ninguna referencia viva a los 28 nombres eliminados (drawBond,
+  bondEntitlement, sourceLabel, promptContentSource, generateBarebonesCharacter,
+  los cinco de la carrera fallida…). Solo quedan en comentarios que explican
+  por qué se fueron.
+- Idiomas: las 579 claves que usa el código están todas en el español. Se han
+  retirado 67 traducciones que ya no usa nadie (obligaciones, carrera fallida,
+  fuentes de contenido, y los 27 nombres de los compendios que el sistema dejó
+  de traer en la fase 3): de 733 a 667. La única nueva es la del encabezado de
+  grupo.
+- Las 16 plantillas tienen sus bloques {{#if}} / {{#each}} bien cerrados.
+- El CSS cierra sus 450 llaves.
+- system.json, package.json y lang/es.json son JSON válido.
+- Ningún comando de package.json apunta a un archivo eliminado.
+
+
+LO QUE NO HE TOCADO, Y POR QUÉ
+------------------------------
+
+- README, LICENSE, CLAUDE.md y docs/ siguen en inglés y siguen nombrando a
+  Air Bladder y a Barebones. Foundry no los carga, así que no se ven en el
+  juego. La excepción: el enlace «¿Cómo creo un trasfondo?» del selector de
+  trasfondos apunta a docs/creating-custom-backgrounds.md, que sí menciona
+  Barebones. Dime si quieres que traduzca y actualice esa guía.
+
+- Las sondas de tools/dev/ siguen escritas para la estructura antigua. No se
+  cargan en Foundry ni las ejecuta la publicación; son mías, para probar. He
+  borrado la de Barebones porque ya no tenía nada que probar.
+
+- Las 19 profesiones de seguidor de module/npc-careers-2e.json siguen en
+  inglés. Sigue pendiente de tu decisión desde la fase 6.
+
+
+QUÉ MIRAR PRIMERO AL ABRIRLO
+----------------------------
+
+  1. Abre un PJ en blanco («Crear actor») y arrástrale un trasfondo. Las
+     cuatro cifras deben cambiar, y debe salir la tarjeta de tiradas.
+  2. Marca «Características iniciales» en ese trasfondo, pon 12/9/14/5, y
+     vuelve a arrastrarlo. Deben salir esos cuatro exactos, sin tarjeta.
+  3. Ponle un encabezado a la primera pregunta del trasfondo y mira la
+     pestaña Trasfondo del personaje.
+  4. Abre la pestaña «Vínculos y notas»: encima del editor de notas debe
+     estar la lista de vínculos con su botón de conectar.
+  5. Dale a un libro un idioma que el personaje NO tenga en su lista de
+     idiomas, y abre el libro desde su mochila: solo Descripción.

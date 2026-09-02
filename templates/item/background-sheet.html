@@ -47,10 +47,6 @@
                     </div>
 
                     <div class="bg-edit-row">
-                        <label>{{ localize 'CAIRN.BackgroundSource' }}</label>
-                        <span class="bg-source-fixed">{{sourceLabel}}</span>
-                    </div>
-                    <div class="bg-edit-row">
                         <label>{{ localize 'CAIRN.BgAuthor.Archetype' }}</label>
                         <select name="system.archetype">
                             {{ selectOptions archetypeChoices selected=system.archetype localize=false blank="—" }}
@@ -83,27 +79,9 @@
                     <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.StartingAbilitiesRolled' }}</p>
                     {{/unless}}
 
-                    {{!-- Two obligations instead of one. A checkbox rather than prose,
-                          because the shipped 2e backgrounds say it in a sentence that
-                          `mentionsSecondBond` matches, and a custom background cannot
-                          depend on an English sentence surviving translation or
-                          rewording. --}}
-                    <div class="bg-edit-row">
-                        <label for="{{@root.idp}}-system.secondBond">{{ localize 'CAIRN.BgAuthor.SecondBond' }}</label>
-                        <input type="checkbox" id="{{@root.idp}}-system.secondBond" name="system.secondBond"
-                            {{checked system.secondBond}} value="{{system.secondBond}}" data-dtype="Boolean" />
-                    </div>
-                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.SecondBondHint' }}</p>
-                    {{!-- An obligations table of the author's own, by NAME so a shared
-                          background still resolves it. Narrative-only: Foundry's table
-                          UI cannot author the gold/gear flags the shipped rows carry. --}}
-                    <div class="bg-edit-row">
-                        <label for="{{@root.idp}}-system.bondsTable">{{ localize 'CAIRN.BgAuthor.BondsTable' }}</label>
-                        <input type="text" id="{{@root.idp}}-system.bondsTable" name="system.bondsTable"
-                            value="{{system.bondsTable}}" placeholder="{{ localize 'CAIRN.BgAuthor.BondsTablePlaceholder' }}" />
-                    </div>
-                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.BondsTableHint' }}</p>
-                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.SourceHint' }}</p>
+                    {{!-- The «second obligation» checkbox and the «tabla de
+                          obligaciones» field stood here and are GONE (2026-09-02)
+                          with obligations themselves. --}}
 
                     <h3>{{ localize 'CAIRN.BackgroundNames' }}</h3>
                     <div class="bg-name-list">
@@ -170,6 +148,13 @@
                     <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.TablesHint' max=maxTables }}</p>
                     {{#each editTables}}
                     <div class="bg-edit-table">
+                        {{!-- The GROUP HEADING (2026-09-02, user ask), above the
+                              question and optional. Fill it in and the character
+                              sheet prints it over this question, in a larger
+                              hand, the way a Beyond the Wall playbook heads a
+                              group of tables; leave it blank and the question
+                              simply follows the one before it. --}}
+                        <input class="bg-table-heading" type="text" data-t="{{@index}}" value="{{this.heading}}" placeholder="{{ localize 'CAIRN.BgAuthor.HeadingPlaceholder' }}" />
                         <div class="bg-table-head">
                             <input class="bg-table-question" type="text" data-t="{{@index}}" value="{{this.question}}" placeholder="{{ localize 'CAIRN.BgAuthor.QuestionPlaceholder' }}" />
                             <label class="bg-table-die-label">{{ localize 'CAIRN.BgAuthor.TableDie' }}
@@ -226,12 +211,6 @@
                 {{else}}
                 {{!-- Read-only view (locked shipped packs) --}}
                 <div class="tab background-details {{tabs.details.cssClass}}" data-group="primary" data-tab="details">
-                    <p class="background-source">
-                        {{! sourceLabel, not the raw stored enum "2e" — same derived label
-                            the editor branch shows, from the same helper. }}
-                        <strong>{{ localize 'CAIRN.BackgroundSource' }}:</strong> {{sourceLabel}}
-                    </p>
-
                     {{#if readOnlyAbilities}}
                     <h3>{{ localize 'CAIRN.BgAuthor.StartingAbilities' }}</h3>
                     <p class="background-abilities">
@@ -267,6 +246,9 @@
                           The editor branch above keeps raw inputs — those are values a
                           save writes back. --}}
                     {{#each backgroundTables}}
+                    {{#if this.heading}}
+                    <h3 class="background-group-heading">{{this.heading}}</h3>
+                    {{/if}}
                     <div class="background-table">
                         <h3>{{this.question}} <span class="background-table-die">d{{this.die}}</span></h3>
                         <ol>

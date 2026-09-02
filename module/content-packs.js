@@ -53,7 +53,10 @@ export const PACK_KINDS = {
  */
 export const TABLES = {
   // ---- Generadores ----
-  bonds: "Obligaciones",
+  /* `bonds: "Obligaciones"` stood here and is GONE (2026-09-02, user ruling:
+     "no quiero obligaciones, ni tablas de obligaciones"). Nothing looks for a
+     table of that name any more, so nothing needs to be in the Warden's
+     Generadores compendium under it. */
   clothing: "Vestimenta",
   face: "Rostro",
   hair: "Cabello",
@@ -293,7 +296,7 @@ export const languages = () => {
 /**
  * Resolve a gear item BY NAME out of the Objetos compendium.
  *
- * The by-name resolver behind every background, bond and career gear grant.
+ * The by-name resolver behind every background and career gear grant.
  * Case-insensitive, because a grant's spelling and the item's spelling are typed
  * by different people at different times.
  *

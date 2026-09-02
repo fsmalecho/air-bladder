@@ -5,7 +5,7 @@ import { canReadBook } from "../magic.js";
 import {
   BOOK_PAGE_KEYS, BG_ABILITY_KEYS, BG_TABLE_DICE, BG_DEFAULT_DIE, BG_MAX_TABLES, bgTableDie,
 } from "../data-models.js";
-import { bindEditorClickAwaySave, cleanDescription, formatCount, sourceLabel } from "../utils.js";
+import { bindEditorClickAwaySave, cleanDescription, formatCount } from "../utils.js";
 import { pickArt } from "../art-picker.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -455,6 +455,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // it is now the table's own — a reader cannot infer it from the row count on
     // a document nobody can open the editor for.
     context.backgroundTables = (this.item.system.tables ?? []).map((tbl) => ({
+      heading: tbl.heading ?? "",
       question: tbl.question ?? "",
       die: bgTableDie(tbl),
       options: (tbl.options ?? []).map((o) => ({ description: o.description ?? "" })),
@@ -463,10 +464,6 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // otherwise there is nothing to show and the dice speak for themselves.
     const sa = this.item.system.startingAbilities ?? {};
     context.readOnlyAbilities = sa.enabled ? abilityRows(sa) : null;
-    // Same derived label the editor branch shows — the read-only header printed
-    // the raw stored enum ("2e"), which sourceLabel exists to prevent drifting
-    // copies of. Third copy retired.
-    context.sourceLabel = sourceLabel(this.item.system.source || "2e");
   }
 
   /**
@@ -486,14 +483,9 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.archetypeChoices = Object.fromEntries(
       ["Wizard", "Fighter", "Thief"].map((a) => [a, game.i18n.localize(`CAIRN.Archetype.${a}`)])
     );
-    // Source is FIXED for a custom background — it is always Cairn 2e (that is the
-    // whole feature; Barebones authoring is out of scope, and only source "2e" is
-    // discovered). Shown read-only, never an editable pick-list, so a GM can't
-    // silently make their background undiscoverable by choosing another source.
-    // `|| "2e"` matches the schema default, so a background whose source somehow
-    // reads empty shows the edition it will actually be discovered under rather
-    // than a blank. Shared with the actor sheet — see utils.js `sourceLabel`.
-    context.sourceLabel = sourceLabel(this.item.system.source || "2e");
+    /* `context.sourceLabel` was set here and on the read-only branch above, and
+       is GONE with `BackgroundData.source` (2026-09-02). It named the edition a
+       background belonged to, back when there were two. */
     context.editNames = [...(this.item.system.names ?? [])];
     context.editGear = await Promise.all(
       (this.item.system.startingGear ?? []).map(async (g) => {
@@ -532,6 +524,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.editTables = tables.map((st) => {
       const die = bgTableDie(st);
       return {
+        heading: st.heading ?? "",
         question: st.question ?? "",
         die,
         dieChoices: BG_TABLE_DICE.map((v) => ({ value: v, label: `d${v}`, selected: v === die })),
@@ -568,6 +561,11 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     return src.map((st) => {
       const die = bgTableDie(st);
       return {
+        // The optional group heading printed above this question on the
+        // character sheet. Normalized here like every other stored key,
+        // because this function REBUILDS the array that gets written — a key
+        // it does not carry is a key the next edit silently deletes.
+        heading: st.heading ?? "",
         question: st.question ?? "",
         die,
         options: Array.from({ length: die }, (_, oi) => normalizedOption(st.options?.[oi] ?? {})),
@@ -695,6 +693,11 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
 
     // --- The question tables ---------------------------------------------------
+    on(".bg-table-heading", async (ev) => {
+      const tables = this._normalizedTables();
+      tables[Number(ev.currentTarget.dataset.t)].heading = ev.currentTarget.value;
+      await commit({ "system.tables": tables });
+    });
     on(".bg-table-question", async (ev) => {
       const tables = this._normalizedTables();
       tables[Number(ev.currentTarget.dataset.t)].question = ev.currentTarget.value;

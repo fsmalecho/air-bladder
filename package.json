@@ -54,7 +54,6 @@
     "dev:phase2": "node tools/dev/phase2-probe.mjs",
     "dev:marketplace": "node tools/dev/marketplace-probe.mjs",
     "dev:transports": "node tools/dev/transport-probe.mjs",
-    "dev:barebones": "node tools/dev/barebones-probe.mjs",
     "dev:npc": "node tools/dev/npc-probe.mjs",
     "dev:portrait": "node tools/dev/portrait-probe.mjs",
     "dev:settings": "node tools/dev/settings-probe.mjs",

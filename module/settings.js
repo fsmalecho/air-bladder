@@ -36,8 +36,7 @@ export const SETTING_KEYS = [
   "show-grant-tags-print", "show-omens",
   "use-warden-title", "change-log", "auto-record-scars",
   // Character Generation
-  "content-source-barebones",
-  "barebones-failed-career", "show-generate-header",
+  "show-generate-header",
   "allow-player-generate", "allow-player-randomization", "show-generation-rolls",
   // disabled-backgrounds is Warden CONFIGURATION (which 2e backgrounds are
   // switched off), not a migration marker — it must ride the namespace
@@ -109,9 +108,7 @@ export const migrateSettingsNamespace = async () => {
  * The onChange body shared by every no-reload toggle whose value a sheet reads
  * in `_prepareContext`: the read is live, but "live" only means the NEXT
  * render — without this fan an open sheet keeps its stale surface until
- * something unrelated redraws it (review #13; the failed-career comment in
- * actor-sheet.js had promised "switching it off hides the line" since the
- * toggle shipped, and delivered it only on reopen). onChange fires on every
+ * something unrelated redraws it (review #13). onChange fires on every
  * client, so each client sweeps its own windows. One helper, not five copies
  * of the loop — the fifth copy is where the drift starts.
  */
@@ -181,18 +178,14 @@ export const SETTING_GROUPS = [
     hint: "CAIRN.Settings.GroupGenerationHint",
     icon: "fa-solid fa-user-plus",
     keys: [
-      "content-source-barebones",
       "show-generate-header", "allow-player-generate",
       "allow-player-randomization", "show-generation-rolls",
       "custom-portrait-folder",
     ],
-    // The phrase is the SOURCE AS THE LABEL NAMES IT. One carrier left: the two
-    // 2e switches went with the canon/custom distinction (there is one
-    // backgrounds compendium now, and every background in it is offered), and
-    // the age formula moved onto the background itself.
-    boldPhrases: {
-      "content-source-barebones": "CAIRN.ContentSourceBarebones",
-    },
+    // `boldPhrases` is EMPTY since 2026-09-02: its one carrier was the Barebones
+    // source checkbox, and there is ONE generator now. The key stays declared so
+    // settings-menus.js keeps reading the group shape it recognises.
+    boldPhrases: {},
   },
   {
     id: "inventory",
@@ -205,26 +198,10 @@ export const SETTING_GROUPS = [
       "use-gold-threshold",
     ],
   },
-  {
-    // The optional rule hacks, in a menu of their own (2026-08-22, user ask).
-    // Down to ONE member: the Knave-style failed career for Barebones
-    // characters, moved out of Character Generation. The magic hack that used
-    // to sit beside it is not a hack any more — those rules ARE the magic
-    // rules of this system, with no setting to switch them off — so the group
-    // is kept for the member it still has rather than for the pair it began as.
-    id: "hacks",
-    title: "CAIRN.Settings.GroupHacks",
-    button: "CAIRN.Settings.GroupHacksButton",
-    hint: "CAIRN.Settings.GroupHacksHint",
-    icon: "fa-solid fa-flask",
-    keys: ["barebones-failed-career"],
-    // The failed career is meaningless unless Barebones sheets are offered —
-    // and that master checkbox lives in the Character Generation menu, not
-    // here, so this app greys the row from the STORED value at render instead
-    // of following a checkbox live (settings-menus.js handles both shapes).
-    // Down to one carrier: the omen/bond lending settings went 2026-08-09.
-    subOptions: { master: "content-source-barebones", keys: ["barebones-failed-career"] },
-  },
+  /* The "Hacks" group stood here and is GONE (2026-09-02). Its last member was
+     the Knave-style failed career, which only ever applied to Barebones
+     characters; with Barebones removed the group had no member left, and a
+     settings button that opens an empty window is worse than no button. */
 ];
 
 /**
@@ -335,18 +312,23 @@ export const registerSettings = () => {
   // removed `show-containers-tab` (2026-07-31) on the reasoning that a display
   // toggle hiding a live graph is not a setting worth having, and a visible
   // toggle here would re-litigate that. Probes exercise the enabled state by
-  // SHADOWING the settings read in-page (the dev:print failed-career pattern)
-  // — never by writing this into a world.
+  // SHADOWING the settings read in-page — never by writing this into a world.
+  //
+  // DEFAULT TRUE since 2026-09-02 (user report: "los vínculos no aparecen en la
+  // hoja de personaje, solo el campo de notas"). The flag was parked false by the
+  // upstream author while the feature was being reconsidered; here the Vínculos
+  // list IS the top half of the «Vínculos y notas» tab, so parked meant a tab
+  // that showed only its notes editor. It stays `config: false` — there is no
+  // reason to offer a switch that hides half a tab.
   game.settings.register(SETTINGS_NS, "connections-ui-enabled", {
     scope: "world",
     config: false,
     type: Boolean,
-    default: false,
+    default: true,
   });
 
   // The 2e backgrounds a Warden has switched off, as an array of UUIDs — the
-  // eye toggle on the picker's rows (2026-08-04; canon and custom rows alike,
-  // Barebones is all-or-nothing via its source checkbox). World state, NOT a
+  // eye toggle on the picker's rows (2026-08-04). World state, NOT a
   // flag on the documents: the shipped packs are replaced wholesale on every
   // system update, so anything written into them is one release from gone.
   // `config: false` — the picker is the whole UI; internal, in no submenu.
@@ -439,7 +421,7 @@ export const registerSettings = () => {
     requiresReload: true,
   });
 
-  // Show a "Background / Bond / Question" chip on items that generation granted.
+  // Show a "Background / Question" chip on items that generation granted.
   game.settings.register(SETTINGS_NS, "show-grant-tags", {
     name: "CAIRN.Settings.ShowGrantTags.label",
     scope: "world",
@@ -470,11 +452,6 @@ export const registerSettings = () => {
   // exists because a grant tag is an annotation both surfaces legitimately
   // show; switching omens off says the table does not use the rule at all.
   // Stored omen TEXT is never touched and returns if this goes back on.
-  //
-  // NOT the return of `show-omens-barebones` (removed 2026-08-09, see the note
-  // below): that one LENT the 2e field to Barebones. This one WITHDRAWS it from
-  // 2e. Opposite direction, and a new key, so no world's orphaned row for the
-  // old one can be read as a value for this.
   //
   // General, not Character Generation: an omen is not generated —
   // character-generator.js lands every new character with omenEnabled false —
@@ -564,53 +541,12 @@ export const registerSettings = () => {
   });
 
   // ---- Character Generation ------------------------------------------------
-  // Whether the Warden offers the Barebones generator alongside the 2e one.
-  // Cairn 2e is ALWAYS offered and has no switch: `content-source-2e` and
-  // `content-source-custom` are gone, and with them the canon/custom
-  // distinction they filtered on — there is one backgrounds compendium now, so
-  // every background in it is a background the Warden put there. The source
-  // FLOOR went with them for the same reason: with 2e permanently on, "every
-  // source off" is not a state a Warden can reach.
-  //
-  // This gates GENERATION ONLY -- every rule after a character exists is
-  // identical across editions, by design (see CLAUDE.md, "one system, two
-  // generators").
-  game.settings.register(SETTINGS_NS, "content-source-barebones", {
-    name: "CAIRN.Settings.ContentSourceBarebones.label",
-    hint: "CAIRN.Settings.ContentSourceBarebones.hint",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: true,
-    requiresReload: false,
-  });
-
-  // A second background name -- the career that didn't work out -- plus ONE
-  // item drawn at random from that career's gear, made weightless and tagged
-  // `failed-career` (character-generator.js `failedCareerItemFromBg`). This
-  // comment said "grants nothing" until 2026-08-22, and the hint said the
-  // same; the code never did. The sheet reads the setting in _prepareContext
-  // (the header's failed-career block), so the fan below is what makes "read
-  // live" true for a sheet already open.
-  game.settings.register(SETTINGS_NS, "barebones-failed-career", {
-    name: "CAIRN.Settings.BarebonesFailedCareer.label",
-    hint: "CAIRN.Settings.BarebonesFailedCareer.hint",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-    requiresReload: false,
-    onChange: rerenderActorSheets,
-  });
-
-  // `show-omens-barebones` and `show-bonds-barebones` were REMOVED here
-  // (2026-08-09, user ruling): the lending they toggled is gone — Barebones
-  // sheets never show the Omen field and Barebones generation never mints a
-  // bond (Additional Gear always runs). Both defaulted false, so the removal
-  // makes the default the only behaviour. Legacy lent bonds survive as data
-  // and keep displaying (the Notes section shows on content); stored omen
-  // TEXT survives invisibly. Their orphaned world rows are harmless, like
-  // the three settings retired in 2026-07/08.
+  /* `content-source-barebones` and `barebones-failed-career` stood here and are
+     GONE (2026-09-02, user ruling: "eliminar cualquier referencia a Cairn
+     Barebones. La generación de personaje será solo una"). With one generator
+     there is no source to choose, and the failed career was a Barebones-only
+     flourish. Their orphaned world rows are harmless, like every other setting
+     retired here — Foundry simply stops reading them. */
   game.settings.register(SETTINGS_NS, "show-generate-header", {
     name: "CAIRN.Settings.ShowGenerateHeader.label",
     scope: "world",
@@ -649,7 +585,7 @@ export const registerSettings = () => {
 
   // The Warden's switch for the SHEET's randomization surface as seen by
   // players: the title-bar Randomization toggle, the Roll button behind it,
-  // and every per-line re-roll die (background, failed career, age, omen, an
+  // and every per-line re-roll die (background, age, omen, an
   // npc's name/profession/portrait). Off hides ALL of it from players — even
   // on an actor whose own Randomization flag is on, because the sheet derives
   // its generationEnabled context through _mayRandomize (render-only; no

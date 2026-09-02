@@ -88,10 +88,17 @@
             {{#each bookPages as |page|}}
             <div class="tab {{lookup (lookup @root.tabs page.tab) 'cssClass'}}" data-group="primary"
                 data-tab="{{page.tab}}">
+                {{!-- The «Nombre del hechizo» LABEL is gone (2026-09-02, user
+                      ask) and the field stays: it is what the cast picker and
+                      the spell card call this page, so removing it would leave
+                      every spell answering to "Página 2". Styled as the page's
+                      title instead — larger, borderless, no caption — with the
+                      old label kept as the accessible name for a screen
+                      reader. --}}
                 <div class="book-page-name">
-                    <label for="{{@root.idp}}-page-{{page.key}}">{{ localize 'CAIRN.BookPageName' }}</label>
                     <input type="text" name="system.pages.{{page.key}}.name" id="{{@root.idp}}-page-{{page.key}}"
-                        value="{{page.name}}" data-dtype="String" />
+                        value="{{page.name}}" data-dtype="String"
+                        aria-label="{{ localize 'CAIRN.BookPageName' }}" />
                 </div>
                 <prose-mirror name="system.pages.{{page.key}}.text" value="{{page.text}}" toggled collaborate relative
                     data-document-uuid="{{@root.item.uuid}}">{{{page.enrichedText}}}</prose-mirror>

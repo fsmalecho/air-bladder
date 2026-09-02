@@ -1,6 +1,6 @@
-import { regenerateActor, canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula, optionAbilityBonuses, abilityBonusDelta, abilityDeltaUpdate } from "../character-generator.js";
+import { regenerateActor, canRegenerateContainers, withGrantSource, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula, optionAbilityBonuses, abilityBonusDelta, abilityDeltaUpdate } from "../character-generator.js";
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
-import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
+import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
 import { resultText } from "../compendium.js";
 import { generatorTable, languages, TABLES } from "../content-packs.js";
 import { SETTINGS_NS } from "../settings.js";
@@ -258,31 +258,21 @@ const slideDown = (el) => {
  * so refusing on it would enforce nothing.
  */
 /**
- * May this actor's Omen be shown AT ALL? Two terms, and both surfaces need
- * both — which is the whole reason this is a function.
+ * May Omens be shown AT ALL? ONE term since 2026-09-02, and both surfaces need
+ * it — which is the whole reason this is still a function.
  *
- * The CONTENT source is structural: Barebones ships no omens table, so the
- * field is 2e's alone whatever any switch says (the lending setting that used
- * to hand it to Barebones was removed 2026-08-09; a legacy Barebones
- * character's stored omen and its `omenEnabled` flag both survive on the
- * document). The SETTING is the Warden's, 2026-08-17: a 2e table that does not
- * use the youngest-member rule turns the field off, on the sheet and on paper
- * alike — one switch, both surfaces, so a field hidden on screen cannot
- * reappear in print.
+ * The Warden's switch, 2026-08-17: a table that does not use the
+ * youngest-member rule turns the field off, on the sheet and on paper alike —
+ * one switch, both surfaces, so a field hidden on screen cannot reappear in
+ * print. (The second term was the CONTENT SOURCE, and it went with Barebones.)
  *
- * Print carried only the second term for a day (review #16), which is exactly
- * the case the first one exists for: a legacy Barebones character whose sheet
- * hides the Omen printed one.
- *
- * Neither term looks at `system.omenEnabled` — that is the CHARACTER's own
- * switch, asked separately by each surface, and folding it in here would make
- * "this table uses omens" and "this character has one" the same question.
- * @param {CairnActor} actor
+ * It deliberately does not look at `system.omenEnabled` — that is the
+ * CHARACTER's own switch, asked separately by each surface, and folding it in
+ * would make "this table uses omens" and "this character has one" the same
+ * question.
  * @returns {boolean}
  */
-const omenVisible = (actor) =>
-  actor?.system?.contentSource !== "barebones"
-  && game.settings.get(SETTINGS_NS, "show-omens");
+const omenVisible = () => game.settings.get(SETTINGS_NS, "show-omens");
 
 const mayRandomize = (fn) => function (event, target) {
   if (!this._mayRandomize()) {
@@ -424,17 +414,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       toggleTraits: CairnActorSheet.#onToggleTraits,
       toggleScars: CairnActorSheet.#onToggleScars,
       toggleLanguages: CairnActorSheet.#onToggleLanguages,
-      // Background / failed career
+      // Background
       rollBackground: owned(mayRandomize(CairnActorSheet.#onRollBackground)),
       pickBackground: owned(mayRandomize(CairnActorSheet.#onPickBackground)),
-      rollFailedCareer: owned(mayRandomize(CairnActorSheet.#onRollFailedCareer)),
-      pickFailedCareer: owned(mayRandomize(CairnActorSheet.#onPickFailedCareer)),
-      rollFailedCareerItem: owned(mayRandomize(CairnActorSheet.#onRollFailedCareerItem)),
-      // Notes tab — the bond/question controls live inside the template's
-      // generationEnabled blocks, so they are surface too, add/remove included.
-      rerollBond: owned(mayRandomizeUnlessEmpty(CairnActorSheet.#onRerollBond)),
-      addBond: owned(mayRandomize(CairnActorSheet.#onAddBond)),
-      removeBond: owned(mayRandomize(CairnActorSheet.#onRemoveBond)),
+      // Trasfondo tab — the question control lives inside the template's
+      // generationEnabled block, so it is surface too.
       rerollQuestion: owned(mayRandomizeUnlessEmpty(CairnActorSheet.#onRerollQuestion)),
     },
   };
@@ -1175,7 +1159,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this.actor.type === "character") await this._prepareCharacterContext(context);
 
     // Non-player actors reuse the character's STR/DEX/WIL/HP behaviour and
-    // tooltips, but none of the background/traits/bonds machinery. npc is here
+    // tooltips, but none of the background/traits machinery. npc is here
     // too now that it shares the sheet — without it the per-field dice and the
     // ability tooltips were simply absent on an NPC.
     if (["hireling", "npc"].includes(this.actor.type)) {
@@ -1466,10 +1450,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   async _prepareCharacterContext(context) {
     await this._prepareBiographyContext(context);
 
-    // Background description (from the linked Item) + a friendly source label,
-    // shown in the sheet header. "2e" -> "Cairn 2e". The document was already
-    // resolved by the biography block above (for the age formula), so this
-    // reads its answer rather than making a second lookup.
+    // Background description (from the linked Item), shown in the sheet header.
+    // The document was already resolved by the biography block above (for the
+    // age formula), so this reads its answer rather than making a second
+    // lookup.
     const bg = context.ageBackground ?? null;
     context.backgroundDescription = bg?.system?.description
       ? cleanDescription(await foundry.applications.ux.TextEditor.implementation.enrichHTML(
@@ -1477,13 +1461,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       : "";
     // The background name for the header (generated case).
     context.backgroundName = this.actor.system.background ?? "";
-    context.contentSourceLabel = sourceLabel(this.actor.system.contentSource);
 
-    // A generated background (either edition) is a linked document, so its name
-    // is a header rather than a free-text field; a hand-made character keeps the
-    // editable input.
-    context.is2eBackground = this.actor.system.contentSource === "2e";
-    context.isBarebonesBackground = this.actor.system.contentSource === "barebones";
+    // A generated background is a linked document, so its name is a header
+    // rather than a free-text field; a hand-made character keeps the editable
+    // input.
     context.hasGeneratedBackground = !!this.actor.system.backgroundUuid;
     // `showBackgroundNotesLabel` lived here (the Notes tab renamed itself once
     // a background was attached). Retired 2026-08-01, and the per-role static
@@ -1492,44 +1473,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // background has a tab of its own. The DYNAMIC, data-driven rename stays
     // dead: two characters must not disagree on what their own tabs are called.
     // Scars and Age are never generated — a player fills each in by hand after
-    // the fact — so they are NOT edition-specific and show on both. Only
-    // character CREATION differs between 2e and Barebones (see CLAUDE.md,
-    // "One system, two generators").
+    // the fact.
     context.showScars = true;
     context.showAge = true;
-    // Omen is the one exception, and it is a CONTENT question rather than a rule:
-    // Barebones ships no omens table, so the field is 2e's alone. (A Warden
-    // used to be able to lend it via show-omens-barebones; the lending was
-    // removed 2026-08-09. A legacy Barebones character's stored omen text
-    // survives on the document — only the field hides.)
-    //
-    // ...and since 2026-08-17 a Warden can switch the field off for 2e too
-    // (show-omens, default ON) — a table that does not use the youngest-member
-    // rule. Read live and fanned by the setting's onChange, so flipping it
-    // empties an OPEN sheet. Content source stays first: it is the structural
-    // answer, and Barebones hides the field whatever the switch says.
+    // A Warden can switch the Omen field off (show-omens, default ON) — a table
+    // that does not use the youngest-member rule. Read live and fanned by the
+    // setting's onChange, so flipping it empties an OPEN sheet.
     //
     // Render-only, deliberately: #onRollOmen and the .omen-enable listener are
     // NOT gated, because both are reachable only through DOM this context does
     // not render, and render-only is the settled shape for a display toggle
-    // here (showFailedCareer, _mayRandomize). The affordance/enforcement split
-    // this repo insists on governs ACQUISITION — walking past a slot limit —
-    // not whether a field is drawn. Stored omen text is never cleared.
-    context.showOmen = omenVisible(this.actor);
+    // here (_mayRandomize). The affordance/enforcement split this repo insists
+    // on governs ACQUISITION — walking past a slot limit — not whether a field
+    // is drawn. Stored omen text is never cleared.
+    context.showOmen = omenVisible();
     context.omenDisplay = this.actor.system.omen;
-    // Barebones-only: the career that didn't work out — a name, plus the one
-    // keepsake item below (this line read "Grants nothing" until 2026-08-22).
-    // Read the setting live, so a Warden switching it off hides the line on an
-    // already-generated character rather than only affecting the next one.
-    context.failedCareer = this.actor.system.failedCareer ?? "";
-    context.showFailedCareer =
-      this.actor.system.contentSource === "barebones" &&
-      game.settings.get(SETTINGS_NS, "barebones-failed-career");
-    // The single keepsake item the failed career left (grantSource
-    // "failed-career") — shown on its own line under the career, with a re-roll
-    // dice. It also appears in the inventory tagged "Failed Career" + "Petty".
-    context.failedCareerItem =
-      this.actor.items.find((i) => i.getFlag("mondolme", "grantSource") === "failed-career")?.name ?? "";
 
     // Random-generation mode (default on): gates the per-field dice rollers
     // (age, omen). Legacy characters lack the field -> default to enabled.
@@ -1541,35 +1499,31 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       && this._mayRandomize();
 
     // TRASFONDO TAB (2026-09-02; this whole block used to head the Notes tab):
-    // the background's question tables and the character's obligations. Both
-    // arrive from generation EMPTY and are filled by their own die on this tab,
-    // which is what `filled` distinguishes — an unrolled slot shows the
-    // "sin tirar" placeholder and a "roll" tooltip, a filled one its answer and
-    // a "re-roll" tooltip. One control either way, on one handler: rolling an
-    // empty slot is the same swap-out/swap-in with nothing to swap out.
+    // the background's question tables. Each arrives from generation EMPTY and
+    // is filled by its own die on this tab, which is what `filled`
+    // distinguishes — an unrolled slot shows the "sin tirar" placeholder and a
+    // "roll" tooltip, a filled one its answer and a "re-roll" tooltip. One
+    // control either way, on one handler: rolling an empty slot is the same
+    // swap-out/swap-in with nothing to swap out.
     //
-    // Obligations are 2e; a legacy Barebones character may still hold one from
-    // the retired lending setting, so show the section whenever it has any.
-    context.bonds = this._effectiveBonds().map((b) => ({
-      ...b,
-      filled: !!String(b.description ?? "").trim(),
-    }));
-    context.showBonds = context.is2eBackground || context.bonds.length > 0;
-    // "Add an obligation" shows only while below the background's entitlement
-    // (base 1, plus a second for Fieldwarden / Outrider's debt option). A fresh
-    // character starts AT its entitlement — in empty slots — so the link is
-    // normally hidden, and appears once a rolled ANSWER raises the entitlement.
-    context.canAddBond = context.bonds.length < (await this._bondEntitlement(bg));
-    context.questions = (this.actor.system.questions ?? []).map((q) => ({
+    // The GROUP HEADING (2026-09-02, user ask: the playbooks in Beyond the Wall
+    // set their question tables under headed groups, and the tab should read the
+    // same way) is read LIVE off the background document, index-aligned with
+    // `system.questions` exactly as the question text itself is — so an author
+    // who adds or re-words a heading changes every character built on that
+    // background, without anyone re-rolling anything. The stored copy is the
+    // fallback for a character whose background has since been deleted.
+    const bgTables = bg?.system?.tables ?? [];
+    context.questions = (this.actor.system.questions ?? []).map((q, i) => ({
       ...q,
       question: q.question ?? "",
       answer: q.answer ?? "",
+      heading: String(bgTables[i]?.heading ?? q.heading ?? "").trim(),
       filled: !!String(q.answer ?? "").trim(),
     }));
-    // Nothing to show at all: no background questions and no obligations. The
-    // tab still renders (it is in the character's tab set unconditionally), so
-    // it says so rather than standing empty.
-    context.backgroundTabEmpty = !context.showBonds && !(context.is2eBackground && context.questions.length);
+    // Nothing to show at all. The tab still renders (it is in the character's
+    // tab set unconditionally), so it says so rather than standing empty.
+    context.backgroundTabEmpty = !context.questions.length;
     // The Notes editor is TOGGLED (character-sheet.html), so this is its
     // light-DOM DISPLAY half. Enriched but NOT translated: notes are the
     // player's own prose and no content namespace files them.
@@ -1716,7 +1670,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // shows the reorder hint. The class stays because the CSS keys on it.
     el.classList.add("cairn-reorder-enabled");
     // When grant-source tags are on, mark the sheet so the footer hint under the
-    // inventory explains the Background / Bond / Question chips. Character-only:
+    // inventory explains the Background / Question chips. Character-only:
     // those chips are set at character generation, so no other actor type has them.
     el.classList.toggle(
       "cairn-grant-tags-enabled",
@@ -2053,44 +2007,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   }
 
-  /**
-   * The actor's bonds as an array, copied so callers can splice it freely.
-   *
-   * This used to fold a legacy singular `system.bond` into a one-element list.
-   * That shim went with the data-model move: `bond`/`bondGold` were never
-   * declared as schema fields, no world was ever built on the version that wrote
-   * them, and a strict schema drops them anyway.
-   * @returns {{id: String, description: String, gold: Number}[]}
-   * @private
-   */
-  _effectiveBonds() {
-    return foundry.utils.duplicate(this.actor.system.bonds ?? []);
-  }
-
-  /**
-   * How many bonds this character may hold: the base one, plus any the background
-   * grants -- Fieldwarden's description and Outrider's "Always pay your debts"
-   * answer each carry "roll a second time on the Bonds table". Mirrors the
-   * generator's bond count so the sheet and generation agree.
-   * @param {CairnItem} [bg] the background item, if already fetched (else looked up)
-   * @returns {Promise<Number>}
-   * @private
-   */
-  async _bondEntitlement(bg = undefined) {
-    if (bg === undefined) {
-      bg = this.actor.system.backgroundUuid ? await fromUuid(this.actor.system.backgroundUuid) : null;
-    }
-    // Barebones is entitled to no bonds — the lending setting that granted
-    // one is retired (2026-08-09). Display policy, so it stays HERE: the
-    // generator's clamp uses the SHARED bondEntitlement and must never
-    // delete a legacy lent bond because this arm reads 0 — zero only gates
-    // "Add a bond"; existing bonds display on content.
-    if (this.actor.system.contentSource === "barebones") return 0;
-    // The shared rule — one implementation for generation, the Add-a-bond cap
-    // and changeBackground's clamp, after its two hand-kept twins drifted
-    // apart in wording and agreed only by luck (dedup'd 2026-08-02).
-    return bondEntitlement(bg, this.actor.system.questions);
-  }
+  /* `_effectiveBonds` and `_bondEntitlement` stood here and are GONE
+     (2026-09-02) with obligations themselves. */
 
   /**
    * A background dropped on a sheet: swap to it, after asking.
@@ -2103,7 +2021,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * change edition" is the rule the picker already follows (#onPickBackground only ever
    * offers this character's own source), and the drop was the one way around it.
    * Refusing is also the only correct answer to what it actually did when measured: a
-   * Barebones character keeps its generated Rations/Torch/weapon/armor — none of which
+   * character keeps its generated Rations/Torch/weapon/armor — none of which
    * the 2e background knows to remove — so it ended up carrying BOTH loadouts, with
    * duplicates.
    *
@@ -2111,7 +2029,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * `changeBackground` deletes everything the old background granted (its starting
    * gear, its rolled answers' items and containers) and re-rolls the new one's. The
    * prompt names the background, since the likeliest mistake is dropping the wrong one.
-   * Bonds and the portrait survive — that is `changeBackground`'s contract, shared with
+   * The portrait survives — that is `changeBackground`'s contract, shared with
    * the picker.
    * @param {CairnItem} bg
    * @returns {Promise<null>} never an item: nothing is added to the inventory
@@ -2122,19 +2040,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       ui.notifications.warn(game.i18n.localize("CAIRN.Notify.BackgroundNotCharacter"));
       return null;
     }
-    const bgSource = bg.system?.source || "2e";
-    const mySource = this.actor.system.contentSource || "2e";
-    if (bgSource !== mySource) {
-      // Named for what they CARRY, not for where they came from: both are edition
-      // labels, and a translator reading en.json alone could only guess that from
-      // `{background}` / `{character}`, which read like a background and a
-      // character name.
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.BackgroundWrongSource", {
-        backgroundEdition: sourceLabel(bgSource),
-        characterEdition: sourceLabel(mySource),
-      }));
-      return null;
-    }
+    /* The CROSS-EDITION REFUSAL stood here and is GONE (2026-09-02): it turned
+       away a Barebones background dropped on a 2e character and vice versa.
+       There is one kind of background now, so the test could only ever pass. */
     if (!this._mayChangeBackground()) return null;
     // Escaped because the result is interpolated into HTML. The name is a
     // stored document field, and a world Item is creatable by any player a
@@ -2190,24 +2098,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     return canRegenerateContainers(this.actor, null, "CAIRN.Notify.NoContainerBackground");
   }
 
-  /**
-   * The bonds table this character's background names, or "" for the shipped 2e one.
-   * Re-rolling and adding a bond must draw from the SAME table generation used, or a
-   * custom background's bonds silently become 2e bonds the first time a player uses
-   * the d20 beside one.
-   * @returns {Promise<String>}
-   */
-  async _bondsTableName() {
-    const uuid = this.actor.system.backgroundUuid;
-    const bg = uuid ? await fromUuid(uuid) : null;
-    return bg?.system?.bondsTable ?? "";
-  }
 
   /**
    * Delete the actor's items previously granted by `source` and create the new
-   * ones in their place, so re-rolling a bond/question keeps the inventory tab in
+   * ones in their place, so re-rolling a question keeps the inventory tab in
    * sync. render:false -- the pending actor.update re-renders once.
-   * @param {String} source  e.g. "bond:ab12" or "question:1"
+   * @param {String} source  e.g. "question:1"
    * @param {Object[]} newItems  resolved + withGrantSource() item data
    * @private
    */
@@ -2218,31 +2114,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (oldIds.length) {
       // abNoStatusCard: grant machinery is not a player packing or shedding
       // gear, so it stays out of the manual-change log (every caller here —
-      // bonds, questions, the failed-career keepsake — is a re-roll).
+      // a question's grants — is a re-roll).
       await this.actor.deleteEmbeddedDocuments("Item", oldIds, { render: false, abNoStatusCard: true });
     }
     if (newItems.length) {
       await this.actor.createEmbeddedDocuments("Item", newItems, { render: false, abNoStatusCard: true });
-    }
-  }
-
-  /** Replace the character's single failed-career keepsake with a fresh random
-   *  pick from `careerName`'s gear (or clear it when the career has none). The
-   *  item is Petty, so it never affects slots or fatigue. */
-  async _grantFailedCareerItem(careerName) {
-    // Guard against overlapping re-rolls: each does an async delete+create, so a
-    // second click mid-flight would try to delete an item the first already removed.
-    if (this._grantingFailedCareerItem) return;
-    this._grantingFailedCareerItem = true;
-    try {
-      const item = careerName ? await buildFailedCareerItem(careerName) : null;
-      await this._replaceGrantedItems("failed-career", item ? [item] : []);
-      // _replaceGrantedItems renders nothing (render:false, so a trailing update can
-      // re-render once); the bond/question re-rolls have that trailing update, this
-      // path does not — so refresh the sheet explicitly or the line looks dead.
-      this.render(false);
-    } finally {
-      this._grantingFailedCareerItem = false;
     }
   }
 
@@ -2456,7 +2332,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // A Connections SECTION was built here from 2026-08-08 and REMOVED
     // 2026-08-13 (user ruling). It printed every connected actor's name, role,
     // stat line and description — and all of that was already on the page: the
-    // question or bond that granted the beast prints its prose under its own
+    // question that granted the beast prints its prose under its own
     // heading, and whatever a transport or container HOLDS prints as its own
     // inventory section above. Talon's sheet carried the horse three times over.
     // The connected actors themselves still print their inventories (`containers`
@@ -2479,16 +2355,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const subtitle = isChar
       ? (sys.background ?? "")
       : career ? game.i18n.format("CAIRN.PrintRoleCareer", { role: roleLabel, career }) : roleLabel;
-    // "Custom" is MEMBERSHIP, not a stored source (the recorded definition:
-    // not in the Player's Guide, nothing more — a custom character still
-    // stores contentSource "2e"). The test used to be "resolved from anywhere
-    // but the canon pack", and with no canon pack left to compare against it is
-    // constantly true: every background in a world is one the Warden supplied,
-    // so a 2e character with a background always prints the custom label. The
-    // branch is gone rather than kept as a comparison that can only answer one
-    // way (user ruling 2026-08-08, unchanged — it is the WORLD that changed).
-    const isCustomBg = !!bg && sys.contentSource === "2e";
-
     // The footer credits the art actually ON the page (user ruling
     // 2026-08-08): the portrait's PATH picks its attribution line, so an
     // Aspeheim page never credits Tlomdev and vice versa. Lydia Comer's
@@ -2530,22 +2396,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // Character pages only, matching the on-screen surface.
       compatBadge: isChar ? abs(`systems/${game.system.id}/logo/Cairn_Stamp.jpg`) : "",
       subtitle,
-      // The source line prints only where it SAYS something (user ask
-      // 2026-08-16). Canon 2e is dropped: the compatibility badge above it now
-      // states Cairn 2e outright, and a parenthetical repeating the picture
-      // beside it is noise. Custom stays — it is the one thing nothing else on
-      // the page says — and so does Barebones, which names a different
-      // generator rather than restating the badge.
-      subtitleSource: !isChar ? ""
-        : isCustomBg ? L("CAIRN.PrintSourceCustom")
-          : sys.contentSource === "2e" ? ""
-            : sourceLabel(sys.contentSource),
-      // Barebones only, below the background, labelled per the user's exact
-      // wording (2026-08-08). Same gate as the sheet: contentSource AND the
-      // world setting, read live.
-      failedCareer: isChar && sys.contentSource === "barebones"
-        && game.settings.get(SETTINGS_NS, "barebones-failed-career")
-        ? (sys.failedCareer ?? "") : "",
+      /* `subtitleSource` and `failedCareer` stood here and are GONE
+         (2026-09-02): one named the edition under the character's background —
+         there is one edition — and the other was the Barebones flourish. Their
+         two blocks came out of character-print.html with them. */
       pronouns: sys.pronouns,
       stats: {
         str: sys.abilities.STR.value, strMax: sys.abilities.STR.max,
@@ -2601,7 +2455,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         rows: rows(c, c.items.contents),
       })).filter((s) => s.showSlots || s.rows.length),
       description: await enrich(isChar ? sys.description : (sys.description ?? "")),
-      bonds: (sys.bonds ?? []).map((b) => String(b?.description ?? "").trim()).filter(Boolean),
       // The Warden's show-omens switch reaches the PAPER too (ruling
       // 2026-08-17: one switch, both surfaces — a field hidden on the sheet
       // must not reappear in print). No template change needed: the section is
@@ -2609,11 +2462,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // the same empty-sections-are-OMITTED rule the disabled omen already
       // rode.
       //
-      // `omenVisible`, not the setting alone: this read carried ONLY the switch
-      // and so printed an Omen section for a legacy Barebones character whose
-      // own sheet hides it (review #16). The sheet reads the same helper, which
-      // is what stops the two answering differently again.
-      omen: sys.omenEnabled && omenVisible(actor)
+      // `omenVisible`, not the setting read a second time: the sheet reads the
+      // same helper, which is what stops the two answering differently.
+      omen: sys.omenEnabled && omenVisible()
         ? String(sys.omen ?? "").trim()
         : "",
       scars: [...(sys.scars ?? [])],
@@ -2710,7 +2561,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // the action map — one declaration for the whole surface, this handler
     // included, since review #13 found the guard lived here and in
     // #onToggleGeneration while ten hidden dice answered a call unguarded.
-    // The same guard the bond/trait re-roll handlers carry. Every branch below
+    // The same guard the trait re-roll handlers carry. Every branch below
     // AWAITS a dialog and then wipes and rebuilds the actor, so two clicks in
     // quick succession both get past the confirmation and both regenerate --
     // the second one throwing away a character the first just made. Harmless to
@@ -2841,10 +2692,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * sources -- an NPC's name comes from its own spark table, a character's
    * from the background's example names.
    *
-   * 2e names come from the CURRENT background's example-name list (so the name
-   * still suits the background after it has been changed); Barebones falls back
-   * to its spark table. Active tokens are renamed too, as regeneration does,
-   * so a token on the canvas never keeps the discarded name.
+   * The name comes from the CURRENT background's example-name list (so it still
+   * suits the background after it has been changed), falling back to the
+   * «Nombres» table. Active tokens are renamed too, as regeneration does, so a
+   * token on the canvas never keeps the discarded name.
    * @this {CairnActorSheet}
    */
   static async #onRollName(event) {
@@ -2854,13 +2705,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return;
     }
     let name = null;
-    if (this.actor.system.contentSource === "2e" && this.actor.system.backgroundUuid) {
+    if (this.actor.system.backgroundUuid) {
       const bg = await fromUuid(this.actor.system.backgroundUuid);
       const names = bg?.system?.names ?? [];
       if (names.length) name = names[Math.floor(Math.random() * names.length)];
     }
     if (!name) {
-      name = await rollNameFromTable(CONFIG.Cairn?.barebonesGenerator?.name, this.actor.name);
+      name = await rollNameFromTable(CONFIG.Cairn?.npcGenerator?.name, this.actor.name);
     }
     if (!name || name === this.actor.name) return;
     // The tokens follow through CairnActor's rename rule (every scene, only
@@ -3709,12 +3560,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /* -------------------------------------------- */
-  /*  Actions — background and failed career      */
+  /*  Actions — background                        */
   /* -------------------------------------------- */
 
   /**
    * Dice on the background line: swap to a random background. A PER-FIELD swap —
-   * the character keeps its stats, name, traits, bonds and belongings; only the
+   * the character keeps its stats, name, traits and belongings; only the
    * background and what it granted change. Regenerating everything is the Roll
    * Character control's job.
    * @this {CairnActorSheet}
@@ -3725,168 +3576,31 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Magnifier on the background line: open the picker for this character's own
-   * content source, then swap to what was chosen. The picker never offers the
-   * other edition's backgrounds — a character does not change edition.
+   * Magnifier on the background line: open the picker, then swap to what was
+   * chosen.
    * @this {CairnActorSheet}
    */
   static async #onPickBackground(event) {
     event.preventDefault();
     if (!this._mayChangeBackground()) return;   // don't offer a list we can't act on
-    const result = await promptBackground(
-      this.actor.system.contentSource || "2e",
-      this.actor.system.backgroundUuid
-    );
+    const result = await promptBackground(this.actor.system.backgroundUuid);
     if (!result) return;                    // cancelled
     await changeBackground(this.actor, result.bg);
-  }
-
-  /** Dice on the "Failed career" line: roll a random one, avoiding the
-   *  character's real background exactly as generation does. A new career brings
-   *  a fresh keepsake item. @this {CairnActorSheet} */
-  static async #onRollFailedCareer(event) {
-    event.preventDefault();
-    const name = await rollFailedCareerName(this.actor.system.background);
-    if (!name) return;
-    await this.actor.update({ "system.failedCareer": name });
-    await this._grantFailedCareerItem(name);
-  }
-
-  /** Magnifier on the Barebones "Failed career" line: choose a different one.
-   *  Stores the name, then swaps the ONE keepsake item for one drawn from the
-   *  new career's gear (`_grantFailedCareerItem`) — that item, not a loadout,
-   *  is all a failed career grants, so unlike the background swap there is no
-   *  other gear to reconcile. @this {CairnActorSheet} */
-  static async #onPickFailedCareer(event) {
-    event.preventDefault();
-    const result = await promptFailedCareer(this.actor.system.failedCareer);
-    if (!result) return;                    // cancelled
-    await this.actor.update({ "system.failedCareer": result.name });
-    await this._grantFailedCareerItem(result.name);
-  }
-
-  /** Dice on the "Failed career item" line: re-roll WHICH of the current failed
-   *  career's gear items the character kept, without changing the career.
-   *  @this {CairnActorSheet} */
-  static async #onRollFailedCareerItem(event) {
-    event.preventDefault();
-    await this._grantFailedCareerItem(this.actor.system.failedCareer);
   }
 
   /* -------------------------------------------- */
   /*  Actions — Trasfondo tab (obligations, questions)  */
   /* -------------------------------------------- */
 
-  /**
-   * Roll — or RE-roll — one obligation (by its stable id) from the Obligaciones
-   * table, syncing its granted items and gold on the inventory, like a question
-   * roll.
-   *
-   * ONE handler for both, since 2026-09-02: generation now leaves every
-   * obligation as an empty slot, and filling one is exactly this operation with
-   * nothing to swap out — the item swap is a no-op, the old gold is 0 and the
-   * `avoid` list drops the blank descriptions on its own (drawBond filters
-   * them). Only the control's TOOLTIP differs, chosen in the template by
-   * `filled`; writing a second path was the alternative, and a second path is
-   * how the two drift.
-   * @this {CairnActorSheet}
-   */
-  static async #onRerollBond(event, target) {
-    event.preventDefault();
-    if (this._rerolling) return;   // guard the double-click delete/create race
-    this._rerolling = true;
-    try {
-      const id = target.dataset.bondId;
-      const bonds = this._effectiveBonds();
-      const idx = bonds.findIndex((b) => b.id === id);
-      if (idx < 0) return;
-      // Avoid every bond held, INCLUDING the one being re-rolled: a re-roll that
-      // hands back the same bond reads as a broken button, and a re-roll that
-      // hands back a copy of the character's other bond is the duplicate this
-      // guard exists to stop. Both are the same exclusion.
-      const drawn = await drawBond(await this._bondsTableName(), {
-        avoid: bonds.map((b) => b.description),
-      });
-      if (!drawn) return;
-      const newItems = (drawn.items ?? []).map((it) => withGrantSource(it, `bond:${id}`));
-      await this._replaceGrantedItems(`bond:${id}`, newItems);
-      const gold = Math.max(0, (this.actor.system.gold ?? 0) - (bonds[idx].gold ?? 0) + drawn.gold);
-      bonds[idx] = { id, description: drawn.description, gold: drawn.gold };
-      // abNoStatusCard, as on every other bond/question write: the gold swing
-      // is the die's, not the player's, and the ledger card read it as a manual
-      // edit otherwise (review #18 — this was the one member of the family
-      // without the flag).
-      await this.actor.update({ "system.bonds": bonds, "system.gold": gold }, { abNoStatusCard: true });
-    } finally {
-      this._rerolling = false;
-    }
-  }
+  /* THE THREE OBLIGATION HANDLERS — `#onRerollBond`, `#onAddBond` and
+     `#onRemoveBond` — stood here and are GONE (2026-09-02, user ruling: "no
+     quiero obligaciones, ni tablas de obligaciones"). They rolled an obligation
+     off the Obligaciones table, appended one up to the background's
+     entitlement, and removed one while refunding its gold and deleting its
+     granted items. The whole concept went: the stored field, the table name,
+     the second-bond entitlement, the sheet block and the printed line. */
 
-  /**
-   * Add a bond: draw a new one and append it, granting its items and gold. Only
-   * reachable below the bond entitlement (re-checked here so a stale link can't
-   * push over the cap).
-   * @this {CairnActorSheet}
-   */
-  static async #onAddBond(event) {
-    event.preventDefault();
-    // The same guard the two re-roll handlers carry, and for a worse race.
-    // This reads `bonds`, AWAITS a table draw, then writes the array it read:
-    // two clicks in quick succession both see one bond, both pass the
-    // entitlement check, and the second write overwrites the first. One bond
-    // is lost from `system.bonds` while BOTH sets of granted items were
-    // created — and the survivors carry `bond:<id>` for an id no longer in the
-    // array, so `#onRemoveBond` can never reach them and no code ever will.
-    if (this._rerolling) return;
-    this._rerolling = true;
-    try {
-      const bonds = this._effectiveBonds();
-      if (bonds.length >= (await this._bondEntitlement())) return;
-      const rec = bondRecordFrom(await drawBond(await this._bondsTableName(), {
-        avoid: bonds.map((b) => b.description),
-      }));
-      if (!rec) return;
-      bonds.push(rec.bond);
-      if (rec.items.length) {
-        // abNoStatusCard here and on the update below: a bond's grants are
-        // machinery, same as _replaceGrantedItems.
-        await this.actor.createEmbeddedDocuments("Item", rec.items, { render: false, abNoStatusCard: true });
-      }
-      const gold = (this.actor.system.gold ?? 0) + rec.bond.gold;
-      await this.actor.update({ "system.bonds": bonds, "system.gold": gold }, { abNoStatusCard: true });
-    } finally {
-      this._rerolling = false;
-    }
-  }
 
-  /**
-   * Remove a bond (by id): drop it and delete its granted items, refunding its
-   * gold grant back out (never below zero).
-   * @this {CairnActorSheet}
-   */
-  static async #onRemoveBond(event, target) {
-    event.preventDefault();
-    // Guarded for the mirror of the race above: two removals in flight each
-    // splice the array THEY read, so the second write resurrects the bond the
-    // first removed — with its granted items already deleted and its gold
-    // already refunded. Same flag, because these four handlers are all
-    // read-modify-write over `system.bonds` and only one may be in flight.
-    if (this._rerolling) return;
-    this._rerolling = true;
-    try {
-      const id = target.dataset.bondId;
-      const bonds = this._effectiveBonds();
-      const idx = bonds.findIndex((b) => b.id === id);
-      if (idx < 0) return;
-      await this._replaceGrantedItems(`bond:${id}`, []);
-      const gold = Math.max(0, (this.actor.system.gold ?? 0) - (bonds[idx].gold ?? 0));
-      bonds.splice(idx, 1);
-      // abNoStatusCard: the refund is grant machinery, like the grant was.
-      await this.actor.update({ "system.bonds": bonds, "system.gold": gold }, { abNoStatusCard: true });
-    } finally {
-      this._rerolling = false;
-    }
-  }
 
   /**
    * Roll — or RE-roll — a single background question in isolation: throw that
@@ -3942,7 +3656,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // record is what makes that reversible — same reason `gold` is stored.
       const newBonus = optionAbilityBonuses(opt);
       const abilityUpdate = abilityDeltaUpdate(this.actor, abilityBonusDelta(newBonus, questions[idx]?.abilities));
-      questions[idx] = { question: table.question ?? "", answer: opt.description ?? "", gold: newGold, abilities: newBonus };
+      questions[idx] = { heading: table.heading ?? "", question: table.question ?? "", answer: opt.description ?? "", gold: newGold, abilities: newBonus };
       // abNoStatusCard: a question re-roll's gold and ability swing is grant machinery.
       await this.actor.update({ "system.questions": questions, "system.gold": gold, ...abilityUpdate }, { abNoStatusCard: true });
     } finally {

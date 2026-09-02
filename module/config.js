@@ -10,13 +10,13 @@ export const Cairn = {};
 // Never a raw literal — always a TABLES key, so renaming a table is one edit in
 // content-packs.js and not a hunt through every generator.
 
-// Cairn 2e generation config. Backgrounds, gear and bonds come from their own
+// Character generation config. Backgrounds and gear come from their own
 // compendiums (see character-generator.js); this covers the shared biography,
 // which draws the 8 physical/personality traits and rolls age.
 // 2e drops the 1e system's Misfortune and Reputation.
 Cairn.characterGenerator2e = {
   // Cairn 2e starts every character with 3d6 coins, on top of any coins their
-  // bond or background choice-tables grant.
+  // background choice-tables grant.
   gold: "3d6",
   biography: {
     // No sentence template here, on purpose (review #13). One lived here —
@@ -91,13 +91,13 @@ Cairn.npcGenerator = {
   },
   // Role `npc` only (2026-08-20, user ask). A hireling's statblock comes off
   // its career; an NPC has no career, so it is ROLLED — Cairn's own
-  // person-making dice, the same pair Barebones creation uses below and a 2e
-  // character uses above. A generator sitting at its schema defaults reads as
-  // broken, and a rolled stranger is the answer the table actually wanted.
+  // person-making dice, the same pair a player character uses above. A
+  // generator sitting at its schema defaults reads as broken, and a rolled
+  // stranger is the answer the table actually wanted.
   ability: "3d6",
   hitProtection: "1d6",
-  // `backgroundGear` — a hardcoded English map from NPC Background name to a
-  // Barebones counterpart — is GONE (2026-08-29). It keyed on the raw text of a
+  // `backgroundGear` — a hardcoded English map from NPC Background name to its
+  // gear — is GONE (2026-08-29). It keyed on the raw text of a
   // shipped English table, and the Trasfondo table is the Warden's now and in
   // Spanish, so every one of its eighteen keys was dead. What replaced it needs
   // no map at all: an NPC's Background is looked up BY NAME as a `background`
@@ -114,14 +114,9 @@ Cairn.npcGenerator = {
 // `monster` ROLE stays — a monster is made with Crear actor and written by
 // hand now.
 
-// Cairn Barebones creation. Abilities/HP/coins follow the SRD; the name comes
-// from the same NPC name table the NPC generator uses, because 2e dropped 1e's
-// name tables and Barebones ships none of its own.
-Cairn.barebonesGenerator = {
-  name: TABLES.names,
-  ability: "3d6",
-  hitProtection: "1d6",
-  gold: "3d6",
-};
+/* `Cairn.barebonesGenerator` stood here and is GONE (2026-09-02, user ruling:
+   "eliminar cualquier referencia a Cairn Barebones. La generación de personaje
+   será solo una"). It was the second of the two character generators; there is
+   one now — `Cairn.characterGenerator2e` above — and every caller goes to it. */
 
 CONFIG.Cairn = Cairn;
