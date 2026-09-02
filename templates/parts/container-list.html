@@ -1,6 +1,20 @@
-{{!-- The Connections tab body: the relationship graph, not an inventory view.
-      The marketplace link that used to live here is gone on purpose — shopping
-      stays on the Items tab; this tab is who travels with whom.
+{{!-- The Vínculos list: the relationship graph, not an inventory view. The
+      marketplace link that used to live here is gone on purpose — shopping
+      stays on the Items tab; this list is who travels with whom.
+
+      RENAMED «Conexiones» → «Vínculos» throughout the interface (2026-09-02,
+      user ruling) and MOVED: it is no longer a tab of its own but the head of
+      the «Vínculos y notas» tab, with the free-form notes editor beneath it.
+      The tab id stayed `notes` — the tab that survived — and the context keys
+      kept their English names (`connectionRows`, `connectionGroups`), which is
+      the house rule: identifiers English, interface Spanish.
+
+      GROUPED BY RELATIONSHIP, one small heading per group (Contactos,
+      Compañeros, Contratados, and a catch-all for a monster, a transport or a
+      container). A group with no members does not render; the grouping and the
+      per-row sentence are both built in actor-sheet.js `connectionGroups`, off
+      the SAME `relationshipLabel` helper the connected actor's own sheet header
+      prints — one sentence, two surfaces.
 
       KEEPER-SIDE ONLY since 2026-08-02, which under the flat graph means the
       CHARACTER sheet only — a PC is never kept, so the upward keeper line and
@@ -23,7 +37,7 @@
       restrictive. Note `system.canKeep` is CHARACTER-ONLY now (the flat graph),
       so Connect renders on a PC's sheet and nowhere else. --}}
 <div class="cairn-items-list-header">
-    <div>{{ localize 'CAIRN.Name' }}</div>
+    <div>{{ localize 'CAIRN.Links' }}</div>
     {{#if @root.canManageConnections}}
     <div class="connection-controls">
         {{#if system.canKeep}}
@@ -32,34 +46,47 @@
     </div>
     {{/if}}
 </div>
-{{#each @root.connectionRows as |row|}}
-<div class="cairn-items-list-row" data-item-id="{{row.uuid}}" data-is-container="true">
-    <div class="cairn-items-list-row-header">
-        <div class="cairn-item-name-and-tags">
-            <a class="cairn-item-title" data-action="itemDescription">
-                {{row.name}} ({{row.slotsUsed}}/{{row.slots}})
-            </a>
-        </div>
+{{#each @root.connectionGroups as |group|}}
+<div class="connection-group connection-group-{{group.key}}">
+    <h4 class="connection-group-heading">{{group.heading}}</h4>
+    {{#each group.rows as |row|}}
+    <div class="cairn-items-list-row" data-item-id="{{row.uuid}}" data-is-container="true">
+        <div class="cairn-items-list-row-header">
+            <div class="cairn-item-name-and-tags">
+                <a class="cairn-item-title" data-action="itemDescription">
+                    {{row.name}} ({{row.slotsUsed}}/{{row.slots}})
+                </a>
+                {{!-- What this actor is to the character keeping it, as ONE
+                      whole sentence («Contacto de Talon»). A monster, a
+                      transport or a container has no such word and shows no
+                      line — the row's name and slot count are the whole of
+                      what a cart is to you. --}}
+                {{#if row.relationship}}
+                <span class="connection-relationship">{{row.relationship}}</span>
+                {{/if}}
+            </div>
 
-        {{!-- TWO controls, deliberately. The trash used to be the only one and it
-              did not delete -- it asked "Delete X?" and then unlinked, which
-              quietly drops the thing on the floor. "Destroy this cart" and
-              "leave this cart here" are different intentions and now have
-              different icons. --}}
-        <div class="cairn-item-controls">
-            <a class="item-control item-edit" data-action="itemEdit" title="{{ localize 'CAIRN.EditItem' }}"><i class="fas fa-edit"></i></a>
-            {{#if row.canUnlink}}
-            <a class="item-control container-unlink" data-action="containerUnlink" title="{{ localize 'CAIRN.UnlinkContainer' }}"><i class="fas fa-link-slash"></i></a>
-            {{/if}}
-            {{#if @root.canDeleteActors}}
-            <a class="item-control item-delete" data-action="itemDelete" title="{{ localize 'CAIRN.DeleteContainer' }}"><i class="fas fa-trash"></i></a>
-            {{/if}}
+            {{!-- TWO controls, deliberately. The trash used to be the only one and it
+                  did not delete -- it asked "Delete X?" and then unlinked, which
+                  quietly drops the thing on the floor. "Destroy this cart" and
+                  "leave this cart here" are different intentions and now have
+                  different icons. --}}
+            <div class="cairn-item-controls">
+                <a class="item-control item-edit" data-action="itemEdit" title="{{ localize 'CAIRN.EditItem' }}"><i class="fas fa-edit"></i></a>
+                {{#if row.canUnlink}}
+                <a class="item-control container-unlink" data-action="containerUnlink" title="{{ localize 'CAIRN.UnlinkContainer' }}"><i class="fas fa-link-slash"></i></a>
+                {{/if}}
+                {{#if @root.canDeleteActors}}
+                <a class="item-control item-delete" data-action="itemDelete" title="{{ localize 'CAIRN.DeleteContainer' }}"><i class="fas fa-trash"></i></a>
+                {{/if}}
+            </div>
         </div>
     </div>
+    {{/each}}
 </div>
 {{/each}}
 {{#unless @root.connectionRows.length}}
 <div class="container-empty">
-    <p>{{ localize 'CAIRN.ConnectionsEmpty' }}</p>
+    <p>{{ localize 'CAIRN.LinksEmpty' }}</p>
 </div>
 {{/unless}}

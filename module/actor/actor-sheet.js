@@ -36,6 +36,7 @@ const NPC_TRAIT_LABELS = {
   virtue: "CAIRN.Trait.Virtue",
   vice: "CAIRN.Trait.Vice",
 };
+
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
 import { FATIGUE_NAME, bookPages } from "../item/item.js";
 import { castFromBook, castSpell, booksOn, canReadBook } from "../magic.js";
@@ -44,57 +45,100 @@ import { pickArt } from "../art-picker.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
-/** Tab labels by id. The nav itself is hand-written in each template, because
- *  the labels carry live data (slot counts, connection counts) and, on the NPC
- *  sheet, a per-role static name: "Background & Notes" on a person and on a
- *  player character, plain "Notes" on a monster, mount, transport or container
- *  (see `context.notesTabLabel`). */
-const TAB_LABELS = {
-  items: "CAIRN.Items",
-  // The tab ID stays `containers` -- it is internal, and renaming it would touch
-  // both templates and the tab filter for no gain anyone can see. What a person READS is "Connections": the relationship
-  // graph — one PC to many NPCs, NPC under NPC below that — listing mounts,
-  // vehicles, loot piles AND hirelings, who never had a link back to whoever
-  // hired them until role hireling put them on it.
-  containers: "CAIRN.Connections",
-  description: "CAIRN.Description",
-  notes: "CAIRN.Notes",
+/**
+ * What a connected actor IS to the character keeping it, keyed by the CHILD's
+ * role. WHOLE-SENTENCE format keys, one per relationship — the house rule the
+ * biography sentence is built on, and for the same reason: "Contacto de" and
+ * "Contratado por" take different prepositions, so no fragment plus a name
+ * survives translation.
+ *
+ * Three roles have a word for it. A MONSTER, a TRANSPORT or a CONTAINER has
+ * none — nobody is "contacted by" a cart — so those answer null and both
+ * surfaces fall back to what they showed before: the keeper's own sheet header
+ * reads the plain "Conectado a: X" (CAIRN.ConnectedToNamed) and the row in the
+ * Vínculos list carries no relationship line at all.
+ *
+ * ONE map, because the sentence is printed in two places that must agree: the
+ * Vínculos list on the keeper's sheet, and the connection line on the connected
+ * actor's own header.
+ */
+const RELATIONSHIP_KEYS = {
+  npc: "CAIRN.Relationship.Contact",
+  companion: "CAIRN.Relationship.Companion",
+  hireling: "CAIRN.Relationship.Hired",
 };
 
-/** Which tabs each actor type shows, in order. `containers` is dropped unless
- *  the actor actually has the Connections tab enabled (see _getTabsConfig —
- *  for the character list that means: not on an unlinked token's actor).
+/**
+ * @param {String|null} role  the CONNECTED actor's role
+ * @param {String} name  the keeping character's name
+ * @returns {String|null} the whole sentence, or null for a role that has none
+ */
+const relationshipLabel = (role, name) =>
+  RELATIONSHIP_KEYS[role] ? game.i18n.format(RELATIONSHIP_KEYS[role], { name: name ?? "" }) : null;
+
+/** The Vínculos list's groups, in render order. A group with no members does
+ *  not render (see `connectionGroups`), so the fourth is invisible in a party
+ *  of people and holds the mounts, carts and loot piles otherwise. */
+const RELATIONSHIP_GROUPS = [
+  { key: "npc", heading: "CAIRN.RelationshipGroup.Contacts" },
+  { key: "companion", heading: "CAIRN.RelationshipGroup.Companions" },
+  { key: "hireling", heading: "CAIRN.RelationshipGroup.Hired" },
+  { key: "other", heading: "CAIRN.RelationshipGroup.Other" },
+];
+
+/** Which group a connected actor's role falls into. Everything without a
+ *  relationship sentence of its own lands in `other`. */
+const relationshipGroupFor = (role) => (RELATIONSHIP_KEYS[role] ? role : "other");
+
+/** Tab labels by id. The nav itself is hand-written in each template, because
+ *  the labels carry live data (slot counts, connection counts). ONE name per
+ *  tab across both sheets since 2026-09-02 — the per-role "Notes" / "Background
+ *  & Notes" split is gone with the merge, and both sheets read
+ *  CAIRN.LinksAndNotes. */
+const TAB_LABELS = {
+  items: "CAIRN.Items",
+  description: "CAIRN.Description",
+  // CHARACTER ONLY: the background's question tables and the character's
+  // obligations, which used to sit at the head of the Notes tab.
+  background: "CAIRN.Background",
+  // The old `containers` tab MERGED INTO THIS ONE (2026-09-02, user ruling):
+  // the connections list first, the free-form notes editor below it. What a
+  // person READS is "Vínculos" — the relationship graph, one PC to many NPCs —
+  // and the tab id stays `notes` because it is the tab that survived.
+  notes: "CAIRN.LinksAndNotes",
+};
+
+/** Which tabs each actor type shows, in order.
  *
- *  The CHARACTER alone carries `containers` (2026-08-02): a PC keeps up to ten
- *  connections, which is a list worth a tab. Any child role has at most ONE
- *  keeper, so the npc sheet expresses that single fact as a header line
- *  (`connectionLine` below) and a tab whose count could only ever read (0) or
- *  (1) went with it. */
+ *  The CHARACTER alone carries `background` (2026-09-02): a PC has a background
+ *  with questions to answer and obligations to owe, and nobody else does. The
+ *  connections LIST is character-only too, but it is a section inside the Links
+ *  & Notes tab now rather than a tab of its own — see container-list.html. */
 const TAB_IDS = {
-  character: ["items", "description", "containers", "notes"],
-  // Description FIRST on the non-player sheet (2026-08-01, asked for): a Warden
-  // opens an NPC to remember who they are — statblock, biography —
-  // and reaches for the inventory second. The character sheet deliberately
-  // keeps Items first; the reorder is the NPC's alone. The order here must
-  // match the hand-written nav in npc-sheet.html. This list is ORDER only —
-  // the tab a fresh sheet OPENS on is `initialTabId` below, which is
-  // role-aware since 2026-08-21.
-  npc: ["description", "items", "notes"],
+  character: ["items", "description", "background", "notes"],
+  // ITEMS FIRST on the non-player sheet too since 2026-09-02 (user ruling: the
+  // same three tabs as the character, minus Trasfondo, in the character's
+  // order). This list is ORDER only — the tab a fresh sheet OPENS on is
+  // `initialTabId` below, which is role-aware and unchanged by the reorder.
+  npc: ["items", "description", "notes"],
   // Same set as npc: one sheet, one tab set. A hireling used to get only
   // items+notes, so anything written in its Description was unreachable.
-  hireling: ["description", "items", "notes"],
+  hireling: ["items", "description", "notes"],
 };
 
 /** The tab a FRESH sheet opens on. Role-aware since 2026-08-21 (user ask):
  *  a PERSON-role sheet (npc, hireling) opens on Items, the character's
- *  default, while the nav ORDER above is untouched — Description still leads
- *  the bar, the sheet just stands on Items. Monsters and things keep the
- *  list head (Description), so the 2026-08-01 "remember who they are"
- *  reasoning survives where no inventory-first ask displaced it. `npcRole`
- *  is null on a character, whose list already leads with Items. */
+ *  default. A MONSTER or a thing still opens on Description — a Warden opens
+ *  one to remember what it is, statblock and prose, and reaches for its cargo
+ *  second (2026-08-01). That used to fall out of Description leading the npc
+ *  nav; the 2026-09-02 reorder put Items at the head, so the rule is named
+ *  here rather than inherited from list order. `npcRole` is null on a
+ *  character, whose list already leads with Items. */
 const initialTabId = (doc) => {
   const ids = TAB_IDS[doc?.type] ?? ["items"];
-  return PERSON_ROLES.includes(doc?.npcRole) ? "items" : ids[0];
+  if (doc?.type === "character") return ids[0];
+  if (PERSON_ROLES.includes(doc?.npcRole)) return "items";
+  return ids.includes("description") ? "description" : ids[0];
 };
 
 /**
@@ -248,6 +292,27 @@ const mayRandomize = (fn) => function (event, target) {
   return fn.call(this, event, target);
 };
 
+/**
+ * Randomization gate for a slot that STARTS EMPTY.
+ *
+ * A question and an obligation now arrive blank and the player rolls them, so
+ * the FIRST roll is not randomization at all — it is finishing the character.
+ * Gating it behind the Warden's allow-player-randomization switch would leave a
+ * player unable to complete a sheet the generator deliberately left unfinished.
+ *
+ * So: an empty slot always rolls; a filled one is a re-roll and rides the gate
+ * like every other die. `data-filled` is written by the template off the same
+ * `filled` flag that picks the tooltip, so the two can never disagree.
+ */
+const mayRandomizeUnlessEmpty = (fn) => function (event, target) {
+  const filled = target?.dataset?.filled === "true";
+  if (filled && !this._mayRandomize()) {
+    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.RandomizationDisabled"));
+    return undefined;
+  }
+  return fn.call(this, event, target);
+};
+
 const owned = (fn) => function (event, target) {
   if (!this.isEditable) {
     // SAY WHY. This used to `return undefined` in silence, which is the worst
@@ -352,6 +417,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       dieOfFate: CairnActorSheet.#onDieOfFate,
       // Description tab
       rollAge: owned(mayRandomize(CairnActorSheet.#onRollAge)),
+      // The «Cumpleaños» generator, beside the Age die inside the Rasgos panel
+      // (2026-09-02). Same gating as every other die on the sheet.
+      rollBirthday: owned(mayRandomize(CairnActorSheet.#onRollBirthday)),
       rollOmen: owned(mayRandomize(CairnActorSheet.#onRollOmen)),
       toggleTraits: CairnActorSheet.#onToggleTraits,
       toggleScars: CairnActorSheet.#onToggleScars,
@@ -364,10 +432,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rollFailedCareerItem: owned(mayRandomize(CairnActorSheet.#onRollFailedCareerItem)),
       // Notes tab — the bond/question controls live inside the template's
       // generationEnabled blocks, so they are surface too, add/remove included.
-      rerollBond: owned(mayRandomize(CairnActorSheet.#onRerollBond)),
+      rerollBond: owned(mayRandomizeUnlessEmpty(CairnActorSheet.#onRerollBond)),
       addBond: owned(mayRandomize(CairnActorSheet.#onAddBond)),
       removeBond: owned(mayRandomize(CairnActorSheet.#onRemoveBond)),
-      rerollQuestion: owned(mayRandomize(CairnActorSheet.#onRerollQuestion)),
+      rerollQuestion: owned(mayRandomizeUnlessEmpty(CairnActorSheet.#onRerollQuestion)),
     },
   };
 
@@ -447,29 +515,33 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * The tab set varies by actor type, and the Containers tab comes and goes with
-   * the actor's containers.
+   * The tab set varies by actor type: a character carries Trasfondo, nobody
+   * else does.
+   *
+   * The Connections tab that used to come and go with `showContainersTab` is
+   * GONE (2026-09-02) — the list is a section inside Links & Notes now, and
+   * that section carries the same gate. Nothing filters the id list any more,
+   * but the vanished-tab reset below stays MANDATORY: it is what catches a
+   * character sheet re-rendering onto a tab set that no longer holds the tab
+   * the window is standing on (a re-typed document, or this very edit meeting a
+   * sheet left open on `containers`).
    * @override
    */
   _getTabsConfig(group) {
     const config = foundry.utils.deepClone(super._getTabsConfig(group));
     if (!config) return config;
-    const ids = (TAB_IDS[this.actor.type] ?? ["items"])
-      .filter((id) => id !== "containers" || this.actor.system.showContainersTab);
+    const ids = TAB_IDS[this.actor.type] ?? ["items"];
     config.tabs = ids.map((id) => ({ id, label: TAB_LABELS[id] }));
     // The group's initial is ROLE-aware (`initialTabId`), not the static TABS
-    // default ("items") and not blindly the list head: a person-role sheet
-    // opens on Items (2026-08-21) under a nav that still leads with
-    // Description, a monster on Description. The vanished-tab reset below
-    // lands on the same answer. The includes() guard is for the character
-    // list only, whose head IS the initial, so it never actually filters —
-    // but an initial the filtered list dropped would strand the reset.
+    // default ("items") and not blindly the list head: a person-role sheet and
+    // a character open on Items, a monster on Description. The vanished-tab
+    // reset below lands on the same answer.
     const initial = initialTabId(this.actor);
     config.initial = ids.includes(initial) ? initial : (ids[0] ?? config.initial);
-    // Losing your last container removes the tab you were standing on.
-    // `_prepareTabs` only defaults the group when it is unset (`??=`), so without
-    // this the group keeps pointing at a tab that is no longer rendered and NO
-    // panel is active — a blank sheet body with no error.
+    // THE GUARD. `_prepareTabs` only defaults the group when it is unset
+    // (`??=`), so without this the group keeps pointing at a tab that is no
+    // longer rendered and NO panel is active — a blank sheet body with no
+    // error. Every tab added or removed anywhere in this file relies on it.
     if (!ids.includes(this.tabGroups[group])) this.tabGroups[group] = config.initial;
     return config;
   }
@@ -845,7 +917,25 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       slotsUsed: c.system.slotsUsed,
       slots: c.system.slots,
       canUnlink: game.user.isGM || (this.actor.isOwner && c.isOwner),
+      // What this actor IS to the character keeping it, from the CHILD's role
+      // — the same sentence the child's own sheet header prints, through the
+      // same helper, so the two surfaces cannot drift (they were one ruling).
+      role: c.npcRole,
+      relationship: relationshipLabel(c.npcRole, this.actor.name),
     }));
+    // ...grouped by relationship, with a heading apiece (2026-09-02, user
+    // ruling): a flat list of ten said nothing about which of them travel with
+    // you and which of them merely owe you a favour. An EMPTY group does not
+    // render, and the group a role falls into is `relationshipGroupFor` — the
+    // three named ones plus a catch-all for a monster, a transport or a
+    // container, whose rows carry no relationship line at all.
+    context.connectionGroups = RELATIONSHIP_GROUPS
+      .map((g) => ({
+        key: g.key,
+        heading: game.i18n.localize(g.heading),
+        rows: context.connectionRows.filter((r) => relationshipGroupFor(r.role) === g.key),
+      }))
+      .filter((g) => g.rows.length);
     // ...and the keeper line's break link, same rule from the child's end. A
     // DANGLING keeper (uuid resolving to nothing) has no other end left to
     // own, so the child's owner suffices — that detach is the only recovery
@@ -870,20 +960,24 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // never drift into looking like different controls.
       context.showCareer = role === "hireling";
       context.showBackground = role === "npc";
-      // FOR HIRE IS THE HIRELING'S BOX, and only theirs (user ask, in the same
-      // breath as the split: "NPCs do not need the For Hire or Day Rate
-      // fields"). It gated on isNpcPerson, which was the same thing as "is a
-      // hireling" right up until the split gave that predicate a second role —
-      // so the NPC sheet was offering a checkbox whose only effect, the day
-      // rate, is gated on the role it is not. Ticking it did nothing visible.
+      // FOR HIRE IS EVERY PERSON'S BOX (2026-09-02, user ruling, reversing the
+      // 2026-08-20 "NPCs do not need the For Hire or Day Rate fields"): an
+      // innkeeper who will guide the party for 3gp a day is an NPC with a
+      // price, and the day rate follows the CHECKBOX rather than the role.
+      // A monster, a companion, a cart or a crate gets neither control —
+      // `forHire`'s schema initial is TRUE, so every one of them silently
+      // stores a ticked box, and the role gate is what keeps that unread.
       //
-      // Separate from showCareer even though both read "role is hireling": the
-      // career row is a FIELD and this is a mechanic that happens to belong to
-      // the same role, and the template must be able to move one without the
-      // other. The stored boolean is never cleared — an NPC re-roled to
-      // hireling gets its old answer back, like every other field the two
-      // roles do not share.
-      context.showForHire = role === "hireling";
+      // Derived on the document (actor.js `showForHire`/`showDayRate`), where
+      // the day rate's gate already lived, so the box and the rate cannot
+      // disagree about who is a person. Mirrored onto the context because the
+      // template's own `showForHire` predates the derivation.
+      //
+      // Separate from showCareer: the career row is a FIELD, this is a
+      // mechanic, and the template must be able to move one without the other.
+      // The stored boolean is never cleared — a re-roled actor gets its old
+      // answer back, like every other field the roles do not share.
+      context.showForHire = this.actor.system.showForHire === true;
       // Faction shows for anyone who can take sides — either person OR a
       // monster; things have no politics. It used to ride the Career gate,
       // which is why Monsters never saw it: a job is a person's, and a monster
@@ -905,10 +999,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       context.kindCustomValue = context.kindIsCustom ? cls : "";
       context.professionDisplay = this.actor.system.profession;
       context.backgroundDisplay = this.actor.system.background;
-      // Every role says plain "Notes" (user ruling 2026-08-08). The person role
-      // used to mirror the character sheet's "Background & Notes" wording; that
-      // parity read as noise on an NPC, so only the character sheet keeps it.
-      context.notesTabLabel = game.i18n.localize("CAIRN.Notes");
+      // `notesTabLabel` lived here and is RETIRED (2026-09-02): both sheets
+      // read one static key, CAIRN.LinksAndNotes, straight from their nav. The
+      // per-role split it carried ("Notes" on an NPC against the character's
+      // "Background & Notes") had nothing left to distinguish once the two tabs
+      // merged under one name.
       // The connection line under the header (2026-08-02): the child end's ONE
       // upward edge, expressed as a field rather than a tab — any child role
       // has at most one keeper, so the Connections tab this sheet used to carry
@@ -917,16 +1012,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // the keeper is renamed — the prepareDerivedData copy it replaces went
       // stale until something else touched this actor.
       //
-      // Label sense is ruled (2026-08-02): "Hired by" only for a PERSON who is
-      // actually for hire — the role gate is load-bearing, since forHire's
-      // schema initial is true and a mount can silently store it — "Connected
-      // to" for everyone else with a keeper, the stamped "Formerly connected
-      // to" once unlinked, and nothing if it was never connected. The controls
-      // reuse the registered connectionAttach/connectionDetach actions and
-      // their gates verbatim; only their template home moved.
-      const hired = role === "hireling" && this.actor.system.forHire === true;
+      // Label sense is RULED BY THE ROLE since 2026-09-02: the line says what
+      // this actor IS to its keeper — "Contacto de X", "Compañero de X",
+      // "Contratado por X" — through `relationshipLabel`, THE SAME helper the
+      // keeper's own Vínculos list prints beside this actor's name. That was
+      // the ask: one sentence, two surfaces, kept in step by having one
+      // builder. A monster, a transport or a container has no such word, so
+      // those keep the plain "Conectado a: X" this line has always shown.
+      //
+      // It replaces a `forHire`-driven "Hired by": a hireling is now hired by
+      // its ROLE, and reading the checkbox here made the label flicker every
+      // time a Warden took somebody off the market.
+      //
       // Parked (2026-08-09): with the Connections UI off, the line never gains
-      // a label or a control — but it still RENDERS for a hireling, because
+      // a label or a control — but it still RENDERS for a person, because
       // showConnectionLine's showForHire arm below is what keeps the For Hire
       // checkbox on screen, and For Hire is the day-rate mechanic, not
       // connections. The builder is skipped, not the line.
@@ -934,8 +1033,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         // no connectionLine
       } else if (keeperDoc) {
         context.connectionLine = {
-          label: game.i18n.format(hired ? "CAIRN.HiredBy" : "CAIRN.ConnectedToNamed",
-            { name: keeperDoc.name }),
+          label: relationshipLabel(role, keeperDoc.name)
+            ?? game.i18n.format("CAIRN.ConnectedToNamed", { name: keeperDoc.name }),
           detach: context.canDetach,
         };
       } else if (keeperLink) {
@@ -957,12 +1056,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         context.connectionLine = { attach: context.canManageConnections };
       }
       // The line renders whenever it has something to say — and ALWAYS for a
-      // HIRELING, whose For Hire checkbox lives on it and must stay visible
-      // while unticked (the deadlock lesson: never hidden by anything it
-      // hides). It was isNpcPerson until 2026-08-20 for exactly that reason,
-      // and follows the checkbox now that the checkbox has narrowed: with the
-      // Connections UI parked an NPC's line has nothing at all to put in it, so
-      // rendering it drew an empty row under the Background.
+      // PERSON, whose For Hire checkbox lives on it and must stay visible while
+      // unticked (the deadlock lesson: never hidden by anything it hides). It
+      // follows the checkbox, which is back to both person roles as of
+      // 2026-09-02; a monster or a thing with the Connections UI parked has
+      // nothing at all to put in the line, so it is not drawn.
       context.showConnectionLine = context.showForHire
         || !!(context.connectionLine
           && (context.connectionLine.label || context.connectionLine.attach));
@@ -1305,8 +1403,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     });
 
     // Live constructed trait sentence + collapsible pick-lists (transient
-    // sheet state; defaults collapsed so the sentence is the clean default view).
-    context.traitSentence = this._buildTraitSentence(this.actor.system.traits, this.actor.system.age);
+    // sheet state; defaults collapsed so the sentence is the clean default
+    // view). The sentence now OPENS the Description tab and everything that
+    // feeds it — the eight pick-lists, the birthday die and the age die —
+    // lives inside the «Rasgos» panel below it (2026-09-02, user ruling).
+    context.traitSentence = this._buildTraitSentence(
+      this.actor.system.traits, this.actor.system.age, this.actor.system.birthday);
     context.traitsCollapsed = this._traitsCollapsed ?? true;
 
     // Scars pick-list, off the SAME Cicatrices table the damage flow draws from
@@ -1356,8 +1458,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   /**
    * Description tab: the biography block (see _prepareBiographyContext), plus
-   * the 2e background header/description; and the Notes tab's bonds and
-   * questions. Character-only — the npc path shares only the biography part.
+   * the 2e background header/description; and the Trasfondo tab's questions
+   * and obligations (both moved off the Notes tab 2026-09-02).
+   * Character-only — the npc path shares only the biography part.
    * @private
    */
   async _prepareCharacterContext(context) {
@@ -1382,15 +1485,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.is2eBackground = this.actor.system.contentSource === "2e";
     context.isBarebonesBackground = this.actor.system.contentSource === "barebones";
     context.hasGeneratedBackground = !!this.actor.system.backgroundUuid;
-    // `showBackgroundNotesLabel` lived here (the Notes tab renamed itself
-    // "Background & Notes" once a background was attached). Retired 2026-08-01:
-    // one name, one key, and the label no longer disagrees with
-    // TAB_LABELS.notes on generated characters. 2026-08-02 made the label
-    // static per role (person read CAIRN.BackgroundAndNotes); 2026-08-08
-    // flattened that too — every NPC-sheet role reads CAIRN.Notes, and only
-    // the character sheet's hardcoded tab keeps the long wording. The DYNAMIC,
-    // data-driven rename stays dead: two characters must not disagree on what
-    // their own tabs are called.
+    // `showBackgroundNotesLabel` lived here (the Notes tab renamed itself once
+    // a background was attached). Retired 2026-08-01, and the per-role static
+    // variants that replaced it are gone too (2026-09-02): both sheets now read
+    // one key, TAB_LABELS.notes / CAIRN.LinksAndNotes, and a character's
+    // background has a tab of its own. The DYNAMIC, data-driven rename stays
+    // dead: two characters must not disagree on what their own tabs are called.
     // Scars and Age are never generated — a player fills each in by hand after
     // the fact — so they are NOT edition-specific and show on both. Only
     // character CREATION differs between 2e and Barebones (see CLAUDE.md,
@@ -1440,23 +1540,36 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.generationEnabled = this.actor.system.generationEnabled !== false
       && this._mayRandomize();
 
-    // Notes tab: bonds (a character can hold several) + the background's
-    // re-rollable questions. Questions are 2e; bonds are 2e, but a legacy
-    // Barebones character may still hold one from the retired lending
-    // setting, so show the section whenever the character actually has one.
-    context.bonds = this._effectiveBonds().map((b) => ({ ...b }));
+    // TRASFONDO TAB (2026-09-02; this whole block used to head the Notes tab):
+    // the background's question tables and the character's obligations. Both
+    // arrive from generation EMPTY and are filled by their own die on this tab,
+    // which is what `filled` distinguishes — an unrolled slot shows the
+    // "sin tirar" placeholder and a "roll" tooltip, a filled one its answer and
+    // a "re-roll" tooltip. One control either way, on one handler: rolling an
+    // empty slot is the same swap-out/swap-in with nothing to swap out.
+    //
+    // Obligations are 2e; a legacy Barebones character may still hold one from
+    // the retired lending setting, so show the section whenever it has any.
+    context.bonds = this._effectiveBonds().map((b) => ({
+      ...b,
+      filled: !!String(b.description ?? "").trim(),
+    }));
     context.showBonds = context.is2eBackground || context.bonds.length > 0;
-    // "Add a bond" shows only while below the background's entitlement (base 1,
-    // plus a second for Fieldwarden / Outrider's debt option). A fresh character
-    // starts AT its entitlement, so the link is normally hidden.
+    // "Add an obligation" shows only while below the background's entitlement
+    // (base 1, plus a second for Fieldwarden / Outrider's debt option). A fresh
+    // character starts AT its entitlement — in empty slots — so the link is
+    // normally hidden, and appears once a rolled ANSWER raises the entitlement.
     context.canAddBond = context.bonds.length < (await this._bondEntitlement(bg));
-    // Divider between the bonds/questions area and the free-form notes editor.
-    context.showNotesDivider = context.showBonds;
     context.questions = (this.actor.system.questions ?? []).map((q) => ({
       ...q,
       question: q.question ?? "",
       answer: q.answer ?? "",
+      filled: !!String(q.answer ?? "").trim(),
     }));
+    // Nothing to show at all: no background questions and no obligations. The
+    // tab still renders (it is in the character's tab set unconditionally), so
+    // it says so rather than standing empty.
+    context.backgroundTabEmpty = !context.showBonds && !(context.is2eBackground && context.questions.length);
     // The Notes editor is TOGGLED (character-sheet.html), so this is its
     // light-DOM DISPLAY half. Enriched but NOT translated: notes are the
     // player's own prose and no content namespace files them.
@@ -2134,84 +2247,68 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Build the live "You have a ... Physique, ..." sentence from the current trait
-   * values + age, so it always reflects the dropdowns. Empty traits are skipped.
+   * The first-person portrait that OPENS the Description tab: "Soy de físico
+   * fornido, de piel curtida, … Nací en pleno invierno y tengo 34 años."
    *
-   * SECOND PERSON for a character, THIRD for anyone else (2026-08-20, user
-   * ruling): a player reads "You are Honest and Vain" on their own sheet, and a
-   * Warden reads "They are…" on an NPC's or a hireling's. Routed through
-   * `_wording`, which is how every other NPC-worded string on this sheet
-   * resolves, rather than a second sentence builder — the wording differs, the
-   * assembly does not, and two builders is how the two drift.
+   * ONE WHOLE-SENTENCE KEY, with named placeholders, and never a join of
+   * fragments (2026-09-02, user ruling — restated as the house rule). The
+   * clause-per-key assembly this replaces could not survive Spanish: "de físico
+   * {value}" and "un rostro {value}" take different articles, the vice/virtue
+   * pair needs "se dice que soy X pero que también soy Y" rather than a comma
+   * list, and an opening «¿» has no fragment to live in at all. A translator
+   * owns the whole sentence or owns nothing.
    *
-   * `_wording` answers with the `…Npc` variant only when THIS language has one,
-   * so a Spanish client keeps its translated second-person string until a
-   * translator adds the variants. That is deliberate and is the whole reason it
-   * passes `fallback: false` — see the helper. A missing variant must never
-   * mean serving English over a working translation.
+   * FIRST PERSON on a character, THIRD on anyone else — routed through
+   * `_wording`, which is how every NPC-worded string on this sheet resolves and
+   * is why there is one key and not two builders. The two are genuinely
+   * different sentences, not one sentence with swapped verbs: the NPC's also
+   * carries Quirk and Goal, the two traits only an npc-role actor stores, so
+   * folding them in as an optional clause would be the fragment concatenation
+   * this whole note exists to forbid.
    *
-   * Pronoun-accurate wording ("He is…", "She is…") is NOT done, though the
+   * AN UNSET TRAIT IS A VISIBLE GAP (`CAIRN.Bio.Unset`, "____"), not a dropped
+   * clause: the sentence must show the player which of the ten answers is still
+   * missing, and a clause that silently disappears reads as a complete portrait
+   * of somebody with no hair. It is a localization key rather than a literal so
+   * a translator can choose their own blank.
+   *
+   * Pronoun-accurate wording ("Es alto" / "Es alta") is NOT done, though the
    * pronouns are right there on the document: Spanish adjectives agree in
    * gender, so per-pronoun variants would multiply the translator's work by
-   * three for every clause in the sentence.
+   * three for the whole sentence.
    *
    * The printed character page shares this builder (`traitsProse`), so the
-   * ruling reaches paper with no second change.
+   * ruling reaches paper with no second change — blanks included, which is what
+   * a sheet printed to be filled in by hand wants anyway.
    * @param {Object} traits
    * @param {String} age
+   * @param {String} birthday
    * @returns {String}
    * @private
    */
-  _buildTraitSentence(traits = {}, age = "") {
-    // i18n-driven so the whole sentence localizes: each clause/conjunction is a
-    // CAIRN.Bio.* key (English defaults reproduce the original wording exactly).
-    const F = (k, data) => game.i18n.format(this._wording(k), data);
-    const val = (key) => String(traits?.[key] ?? "").trim();
-    const sep = game.i18n.localize("CAIRN.Bio.ListSep");
-    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-    const andList = (arr) =>
-      arr.length <= 1 ? (arr[0] ?? "")
-      : arr.length === 2 ? F("CAIRN.Bio.ListTwo", { first: arr[0], second: arr[1] })
-      : F("CAIRN.Bio.ListMore", { init: arr.slice(0, -1).join(sep), last: arr[arr.length - 1] });
-
-    const parts = [];
-    const physical = [
-      val("physique") && F("CAIRN.Bio.Physique", { value: val("physique") }),
-      val("skin") && F("CAIRN.Bio.Skin", { value: val("skin") }),
-      val("hair") && F("CAIRN.Bio.Hair", { value: val("hair") }),
-    ].filter(Boolean);
-    if (physical.length) parts.push(F("CAIRN.Bio.Physical", { list: andList(physical) }));
-
-    const faceSpeech = [
-      val("face") && F("CAIRN.Bio.Face", { value: val("face") }),
-      val("speech") && F("CAIRN.Bio.Speech", { value: val("speech") }),
-    ].filter(Boolean);
-    // Capitalize the assembled sentence, not a fragment, so it works in any language.
-    if (faceSpeech.length) parts.push(cap(F("CAIRN.Bio.FaceSpeech", { list: faceSpeech.join(sep) })));
-
-    if (val("clothing")) parts.push(F("CAIRN.Bio.Clothing", { value: val("clothing") }));
-
-    // The two NPC-only traits (2026-08-20). Nobody else stores them, so no gate
-    // is needed — an empty value is skipped like every other clause.
-    //
-    // Quirk gets a clause that NAMES it ("Their Quirk is Missing Ear") rather
-    // than being folded into the adjective list below, and that is a wording
-    // decision with a reason: the Warden's Guide list is not all adjectives.
-    // "They are Gaunt" reads, "They are Missing Ear" and "They are Bright Eyes"
-    // do not, and a phrasing that is wrong for a third of a d20 table is wrong.
-    if (val("quirk")) parts.push(F("CAIRN.Bio.Quirk", { value: val("quirk") }));
-
-    const viceVirtue = [val("vice"), val("virtue")].filter(Boolean);
-    if (viceVirtue.length) parts.push(F("CAIRN.Bio.ViceVirtue", { list: andList(viceVirtue) }));
-
-    // Every entry on the Goals table is a noun — Ascension, Revenge, Wealth —
-    // so one verb carries all twenty.
-    if (val("goal")) parts.push(F("CAIRN.Bio.Goal", { value: val("goal") }));
-
-    const ageStr = String(age ?? "").trim();
-    if (ageStr) parts.push(F("CAIRN.Bio.Age", { value: ageStr }));
-
-    return parts.join(" ");
+  _buildTraitSentence(traits = {}, age = "", birthday = "") {
+    const blank = game.i18n.localize("CAIRN.Bio.Unset");
+    // Every slot resolves to SOMETHING: the stored value, or the visible gap.
+    const val = (v) => {
+      const s = String(v ?? "").trim();
+      return s || blank;
+    };
+    return game.i18n.format(this._wording("CAIRN.Bio.Portrait"), {
+      physique: val(traits?.physique),
+      skin: val(traits?.skin),
+      hair: val(traits?.hair),
+      face: val(traits?.face),
+      speech: val(traits?.speech),
+      clothing: val(traits?.clothing),
+      vice: val(traits?.vice),
+      virtue: val(traits?.virtue),
+      // Carried for the NPC wording alone; the character sentence names neither
+      // placeholder and `format` simply leaves an unused one unused.
+      quirk: val(traits?.quirk),
+      goal: val(traits?.goal),
+      birthday: val(birthday),
+      age: val(age),
+    });
   }
 
   /**
@@ -2340,7 +2437,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       !isChar && sys.panicked && L("CAIRN.Panicked"),
       sys.critical && L("CAIRN.CriticalDamage"),
     ].filter(Boolean).join(" · ");
-    const traitsProse = this._buildTraitSentence(sys.traits, sys.age);
+    const traitsProse = this._buildTraitSentence(sys.traits, sys.age, sys.birthday);
 
     // The background's own prose and its rolled question/answer pairs (user
     // additions 2026-08-08). Each Q&A stays its OWN pair of paragraphs:
@@ -3548,6 +3645,25 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
+   * Roll the «Cumpleaños» table into the birthday field.
+   *
+   * roll(), not draw(), like every other pick-list read on this sheet: the
+   * table's drawn state is never mutated, so a Warden's table cannot be
+   * exhausted by a session of character creation. A missing table is reported
+   * by `generatorTable` (once per session, via content-packs) rather than here
+   * — this is a plain pick off a Generadores table, with none of the Omen die's
+   * "you pressed this exact button" specificity to add.
+   * @this {CairnActorSheet}
+   */
+  static async #onRollBirthday(event) {
+    event.preventDefault();
+    const table = await cachedGeneratorTable(TABLES.birthday);
+    if (!table) return;
+    const { results } = await table.roll();
+    await this.actor.update({ "system.birthday": resultText(results?.[0]) });
+  }
+
+  /**
    * Roll the Omens table and drop the result into the omen field (enabled by its
    * checkbox). roll(), not draw(): the Omens table is read-only from here — the
    * drawn text is stored on the actor, nothing is automated.
@@ -3658,12 +3774,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /* -------------------------------------------- */
-  /*  Actions — notes tab (bonds and questions)   */
+  /*  Actions — Trasfondo tab (obligations, questions)  */
   /* -------------------------------------------- */
 
   /**
-   * Re-roll one bond (by its stable id) from the Bonds table, syncing its granted
-   * items and gold on the inventory, like a question re-roll.
+   * Roll — or RE-roll — one obligation (by its stable id) from the Obligaciones
+   * table, syncing its granted items and gold on the inventory, like a question
+   * roll.
+   *
+   * ONE handler for both, since 2026-09-02: generation now leaves every
+   * obligation as an empty slot, and filling one is exactly this operation with
+   * nothing to swap out — the item swap is a no-op, the old gold is 0 and the
+   * `avoid` list drops the blank descriptions on its own (drawBond filters
+   * them). Only the control's TOOLTIP differs, chosen in the template by
+   * `filled`; writing a second path was the alternative, and a second path is
+   * how the two drift.
    * @this {CairnActorSheet}
    */
   static async #onRerollBond(event, target) {
@@ -3764,14 +3889,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Re-roll a single background question in isolation: re-roll that table's own
-   * die (from the source background via `backgroundUuid`), replace only that
-   * question's answer, and sync the items, gold and ability bonuses it grants
-   * (options carry gear as references, resolved through resolveRefs like
-   * generation does).
+   * Roll — or RE-roll — a single background question in isolation: throw that
+   * table's own die (from the source background via `backgroundUuid`), replace
+   * only that question's answer, and sync the items, gold and ability bonuses
+   * it grants (options carry gear as references, resolved through resolveRefs
+   * like generation does).
+   *
+   * THIS IS NOW THE ONLY PATH by which a question is ever answered (2026-09-02):
+   * generation leaves every answer empty, so the FIRST click on a question's die
+   * is this same swap with nothing to swap out — no items to delete, an old gold
+   * of 0 and a zeroed old ability tally, so the arithmetic below simply adds the
+   * new answer's grants. It is where the gold, the item and the ability bonuses
+   * an answer carries actually arrive.
    *
    * `bgTableDie`, not the option count — the SAME rule applyChoiceTables rolls
-   * on, so a question re-rolled here and one rolled at generation cannot land on
+   * on, so a question rolled here and one a dry-run preview rolls cannot land on
    * different dice.
    * @this {CairnActorSheet}
    */

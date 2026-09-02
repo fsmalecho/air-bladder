@@ -1726,12 +1726,17 @@
     gap: 8px;
 }
 
-/* Pronouns and Age side by side at the top. */
-.character-traits .bio-top {
+/* Pronombres, Cumpleaños and Edad, INSIDE the «Rasgos» panel and under the
+   pick-list grid (2026-09-02 — they used to sit above the sentence as
+   `.bio-top`, which is the one place the tab may not open on). Same two-column
+   shape as the grid above it, so the two blocks line up; a third row simply
+   wraps to the left column, which is what the pronoun/birthday/age trio does. */
+.character-traits .bio-generators {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 16px;
     row-gap: 4px;
+    margin-top: 6px;
 }
 
 /* The constructed trait sentence — the default read view of the character's
@@ -1785,6 +1790,11 @@
     font-style: italic;
 }
 
+/* The generator rows carry the same per-row spacing the grid supplies. */
+.character-traits .bio-generators .trait-row {
+    margin-bottom: 0;
+}
+
 /* Label on the left, control on the right (not stacked). */
 .character-traits .trait-row,
 .character-omen-scar .omen-row {
@@ -1807,8 +1817,10 @@
     margin-bottom: 0;
 }
 
-/* Pronouns and Age hug their fields instead of reserving the 96px column. */
+/* Pronouns, Birthday and Age hug their fields instead of reserving the 96px
+   column — three short labels over three short fields. */
 .character-traits .pronouns-row .trait-label,
+.character-traits .birthday-row .trait-label,
 .character-traits .age-row .trait-label {
     min-width: auto;
 }
@@ -1923,8 +1935,31 @@ textarea.omen-input {
 }
 
 /******************************************************************************
- * Notes tab: bonds + background questions above the free-form notes editor.
+ * Trasfondo tab: the background's questions and the character's obligations.
+ * (Both lived at the head of the Notes tab until 2026-09-02.)
  ******************************************************************************/
+/* One heading per section — «Preguntas del trasfondo», «Obligaciones». Sized
+   down from a browser h3, which is a display heading and dwarfs the question
+   text it introduces. */
+.background-section-heading {
+    margin: 12px 0 6px 0;
+    font-size: 1em;
+    font-weight: bold;
+    border: none;
+}
+
+.background-section-heading:first-child {
+    margin-top: 0;
+}
+
+/* An answer nobody has rolled yet: the same muted italic the Omen and Scars
+   placeholders use, so "not filled in" reads the same everywhere. */
+.question-answer.unrolled,
+.bond-answer.unrolled {
+    color: var(--ab-muted);
+    font-style: italic;
+}
+
 .bond-block,
 .question-block {
     margin: 0 0 8px 0;
@@ -3056,6 +3091,33 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 .cairn-items-list-header .connection-controls {
     display: flex;
     gap: 12px;
+}
+
+/* The Vínculos list is grouped by relationship (2026-09-02): a small heading
+   per group, and a group with no members is not rendered at all — so these
+   never produce an empty band. */
+.connection-group {
+    margin-bottom: 10px;
+}
+
+.connection-group-heading {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ab-muted);
+    border: none;
+}
+
+/* "Contacto de Talon", under the connected actor's name — the same sentence
+   its own sheet header prints. Second-line, muted, so the row still reads
+   name-first. */
+.connection-relationship {
+    display: block;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--ab-muted);
 }
 
 .container-empty {

@@ -278,6 +278,13 @@ class CharacterData extends CairnDataModel {
       background: str(),
       bonds: objList(),
       age: str(),
+      // The day this character was born, as the «Cumpleaños» table words it
+      // ("en pleno invierno", "durante la cosecha"). PLAIN TEXT rather than a
+      // date: the table's rows are seasons and events, not calendar days, and
+      // the first-person portrait on the Description tab reads it verbatim
+      // ("Nací {birthday}"). Free-typed values are as legal as rolled ones —
+      // the die beside the field is an offer, not the only writer.
+      birthday: str(),
       traits: traits(),
       biography: html(),
       // The Description tab's free prose and the Notes tab's editor. Both are
@@ -412,6 +419,11 @@ class NpcData extends CairnDataModel {
       faction: str(),
       pronouns: str(),
       age: str(),
+      // Same field, same rules, as CharacterData's — a person has a birthday
+      // whichever sheet draws them, and the biography block is shared between
+      // the two. On the shared model because a schema cannot vary by role: a
+      // crate carries an unread "" that costs nothing.
+      birthday: str(),
       traits: traits(),
       scarEnabled: bool(),
       scars: strList(),

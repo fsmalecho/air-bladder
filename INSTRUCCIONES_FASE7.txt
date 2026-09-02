@@ -1,0 +1,149 @@
+MONDOLME — Fase 7: las fichas
+================================
+
+Sobre la fase 6 ya aplicada.
+
+
+CÓMO APLICARLO
+--------------
+
+Igual que las dos anteriores: borra estas cinco carpetas y luego descomprime.
+
+     module
+     tools
+     lang
+     css
+     templates
+
+Después reemplaza system.json y package.json cuando Windows pregunte, y
+commit + push.
+
+
+LAS PESTAÑAS
+------------
+
+  Personaje jugador:  Equipo · Descripción · Trasfondo · Vínculos y notas
+  PNJ:                Equipo · Descripción · Vínculos y notas
+
+El PNJ no tiene pestaña de Trasfondo, como pediste.
+
+
+LA PESTAÑA DESCRIPCIÓN
+----------------------
+
+Empieza con el retrato en primera persona:
+
+  "Soy de físico ___, de piel ___, de cabello ___, y un rostro ___. Tengo una
+   voz ___ y llevo una vestimenta ___. Se dice que soy ___ pero que también
+   soy ___. Nací ___ y tengo ___ años."
+
+Los rasgos que aún no tienen valor salen como una raya visible, no
+desaparecen: así ves de un vistazo lo que falta por rellenar.
+
+Debajo, el botón "Rasgos" despliega los ocho selectores (Físico, Piel,
+Cabello, Rostro, Voz, Vestimenta, Defecto, Virtud) más los generadores de
+Cumpleaños y de Edad. Los pronombres también se han metido ahí dentro: era
+la única línea editable que la frase no consume, y la pestaña debe abrir
+mostrando el retrato.
+
+Más abajo siguen Cicatrices, Presagios e Idiomas como estaban. El PNJ tiene
+todo eso menos los Presagios, y su retrato está en tercera persona.
+
+
+LA PESTAÑA TRASFONDO
+--------------------
+
+Aquí están las preguntas del trasfondo y las Obligaciones.
+
+CAMBIO IMPORTANTE, y es el que pediste: un personaje recién generado llega
+con las preguntas HECHAS PERO SIN RESPONDER, y con sus casillas de
+Obligación vacías. El generador ya no las tira.
+
+Las tira el jugador, una a una, desde esta pestaña. Y el oro, el objeto y
+las bonificaciones a características que trae cada respuesta llegan en ese
+momento, no al crear el personaje.
+
+Ojo con la consecuencia: un personaje recién creado tiene menos oro y menos
+equipo del que tendrá cuando termine de responder. Es lo que has pedido, pero
+conviene saberlo antes de la primera partida.
+
+Nota de interpretación: entendí que tanto las preguntas COMO las
+Obligaciones esperan al jugador. Si querías que las Obligaciones sí se
+tiraran al generar, dímelo y es un cambio pequeño.
+
+La PRIMERA tirada de cada pregunta y de cada obligación NO depende del
+interruptor "permitir aleatorización a los jugadores". Volver a tirarlas sí.
+La razón: con las respuestas empezando en blanco, esa primera tirada no es
+aleatorizar nada, es terminar el personaje — y dejarla detrás del interruptor
+dejaría al jugador sin poder acabar su propia ficha.
+
+
+LA PESTAÑA VÍNCULOS Y NOTAS
+---------------------------
+
+Lo que antes se llamaba "Conexiones" ahora es "Vínculos", y comparte pestaña
+con las notas: primero la lista de vínculos, debajo el cuadro de texto.
+
+Cada actor vinculado muestra su relación con el personaje, según el rol que
+tenga:
+
+     rol PNJ         ->  "Contacto de (nombre)"
+     rol Compañero   ->  "Compañero de (nombre)"
+     rol Seguidor    ->  "Contratado por (nombre)"
+
+Y la lista va AGRUPADA por relación, con un encabezado por grupo
+(Contactos, Compañeros, Contratados y "Otros vínculos"). Los grupos vacíos
+no se muestran. Preguntaste si se podía ordenar por relación: agrupar se lee
+mejor que ordenar y no hace falta ningún dato nuevo.
+
+Un monstruo, un transporte o un contenedor vinculado no tiene frase de
+relación — no la hay que tenga sentido — y cae en "Otros vínculos" mostrando
+su nombre y sus espacios, como hasta ahora.
+
+Esa misma frase es la que aparece en la cabecera de la ficha del PNJ
+vinculado, para que las dos digan lo mismo.
+
+
+LA FICHA DE PNJ
+---------------
+
+La cabecera conserva el selector de Rol, y Trasfondo y Facción como estaban.
+
+Se le añade lo que antes solo tenían los seguidores: la casilla "Disponible
+para contratar" y su salario en monedas por día. Ahora aparece en cualquier
+PNJ que sea una PERSONA (rol PNJ o Seguidor). Un monstruo, un compañero, un
+transporte o un contenedor no la muestran — la casilla trae un valor
+guardado por defecto, y enseñarla en un carro haría que pareciera
+contratable.
+
+
+CUMPLEAÑOS
+----------
+
+Es un campo nuevo. Hay un generador en la pestaña Descripción que tira de la
+tabla "Cumpleaños" del compendio de Generadores.
+
+Además, la generación lo tira junto con la edad: son el mismo hecho sobre una
+persona, y un personaje que sabe cuántos años tiene pero no cuándo nació se
+lee a medio hacer.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 122 archivos de código pasan la comprobación de sintaxis.
+- system.json, package.json y lang/es.json son JSON válido.
+- Todos los textos que usa el código existen en el idioma español.
+- Cada campo de formulario de las fichas tiene su hueco en los datos (si no
+  lo tuviera, lo que escribieras se perdería en silencio al guardar).
+- Las plantillas tienen sus bloques y etiquetas equilibrados.
+
+
+LO QUE QUEDA
+------------
+
+FASE 8, la última: los generadores y la barra lateral. En realidad casi todo
+eso se hizo ya en la fase 3 (los tres botones, las facciones a la barra de
+diarios, los avisos cuando falta un compendio). Lo que queda es repasar que
+el generador de PJ y el de PNJ hagan lo correcto con todo lo que ha cambiado
+desde entonces, y publicar la primera versión instalable en tu fork.

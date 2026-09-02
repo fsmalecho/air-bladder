@@ -149,12 +149,12 @@ export const generateFaction = async () => {
   // dossier is BAKED into a journal at generation time: whatever it writes is
   // permanent, and a Warden is not going to re-punctuate six lines by hand.
   //
-  // NOT the CAIRN.Bio.List* keys the sheet's biography uses, deliberately.
-  // Those build a sentence in running prose ("a Bony Physique, Black Hair and
-  // Pale Skin"), where the conjunction is the translator's to place. This is a
-  // bare enumeration after a label — separator only — and that is data the
-  // platform already has for every locale, including the ones nobody has
-  // translated yet.
+  // NOT the sheet biography's approach, deliberately. That is ONE
+  // whole-sentence key (CAIRN.Bio.Portrait) with named placeholders, where the
+  // whole of the running prose — conjunctions included — is the translator's.
+  // This is a bare enumeration after a label — separator only — and that is
+  // data the platform already has for every locale, including the ones nobody
+  // has translated yet.
   const list = new Intl.ListFormat(game.i18n.lang ?? "en", { style: "narrow", type: "conjunction" });
   const line = (key, value) => `<p>${game.i18n.format(key, { value: value || "&mdash;" })}</p>`;
   const content = [

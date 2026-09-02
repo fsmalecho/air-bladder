@@ -505,7 +505,18 @@ export class CairnActor extends Actor {
     // directly where the two people genuinely differ, and there are only two
     // such places on the whole sheet (the job field and the day rate).
     this.system.isNpcPerson = PERSON_ROLES.includes(this.npcRole);
-    this.system.showDayRate = this.npcRole === "hireling" && this.system.forHire === true;
+    // EVERY PERSON may be available to hire (2026-09-02, user ruling): the box
+    // and the rate follow `isNpcPerson`, not role `hireling`. An innkeeper who
+    // will guide the party for 3gp a day is an NPC with a price, and the split
+    // that gave the checkbox to the hireling role alone made that unsayable.
+    //
+    // The role gate stays load-bearing for everyone ELSE: `forHire`'s schema
+    // initial is TRUE, so a monster, a companion, a cart or a crate all store a
+    // ticked box they were never asked about — hence `isNpcPerson &&`, and not
+    // the stored boolean alone. A non-person shows neither control and keeps
+    // whatever it stores, untouched and unread.
+    this.system.showForHire = this.system.isNpcPerson;
+    this.system.showDayRate = this.system.isNpcPerson && this.system.forHire === true;
     this.system.canKeep = this.canKeepConnected;
     // Round 2: Gold follows the role too. Companions and things hide the COUNTER;
     // the stored value and the coins-take-slots rule are untouched, so a chest

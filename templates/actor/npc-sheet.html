@@ -183,13 +183,15 @@
                   own ::before glyph — a second box drawn inside ours). It sits
                   OUTSIDE everything it hides: unticking it must never remove
                   the way to tick it again, the old checkboxes' deadlock
-                  lesson. Its gate is the HIRELING (showForHire), not
-                  showCareer, which it used to ride inside — a separate flag
-                  because the career row is a field and this is a mechanic, and
-                  the two must be movable apart. It read isNpcPerson until
-                  2026-08-20, which was the same set until the split put a
-                  second role in it and handed the NPC sheet a checkbox with
-                  nothing behind it.
+                  lesson. Its gate is EVERY PERSON again as of 2026-09-02
+                  (showForHire, derived on the document as `isNpcPerson`):
+                  anyone the party can pay may name a price, and the rate below
+                  follows the CHECKBOX rather than the role. A monster, a
+                  companion or a thing gets neither control — `forHire`'s schema
+                  initial is true, so all of them silently store a ticked box
+                  nobody asked them about. Kept separate from showCareer because
+                  the career row is a field and this is a mechanic, and the two
+                  must be movable apart.
 
                   The controls are the registered connectionAttach /
                   connectionDetach actions — the same handlers, gates and
@@ -213,11 +215,12 @@
                 {{/if}}
             </div>
             {{/if}}
-            {{!-- The day rate belongs to someone who is FOR HIRE: role npc with
-                  the box ticked (system.showDayRate). The gate went role-only
-                  when `hireling` was a role of its own; it is both again now,
-                  which is what lets a Warden keep a career on someone who is not
-                  currently taking work. --}}
+            {{!-- The day rate belongs to someone who is FOR HIRE: any PERSON
+                  role with the box ticked (system.showDayRate). It followed the
+                  hireling role alone until 2026-09-02; now it follows the
+                  checkbox, which is what lets a Warden put a price on an
+                  innkeeper who will guide the party — and lets them keep a
+                  career on someone not currently taking work. --}}
             {{#if system.showDayRate}}
             <div class="day-rate-line">
                 <span class="background-label">{{ localize 'CAIRN.DayRate' }}</span>
@@ -355,24 +358,28 @@
                 </div>
                 {{/each}}
             </div>
-            {{!-- Description FIRST (2026-08-01): a Warden opens an NPC to
-                  remember who they are, and reaches for the inventory second.
-                  The order here must match TAB_IDS.npc in actor-sheet.js,
-                  which is also what makes Description the tab the sheet opens
-                  on. The character sheet deliberately keeps Items first. --}}
+            {{!-- ITEMS FIRST since 2026-09-02 (user ruling): the same three
+                  tabs as the character sheet, in the character's order, minus
+                  Trasfondo — a background's questions and a character's
+                  obligations are a player character's alone. The order here
+                  must match TAB_IDS.npc in actor-sheet.js. Which tab a fresh
+                  sheet STANDS on is separate (`initialTabId`): a person opens
+                  on Equipo, a monster or a thing still on Descripción. --}}
             <nav class="tabs" data-group="primary">
-                <a class="item {{tabs.description.cssClass}}" data-action="tab" data-group="primary" data-tab="description">{{ localize 'CAIRN.Description' }}</a>
                 <a class="item {{tabs.items.cssClass}}" data-action="tab" data-group="primary" data-tab="items" id="set-equipment-limit"
                 {{#if system.characterEquipmentLimit}}title="{{localize 'CAIRN.EquipmentLimitTip'}}"{{/if}}>
                     {{!-- `inert`, like core's tab template — see character-sheet.html for why. --}}
                     {{#if system.characterEquipmentLimit}}<i class="fas fa-gears" inert style="opacity:0.5;z-index:5000" ></i>{{/if}}
                     {{ localize 'CAIRN.Items' }} ({{system.slotsUsed}} / {{system.slotsMax}})
                 </a>
-                {{!-- No Connections tab here (2026-08-02): a child role has at
+                <a class="item {{tabs.description.cssClass}}" data-action="tab" data-group="primary" data-tab="description">{{ localize 'CAIRN.Description' }}</a>
+                {{!-- No Vínculos LIST here (2026-08-02): a child role has at
                       most ONE keeper, and that fact is the header's connection
-                      line now. The CHARACTER sheet keeps the tab — a PC keeps
-                      up to ten connections, which is a list worth one. --}}
-                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{notesTabLabel}}</a>
+                      line — which now says what this actor IS to that keeper
+                      («Contacto de X»), the same sentence the keeper's own
+                      Vínculos list prints. The tab still reads "Vínculos y
+                      notas", the one name both sheets use. --}}
+                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{ localize 'CAIRN.LinksAndNotes' }}</a>
             </nav>
             <section class="content">
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">

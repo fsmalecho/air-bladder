@@ -1041,6 +1041,35 @@ export const abilityBonusDelta = (next, prev) => Object.fromEntries(
  *   `abilities` is the SUM of every rolled option's bonuses, for the caller to
  *   apply on top of the starting values (withAbilityBonuses).
  */
+/**
+ * The SAME shape `applyChoiceTables` returns, with nothing rolled: one blank
+ * record per question, no items, no containers, no gold, no ability bonuses.
+ *
+ * This is what generation and a background swap use now (2026-09-02, user
+ * ruling): a character arrives with its background's questions ASKED and
+ * unanswered, and the player rolls each one from the Trasfondo tab, where the
+ * gold, the item and the ability bonuses that answer carries arrive at that
+ * moment. `applyChoiceTables` itself is untouched and still rolls everything —
+ * `previewBackground` is a DRY RUN of what a full roll-through would give, and
+ * a preview that stopped rolling would report nothing at all.
+ *
+ * Index-aligned with `bg.system.tables`, exactly as the rolling version is:
+ * the sheet's roll control addresses a question by its index, and a blank
+ * record is the empty starting state that `#onRerollQuestion` fills — the same
+ * swap-out/swap-in it does for a re-roll, with nothing to swap out.
+ * @param {CairnItem} bg
+ * @returns {{questions:Object[], items:Object[], containers:Object[], gold:Number, abilities:Object}}
+ */
+export const emptyChoiceTables = (bg) => ({
+  questions: (bg?.system?.tables ?? []).map((t) => ({
+    question: t.question ?? "", answer: "", gold: 0, abilities: noAbilityBonuses(),
+  })),
+  items: [],
+  containers: [],
+  gold: 0,
+  abilities: noAbilityBonuses(),
+});
+
 export const applyChoiceTables = async (bg) => {
   const out = { questions: [], items: [], containers: [], gold: 0, abilities: noAbilityBonuses() };
   const tables = bg.system.tables ?? [];
@@ -1598,10 +1627,15 @@ export const replaceGrantedContainers = async (actor, source, specs) => {
  * Generate a Cairn 2e character: starting abilities and Hit Protection (the
  * background's own four, or 3d6 a piece and 1d6 when it does not state them), a
  * 2e background (chosen or random) with a name drawn from its list and its
- * starting gear granted from the pool (weapons/armor equipped), a bond
- * supplying gold and an item, the eight physical/personality traits, an age off
- * the background's own dice, the languages the background grants, and its
- * choice tables rolled for extra gear, gold, story and ability bonuses.
+ * starting gear granted from the pool (weapons/armor equipped), the eight
+ * physical/personality traits, an age off the background's own dice, and the
+ * languages the background grants.
+ *
+ * What it NO LONGER rolls (2026-09-02, user ruling): the background's question
+ * answers and the character's obligations. Both arrive EMPTY — one blank
+ * record per question, one blank slot per entitled obligation — and the player
+ * rolls each from the Trasfondo tab, where the gold, the item and the ability
+ * bonuses that answer carries arrive at that moment rather than at creation.
  * @param {CairnItem|null} chosenBg  a background Item, or null to pick at random
  * @returns {Promise<Object|null>}
  */
@@ -1635,28 +1669,31 @@ export const generate2eCharacter = async (chosenBg = null) => {
   // unusable formula falls back to the system default, warning in the second
   // case (rollAge).
   const age = String(await rollAge(bg, Cairn.characterGenerator2e.biography.age));
-  const choices = await applyChoiceTables(bg);
+  // Rolled WITH the age, not left to the sheet's die: the two are one fact
+  // about a person, and a generated character that knows how old it is but not
+  // when it was born reads as half-finished. Degrades to "" like every other
+  // trait draw when the table is missing — generation never stops for content.
+  const birthday = await generatorText(TABLES.birthday);
+  // NOT rolled (2026-09-02, user ruling): the background's questions arrive
+  // ASKED and unanswered, and the player rolls each from the Trasfondo tab —
+  // where its gold, its item and its ability bonuses arrive with the answer.
+  // The shape is identical to a rolled run (`emptyChoiceTables`), so every sum
+  // below still reads `choices.gold` / `choices.abilities` and simply adds zero.
+  const choices = emptyChoiceTables(bg);
 
-  // One bond by default; the Fieldwarden background and Outrider's "Always pay
+  // The OBLIGATIONS get the same treatment: this many EMPTY slots, each with
+  // its own stable id, and the Trasfondo tab's die fills one. Nothing is drawn
+  // here, so no gold and no granted items arrive at creation either.
+  //
+  // One slot by default; the Fieldwarden background and Outrider's "Always pay
   // your debts" option each add another — bondEntitlement is THE rule, shared
-  // with the sheet's "Add a bond" cap and changeBackground's clamp. Each bond
-  // has a stable id so its granted items can be re-rolled/removed later.
+  // with the sheet's "Add an obligation" cap and changeBackground's clamp. With
+  // the answers empty, the per-question extra is nought until the player rolls
+  // the answer that grants it, and the sheet's Add control offers it then.
   const bondCount = bondEntitlement(bg, choices.questions);
-  const bonds = [];
-  const bondItems = [];
-  let bondGold = 0;
-  for (let i = 0; i < bondCount; i++) {
-    // A custom background may name its own bonds table; empty means the 2e one.
-    // `avoid` grows as the loop runs, so a Fieldwarden's second bond cannot repeat
-    // the first (and a third could not repeat either).
-    const rec = bondRecordFrom(await drawBond(bg.system.bondsTable, {
-      avoid: bonds.map((b) => b.description),
-    }));
-    if (!rec) continue;
-    bonds.push(rec.bond);
-    bondItems.push(...rec.items);
-    bondGold += rec.bond.gold;
-  }
+  const bonds = Array.from({ length: bondCount }, () => ({
+    id: foundry.utils.randomID(), description: "", gold: 0,
+  }));
 
   const goldRoll = await rollGold(Cairn.characterGenerator2e.gold);
 
@@ -1679,7 +1716,11 @@ export const generate2eCharacter = async (chosenBg = null) => {
   return {
     name,
     hp: start.hp,
-    gold: goldRoll.total + bondGold + choices.gold,
+    // The bare gold roll: an unrolled question and an unrolled obligation both
+    // grant nothing, so there is no bonus left to add here. `choices.gold` is
+    // kept in the sum rather than dropped — it is the same shape a rolled run
+    // returns, and reads zero.
+    gold: goldRoll.total + choices.gold,
     abilities: {
       STR: start.str,
       DEX: start.dex,
@@ -1706,6 +1747,7 @@ export const generate2eCharacter = async (chosenBg = null) => {
     contentSource: "2e",
     bonds,
     age,
+    birthday,
     // The languages this background grants at creation, copied by NAME onto the
     // character (characterToActorData). A background that grants none hands over
     // an empty list, which is what clears a regenerated character's.
@@ -1716,7 +1758,7 @@ export const generate2eCharacter = async (chosenBg = null) => {
     // fuel beneath it, Rations last. It writes each item's `sort`, which is
     // Foundry's own field, so the player can drag any row afterwards and the
     // printed page follows without knowing this happened.
-    items: orderGrantedItems([...gear, ...bondItems, ...choices.items]),
+    items: orderGrantedItems([...gear, ...choices.items]),
     // Container Actors cannot ride in items[]; they are minted after the actor
     // exists (createActorWithCharacter / updateActorWithCharacter).
     // A background can grant a container outright as well as from a choice table
@@ -2713,7 +2755,13 @@ export const changeBackground = async (actor, newBg = null) => {
   for (const it of gear) {
     if (it.type === "weapon" || it.type === "armor") it.system.equipped = true;
   }
-  const choices = await applyChoiceTables(bg);
+  // EMPTY, exactly as generation is since 2026-09-02: a swapped-in background
+  // asks its questions and answers none of them. Rolling here while generation
+  // does not would mean a character got its answers by taking the long way
+  // round, and the Trasfondo tab's dice are the one way in either case. The
+  // trade below is unchanged and still correct — the OLD answers' gold and
+  // ability bonuses come off, and the new (zero) ones go on.
+  const choices = emptyChoiceTables(bg);
   const newItems = [...gear, ...choices.items];
   if (newItems.length) await actor.createEmbeddedDocuments("Item", newItems, { render: false, abNoStatusCard: true });
   await grantContainers(actor, [
@@ -2819,6 +2867,7 @@ const characterToActorData = (characterData) => ({
     // Multiple bonds live in system.bonds (each with a stable id).
     bonds: characterData.bonds ?? [],
     age: characterData.age ?? "",
+    birthday: characterData.birthday ?? "",
     // The languages the background granted, by NAME. Set unconditionally, like
     // the omen and scar resets below: a background that grants none hands over
     // an empty list, and regenerating onto it must clear the last one's.

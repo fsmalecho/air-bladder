@@ -1,35 +1,29 @@
-{{!-- The biography block: pronouns + age, the trait sentence and its
-      pick-lists, then Omen (showOmen) and Scars (showScars). MOVED verbatim
-      from character-sheet.html (2026-08-01) when role-npc PEOPLE got the same
-      block — the character sheet includes it ungated, the npc sheet behind
+{{!-- The biography block: the constructed portrait sentence, the «Rasgos»
+      panel that feeds it (pick-lists + the two generators), then Omen
+      (showOmen), Scars (showScars) and Languages. Shared by both sheets — the
+      character sheet includes it ungated, the npc sheet behind
       `{{#if showBiography}}` (BOTH person roles since the 2026-08-20 split:
       npc and hireling. An NPC's grid is ten rows, a hireling's eight — Quirk
       and Goal are the NPC's). Context comes from
-      `_prepareBiographyContext` plus the flags each caller sets. --}}
+      `_prepareBiographyContext` plus the flags each caller sets.
+
+      REORDERED 2026-09-02 (user ruling): the SENTENCE opens the tab, and
+      everything that writes it — the eight pick-lists, Pronombres, the
+      Cumpleaños die and the Edad die — moved inside the collapsed «Rasgos»
+      panel below it. Pronouns and Age used to sit ABOVE the sentence, which is
+      the one place the tab may not open on. --}}
                         {{#if traitRows}}
                         <div class="character-traits">
-                            <!-- Pronouns + Age at the top, then the constructed sentence. -->
-                            <div class="bio-top">
-                                <div class="trait-row pronouns-row">
-                                    <label class="trait-label">{{ localize 'CAIRN.Pronouns' }}</label>
-                                    <input class="trait-input" type="text" name="system.pronouns"
-                                        value="{{system.pronouns}}" maxlength="20" />
-                                </div>
-                                {{#if showAge}}
-                                <div class="trait-row age-row">
-                                    <label class="trait-label">{{ localize 'CAIRN.Age' }}</label>
-                                    <input class="trait-input" type="text" name="system.age" value="{{system.age}}" />
-                                    {{#if generationEnabled}}
-                                    <a class="age-roll" data-action="rollAge" data-tooltip="{{rollAgeTitle}}"><i class="fas fa-dice-d20"></i></a>
-                                    {{/if}}
-                                </div>
-                                {{/if}}
-                            </div>
-                            {{#if traitSentence}}
+                            {{!-- The portrait, in the actor's own voice. ONE
+                                  whole-sentence key with named placeholders
+                                  (_buildTraitSentence) — never a join of
+                                  fragments. An unset trait renders as a
+                                  visible gap («____», CAIRN.Bio.Unset) rather
+                                  than vanishing, so the player can see which
+                                  answers are still missing. --}}
                             <p class="trait-sentence">{{traitSentence}}</p>
-                            {{/if}}
-                            <!-- Collapsible pick-lists: the sentence is the default view;
-                                 expand to change any individual trait. -->
+                            <!-- Collapsible pick-lists + generators: the sentence is the
+                                 default view; expand to change any individual trait. -->
                             <div class="trait-picklist-section">
                                 <div class="trait-picklist-header">
                                     <label class="trait-picklist-label">{{ localize 'CAIRN.Traits' }}</label>
@@ -52,6 +46,36 @@
                                         </select>
                                     </div>
                                     {{/each}}
+                                </div>
+                                {{!-- The two GENERATORS, under the pick-lists: Cumpleaños
+                                      rolls the «Cumpleaños» table, Edad rolls the
+                                      character's own background age formula (rollAgeTitle
+                                      names the very dice a click will throw). Both are
+                                      free-text fields as well — a typed answer is as legal
+                                      as a rolled one — and Pronombres rides along, since it
+                                      is the last editable line the sentence does not use. --}}
+                                <div class="bio-generators">
+                                    <div class="trait-row pronouns-row">
+                                        <label class="trait-label">{{ localize 'CAIRN.Pronouns' }}</label>
+                                        <input class="trait-input" type="text" name="system.pronouns"
+                                            value="{{system.pronouns}}" maxlength="20" />
+                                    </div>
+                                    <div class="trait-row birthday-row">
+                                        <label class="trait-label">{{ localize 'CAIRN.Birthday' }}</label>
+                                        <input class="trait-input" type="text" name="system.birthday" value="{{system.birthday}}" />
+                                        {{#if generationEnabled}}
+                                        <a class="birthday-roll" data-action="rollBirthday" title="{{ localize 'CAIRN.RollBirthday' }}"><i class="fas fa-dice-d20"></i></a>
+                                        {{/if}}
+                                    </div>
+                                    {{#if showAge}}
+                                    <div class="trait-row age-row">
+                                        <label class="trait-label">{{ localize 'CAIRN.Age' }}</label>
+                                        <input class="trait-input" type="text" name="system.age" value="{{system.age}}" />
+                                        {{#if generationEnabled}}
+                                        <a class="age-roll" data-action="rollAge" data-tooltip="{{rollAgeTitle}}"><i class="fas fa-dice-d20"></i></a>
+                                        {{/if}}
+                                    </div>
+                                    {{/if}}
                                 </div>
                                 {{/unless}}
                             </div>
