@@ -1,4 +1,3 @@
-import { Cairn } from "./config.js";
 import { registerSettingMenus } from "./settings-menus.js";
 import { clearPackWarnings } from "./content-packs.js";
 
@@ -37,7 +36,7 @@ export const SETTING_KEYS = [
   "show-grant-tags-print", "show-omens",
   "use-warden-title", "change-log", "auto-record-scars",
   // Character Generation
-  "content-source-2e", "content-source-custom", "content-source-barebones",
+  "content-source-barebones",
   "barebones-failed-career", "show-generate-header",
   "allow-player-generate", "allow-player-randomization", "show-generation-rolls",
   // disabled-backgrounds is Warden CONFIGURATION (which 2e backgrounds are
@@ -55,7 +54,7 @@ export const SETTING_KEYS = [
   // `hireling-split`, which selects on a stored `role: "npc"` that a real NPC
   // also carries once it has run. Do not reason about any new marker from that
   // sentence; reason about the migration.
-  "custom-portrait-folder", "custom-portrait-list", "age-formula",
+  "custom-portrait-folder", "custom-portrait-list",
   "disabled-backgrounds",
   // Internal but CONFIGURATION, not a marker: the parked-Connections flag
   // (2026-08-09) must ride the namespace migration — losing it would re-park
@@ -182,22 +181,16 @@ export const SETTING_GROUPS = [
     hint: "CAIRN.Settings.GroupGenerationHint",
     icon: "fa-solid fa-user-plus",
     keys: [
-      "content-source-2e", "content-source-custom", "content-source-barebones",
+      "content-source-barebones",
       "show-generate-header", "allow-player-generate",
       "allow-player-randomization", "show-generation-rolls",
-      "custom-portrait-folder", "age-formula",
+      "custom-portrait-folder",
     ],
-    // The phrase is the SOURCE AS THE LABEL NAMES IT, which is not always the
-    // source's own name: the two 2e labels distinguish canon from custom, and
-    // the qualifier is the point of the sentence — bolding "Cairn 2e" inside
-    // "Offer canon Cairn 2e backgrounds" emphasises the half the reader already
-    // knew (user ask, 2026-08-07). `CAIRN.ContentSource2e` cannot simply be
-    // widened: it is the source's name, reused by the generation picker and
-    // utils' SOURCE_KEYS, where "canon Cairn 2e" would read as a different
-    // edition. Hence a key of its own.
+    // The phrase is the SOURCE AS THE LABEL NAMES IT. One carrier left: the two
+    // 2e switches went with the canon/custom distinction (there is one
+    // backgrounds compendium now, and every background in it is offered), and
+    // the age formula moved onto the background itself.
     boldPhrases: {
-      "content-source-2e": "CAIRN.ContentSourceCanon2e",
-      "content-source-custom": "CAIRN.ContentSourceCustom",
       "content-source-barebones": "CAIRN.ContentSourceBarebones",
     },
   },
@@ -571,54 +564,17 @@ export const registerSettings = () => {
   });
 
   // ---- Character Generation ------------------------------------------------
-  // Which editions a Warden offers when generating a character. Both on means
-  // the Generate button asks; exactly one means it just uses that one. These
-  // gate GENERATION ONLY -- every rule after a character exists is identical
-  // across editions, by design (see CLAUDE.md, "one system, two generators").
+  // Whether the Warden offers the Barebones generator alongside the 2e one.
+  // Cairn 2e is ALWAYS offered and has no switch: `content-source-2e` and
+  // `content-source-custom` are gone, and with them the canon/custom
+  // distinction they filtered on — there is one backgrounds compendium now, so
+  // every background in it is a background the Warden put there. The source
+  // FLOOR went with them for the same reason: with 2e permanently on, "every
+  // source off" is not a state a Warden can reach.
   //
-  // THE FLOOR (user ruling 2026-08-04, "option 2"): unchecking the LAST
-  // enabled source switches Cairn 2e back on, with a toast. Generation
-  // already falls back to the shipped 2e pack when every source is off, so
-  // an all-off settings window was LYING — the honest fix is the checkbox
-  // following the behavior, not a veto (Foundry has no hook that can block a
-  // settings save). The write-back is idempotent and convergent, so the
-  // activeGM two-tab quirk (both tabs elect themselves) is harmless here —
-  // both write the same true. Re-entrancy: the write-back flips a source ON,
-  // so the guard below cannot fire again from it.
-  const SOURCE_KEYS = ["content-source-2e", "content-source-custom", "content-source-barebones"];
-  const enforceSourceFloor = async () => {
-    if (SOURCE_KEYS.some((k) => game.settings.get(SETTINGS_NS, k))) return;
-    if (game.users.activeGM !== game.user) return;
-    await game.settings.set(SETTINGS_NS, "content-source-2e", true);
-    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.LastSource"));
-  };
-
-  game.settings.register(SETTINGS_NS, "content-source-2e", {
-    name: "CAIRN.Settings.ContentSource2e.label",
-    hint: "CAIRN.Settings.ContentSource2e.hint",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: true,
-    requiresReload: false,
-    onChange: enforceSourceFloor,
-  });
-
-  // GM-authored 2e backgrounds living in a world compendium. They are 2e-format
-  // and share the 2e generation path -- with content-source-2e on they merge into
-  // the same picker; with it off they are the only backgrounds (a homebrew-only
-  // game). Default off: a fresh world has no custom backgrounds to offer.
-  game.settings.register(SETTINGS_NS, "content-source-custom", {
-    name: "CAIRN.Settings.ContentSourceCustom.label",
-    hint: "CAIRN.Settings.ContentSourceCustom.hint",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-    requiresReload: false,
-    onChange: enforceSourceFloor,
-  });
-
+  // This gates GENERATION ONLY -- every rule after a character exists is
+  // identical across editions, by design (see CLAUDE.md, "one system, two
+  // generators").
   game.settings.register(SETTINGS_NS, "content-source-barebones", {
     name: "CAIRN.Settings.ContentSourceBarebones.label",
     hint: "CAIRN.Settings.ContentSourceBarebones.hint",
@@ -627,7 +583,6 @@ export const registerSettings = () => {
     type: Boolean,
     default: true,
     requiresReload: false,
-    onChange: enforceSourceFloor,
   });
 
   // A second background name -- the career that didn't work out -- plus ONE
@@ -790,42 +745,6 @@ export const registerSettings = () => {
     config: false,
     type: Array,
     default: [],
-    requiresReload: false,
-  });
-
-  // The Warden's age FORMULA (issue #21, both halves fsmalecho's). This
-  // REPLACES min-age and max-age (2026-08-21, user ruling): clamping a bell
-  // curve piles ages onto the bound -- with a ceiling of 30, ~57% of 2d20+10
-  // rolls came out exactly 30, which reads as "every character is the same
-  // age". The cap worked as coded; the design was the defect. Editing the
-  // DICE gives a range as a distribution, which no clamp can.
-  //
-  // The default is the config's one copy (see config.js): RAW 2d20 + 10,
-  // by user ruling -- rules as written win over preserving the retired
-  // min-age's 21 default, which was an override, not the game. So upgrading
-  // CAN change ages (12..20 are possible again out of the box), accepted
-  // with eyes open; a Warden who wants the floor back writes the pool form
-  // {2d20 + 10, 21}kh, the hint's own example. A retired min-age or max-age
-  // value survives as an orphaned world row, the established precedent --
-  // never re-read, never reused as a key.
-  //
-  // No onChange fan and no reload: read at ROLL time, not in
-  // _prepareContext, so no open sheet shows a stale value. It governs the
-  // age DIE only -- the sheet's age field is free text and always has been.
-  // Blank falls back to the default silently; a formula that does not parse
-  // -- or carries an `@` reference, which Roll.validate cannot be trusted
-  // about -- falls back too and WARNS (rollAge in character-generator.js).
-  //
-  // Grouped under Character Generation, where min-age sat before it: a
-  // parameter of the character being made, looked for beside the rest of
-  // generation. Placement is SETTING_GROUPS membership, not position.
-  game.settings.register(SETTINGS_NS, "age-formula", {
-    name: "CAIRN.Settings.AgeFormula.label",
-    hint: "CAIRN.Settings.AgeFormula.hint",
-    scope: "world",
-    config: false,
-    type: String,
-    default: Cairn.characterGenerator2e.biography.age,
     requiresReload: false,
   });
 

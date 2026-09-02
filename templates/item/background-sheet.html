@@ -23,26 +23,17 @@
                           hover-only edit button — so the authoring form behind Details
                           is invisible until someone thinks to look. The wording follows
                           what the reader can actually do: an editable background points
-                          at the form, a locked shipped one points a GM at Duplicate, and
-                          a player looking at a locked background is told nothing, because
-                          there is nothing there for them.
+                          at the form, and a reader of a locked one is told nothing,
+                          because there is nothing there for them.
 
                           ABOVE the prose-mirror, not below it. The editor stretches to
                           fill the tab (measured 526px in a default 640px window), which
                           pushed the hint ~130px past the scroll fold — present in the DOM,
                           invisible without scrolling, which is the one thing a
-                          discoverability hint cannot afford.
-
-                          The SAME icon on both, deliberately: it marks the VOICE, and
-                          both lines are the app talking rather than the background. An
-                          icon per destination (a pencil here, a copy there) would spend
-                          the one signal that tells these apart from the prose below on
-                          a distinction the sentence already makes. --}}
+                          discoverability hint cannot afford. --}}
                     {{#if isBackgroundEditor}}
                     <p class="bg-tab-hint"><i class="fas fa-circle-info"></i>{{ localize 'CAIRN.BgAuthor.EditOnDetails' }}</p>
-                    {{else}}{{#if isGM}}
-                    <p class="bg-tab-hint"><i class="fas fa-circle-info"></i>{{ localize 'CAIRN.BgAuthor.DuplicateOnDetails' }}</p>
-                    {{/if}}{{/if}}
+                    {{/if}}
                     <prose-mirror name="system.description" value="{{system.description}}" toggled collaborate relative
                         data-document-uuid="{{item.uuid}}">{{{enrichedDescription}}}</prose-mirror>
                 </div>
@@ -53,7 +44,6 @@
 
                     <div class="bg-edit-toolbar">
                         <a class="bg-test" data-action="testBackground" title="{{ localize 'CAIRN.BgAuthor.TestHint' }}"><i class="fas fa-flask"></i> {{ localize 'CAIRN.BgAuthor.Test' }}</a>
-                        {{#if isGM}}<a class="bg-duplicate" data-action="duplicateBackground" title="{{ localize 'CAIRN.BgAuthor.DuplicateHint' }}"><i class="fas fa-copy"></i> {{ localize 'CAIRN.BgAuthor.Duplicate' }}</a>{{/if}}
                     </div>
 
                     <div class="bg-edit-row">
@@ -66,18 +56,34 @@
                             {{ selectOptions archetypeChoices selected=system.archetype localize=false blank="—" }}
                         </select>
                     </div>
-                    {{!-- The credit line, printed in the footer of every sheet built
-                          on this background. Editable BECAUSE it is a licence claim:
-                          an adapted background keeps its source's credit only while
-                          the source's writing survives in it, and that is the
-                          author's call to make, not a flag's. --}}
+
+                    {{!-- The background's own starting numbers, in place of the dice.
+                          The checkbox is the switch; unticked, the four boxes are
+                          DISABLED rather than hidden, so an author can see the numbers
+                          waiting behind the switch and the line below says what
+                          generation will do instead. --}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.StartingAbilities' }}</h3>
                     <div class="bg-edit-row">
-                        <label for="{{@root.idp}}-system.attribution">{{ localize 'CAIRN.BgAuthor.Attribution' }}</label>
-                        <input type="text" id="{{@root.idp}}-system.attribution" name="system.attribution"
-                            value="{{system.attribution}}" placeholder="{{ localize 'CAIRN.BgAuthor.AttributionPlaceholder' }}" />
+                        <label for="{{@root.idp}}-system.startingAbilities.enabled">{{ localize 'CAIRN.BgAuthor.StartingAbilitiesEnabled' }}</label>
+                        <input type="checkbox" id="{{@root.idp}}-system.startingAbilities.enabled"
+                            name="system.startingAbilities.enabled"
+                            {{checked system.startingAbilities.enabled}} value="{{system.startingAbilities.enabled}}" data-dtype="Boolean" />
                     </div>
-                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.AttributionHint' }}</p>
-                    {{!-- Two bonds instead of one. A checkbox rather than prose,
+                    <div class="bg-abilities{{#unless system.startingAbilities.enabled}} is-inert{{/unless}}">
+                        {{#each startingAbilityRows}}
+                        <label class="bg-ability-box">
+                            <span class="bg-ability-label">{{ localize this.label }}</span>
+                            <input type="number" step="1" min="0" name="system.startingAbilities.{{this.key}}"
+                                value="{{this.value}}" data-dtype="Number"
+                                {{#unless @root.system.startingAbilities.enabled}}disabled{{/unless}} />
+                        </label>
+                        {{/each}}
+                    </div>
+                    {{#unless system.startingAbilities.enabled}}
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.StartingAbilitiesRolled' }}</p>
+                    {{/unless}}
+
+                    {{!-- Two obligations instead of one. A checkbox rather than prose,
                           because the shipped 2e backgrounds say it in a sentence that
                           `mentionsSecondBond` matches, and a custom background cannot
                           depend on an English sentence surviving translation or
@@ -88,7 +94,7 @@
                             {{checked system.secondBond}} value="{{system.secondBond}}" data-dtype="Boolean" />
                     </div>
                     <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.SecondBondHint' }}</p>
-                    {{!-- A bonds table of the author's own, by NAME so a shared
+                    {{!-- An obligations table of the author's own, by NAME so a shared
                           background still resolves it. Narrative-only: Foundry's table
                           UI cannot author the gold/gear flags the shipped rows carry. --}}
                     <div class="bg-edit-row">
@@ -125,11 +131,56 @@
                     </div>
                     <a class="bg-gear-add" data-action="addGear"><i class="fas fa-plus"></i> {{ localize 'CAIRN.BgAuthor.AddGear' }}</a>
 
+                    {{!-- The languages a character built on this background starts
+                          knowing. SAME markup and same class as the actor sheet's
+                          picker (templates/parts/bio-block.html) on purpose: ticking a
+                          language is one gesture, and it must look and behave the same
+                          wherever it is offered. The Warden's list is the only source;
+                          an empty one says so rather than showing an empty box. --}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.Languages' }}</h3>
+                    {{#if languageOptions.length}}
+                    <div class="scar-list bg-language-list">
+                        {{#each languageOptions}}
+                        <label class="scar-option">
+                            <input type="checkbox" class="language-check" value="{{this.name}}"
+                                {{#if this.selected}}checked{{/if}} />
+                            <span class="scar-text">
+                                <span class="scar-name">{{this.name}}</span>
+                            </span>
+                        </label>
+                        {{/each}}
+                    </div>
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.LanguagesHint' }}</p>
+                    {{else}}
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.LanguagesEmpty' }}</p>
+                    {{/if}}
+
+                    {{!-- The age dice for a character built on this background. Blank
+                          means the system default, which the hint names outright so
+                          "blank" is never a guess. --}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.AgeFormula' }}</h3>
+                    <div class="bg-edit-row">
+                        <label for="{{@root.idp}}-system.ageFormula">{{ localize 'CAIRN.BgAuthor.AgeFormulaLabel' }}</label>
+                        <input type="text" id="{{@root.idp}}-system.ageFormula" name="system.ageFormula"
+                            value="{{system.ageFormula}}" placeholder="{{defaultAgeFormula}}" />
+                    </div>
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.AgeFormulaHint' formula=defaultAgeFormula }}</p>
+
                     <h3>{{ localize 'CAIRN.BgAuthor.Tables' }}</h3>
-                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.TablesHint' }}</p>
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.TablesHint' max=maxTables }}</p>
                     {{#each editTables}}
                     <div class="bg-edit-table">
-                        <input class="bg-table-question" type="text" data-t="{{@index}}" value="{{this.question}}" placeholder="{{ localize 'CAIRN.BgAuthor.QuestionPlaceholder' }}" />
+                        <div class="bg-table-head">
+                            <input class="bg-table-question" type="text" data-t="{{@index}}" value="{{this.question}}" placeholder="{{ localize 'CAIRN.BgAuthor.QuestionPlaceholder' }}" />
+                            <label class="bg-table-die-label">{{ localize 'CAIRN.BgAuthor.TableDie' }}
+                                <select class="bg-table-die" data-t="{{@index}}">
+                                    {{#each this.dieChoices}}
+                                    <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
+                                    {{/each}}
+                                </select>
+                            </label>
+                            <a class="bg-table-remove" data-action="removeTable" data-t="{{@index}}" title="{{ localize 'CAIRN.BgAuthor.RemoveTable' }}"><i class="fas fa-times"></i></a>
+                        </div>
                         <ol class="bg-edit-options">
                             {{#each this.options}}
                             <li class="bg-edit-option">
@@ -148,32 +199,43 @@
                                         <span class="bg-drop-hint bg-drop-hint-inline">{{ localize 'CAIRN.BgAuthor.DropItemHint' }}</span>
                                     </div>
                                 </div>
+                                {{!-- What this answer does to the character's four
+                                      starting numbers. Negative is legal and typed as
+                                      such — a background may cost strength. --}}
+                                <div class="bg-option-abilities" title="{{ localize 'CAIRN.BgAuthor.OptionAbilitiesHint' }}">
+                                    {{#each this.abilityRows}}
+                                    <label class="bg-option-ability">
+                                        <span class="bg-ability-label">{{ localize this.label }}</span>
+                                        <input class="bg-option-ability-input" type="number" step="1"
+                                            data-t="{{@../../index}}" data-o="{{@../index}}" data-k="{{this.key}}"
+                                            value="{{this.value}}" />
+                                    </label>
+                                    {{/each}}
+                                </div>
                             </li>
                             {{/each}}
                         </ol>
                     </div>
                     {{/each}}
+                    {{#if canAddTable}}
+                    <a class="bg-table-add" data-action="addTable"><i class="fas fa-plus"></i> {{ localize 'CAIRN.BgAuthor.AddTable' }}</a>
+                    {{else}}
+                    <p class="bg-edit-hint">{{ localize 'CAIRN.BgAuthor.TablesFull' max=maxTables }}</p>
+                    {{/if}}
                 </div>
                 {{else}}
                 {{!-- Read-only view (locked shipped packs) --}}
                 <div class="tab background-details {{tabs.details.cssClass}}" data-group="primary" data-tab="details">
-                    {{#if isGM}}
-                    <div class="bg-edit-toolbar readonly">
-                        <a class="bg-duplicate" data-action="duplicateBackground" title="{{ localize 'CAIRN.BgAuthor.DuplicateHint' }}"><i class="fas fa-copy"></i> {{ localize 'CAIRN.BgAuthor.Duplicate' }}</a>
-                    </div>
-                    {{/if}}
                     <p class="background-source">
                         {{! sourceLabel, not the raw stored enum "2e" — same derived label
                             the editor branch shows, from the same helper. }}
                         <strong>{{ localize 'CAIRN.BackgroundSource' }}:</strong> {{sourceLabel}}
                     </p>
 
-                    {{!-- A shipped background is locked, so its credit shows here
-                          rather than in an input — a Warden should be able to read
-                          whose text they are about to duplicate before they do. --}}
-                    {{#if system.attribution}}
-                    <p class="background-attribution">
-                        <strong>{{ localize 'CAIRN.BgAuthor.Attribution' }}:</strong> {{system.attribution}}
+                    {{#if readOnlyAbilities}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.StartingAbilities' }}</h3>
+                    <p class="background-abilities">
+                        {{~#each readOnlyAbilities~}}{{ localize this.label }} {{this.value}}{{#unless @last}} · {{/unless}}{{~/each~}}
                     </p>
                     {{/if}}
 
@@ -193,13 +255,20 @@
                     </ul>
                     {{/if}}
 
+                    {{#if system.languages.length}}
+                    <h3>{{ localize 'CAIRN.BgAuthor.Languages' }}</h3>
+                    <p class="background-languages">
+                        {{~#each system.languages~}}{{this}}{{#unless @last}}, {{/unless}}{{~/each~}}
+                    </p>
+                    {{/if}}
+
                     {{!-- backgroundTables, not system.tables: localized display copies
                           (bg.question / bg.optionDesc) built in _prepareBackgroundReadOnly.
                           The editor branch above keeps raw inputs — those are values a
                           save writes back. --}}
                     {{#each backgroundTables}}
                     <div class="background-table">
-                        <h3>{{this.question}}</h3>
+                        <h3>{{this.question}} <span class="background-table-die">d{{this.die}}</span></h3>
                         <ol>
                             {{#each this.options}}
                             <li>{{this.description}}</li>

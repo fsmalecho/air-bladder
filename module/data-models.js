@@ -803,6 +803,36 @@ class SpellData extends CairnDataModel {
 }
 
 /**
+ * The dice a question table may be built on, in pick-list order. A table has as
+ * many option rows as its die has faces, so this list is also the set of legal
+ * row counts. Exported because the authoring sheet offers them and
+ * `applyChoiceTables` falls back through them.
+ */
+export const BG_TABLE_DICE = [4, 6, 8, 10, 12];
+
+/** The die a table gets when it is added, and when a stored one says nothing. */
+export const BG_DEFAULT_DIE = 6;
+
+/** How many question tables one background may carry. */
+export const BG_MAX_TABLES = 7;
+
+/** The four starting abilities, in sheet order. The keys are the ones a table
+ *  option's bonuses use, and the ones `startingAbilities` declares. */
+export const BG_ABILITY_KEYS = ["str", "dex", "wil", "hp"];
+
+/**
+ * The die a stored question table rolls on: its own `die` when that is one of
+ * the five legal faces, else BG_DEFAULT_DIE. ONE answer for the generator, the
+ * sheet's question re-roll and the authoring form, so a table cannot be rolled
+ * on one die and edited as another.
+ * @param {Object} table @returns {Number}
+ */
+export const bgTableDie = (table) => {
+  const n = Number(table?.die);
+  return BG_TABLE_DICE.includes(n) ? n : BG_DEFAULT_DIE;
+};
+
+/**
  * A 2e background. Mirrors Kettlewright's content-library schema, which is why
  * `startingGear`, `containers` and `tables` are free-form records rather than
  * pinned sub-schemas — they round-trip that source verbatim.
@@ -813,28 +843,57 @@ class BackgroundData extends CairnDataModel {
       source: str("2e"),
       archetype: str(),
       description: html(),
-      // Who wrote this background and under what terms, printed in the footer of
-      // any character sheet built on it. A FIELD rather than a lookup, and that is
-      // the whole point: the seven shipped class backgrounds are Gordon
-      // McCormick's, and the credit used to be derived from their provenance flag,
-      // which meant a Warden could duplicate one, rewrite every word, and never be
-      // able to stop the sheet crediting him (user ruling 2026-08-15). Whoever owns
-      // the text owns the line.
-      //
-      // Empty on the canon 2e and Barebones backgrounds ON PURPOSE. Cairn's own
-      // credit prints on EVERY sheet unconditionally — the page reproduces its
-      // rules whether a background is involved or not — so filling this with
-      // Yochai Gal would print him twice.
-      //
-      // Plain text, never HTML: it reaches the print page through the escaped
-      // `{{ credits }}` stash, and an authored string is treated as hostile here
-      // the way every other authored string is. Not localized either — an
-      // attribution is a citation, and the shipped value is worded to survive
-      // being read in any language.
-      attribution: str(),
       names: strList(),
       startingGear: objList(),
       containers: objList(),
+      // The background's OWN starting numbers, in place of the dice.
+      //
+      // `enabled` is the switch and the only thing generation asks: off (the
+      // default) and `generate2eCharacter` rolls 3d6 a piece and 1d6 Hit
+      // Protection exactly as before; on and these four ARE the starting
+      // values. The rolled option bonuses below are added on top either way,
+      // so a background can hand out fixed numbers, rolled numbers, or fixed
+      // numbers a question can still move.
+      //
+      // The initials are a playable character rather than zeroes on purpose:
+      // ticking the box must not silently produce a 0/0/0/0 corpse the Warden
+      // then has to notice. 10 is the mean of 3d6 rounded down, 4 the mean of
+      // 1d6 rounded up — the dice this replaces, in one throw.
+      startingAbilities: new fields.SchemaField({
+        enabled: bool(),
+        str: int(10),
+        dex: int(10),
+        wil: int(10),
+        hp: int(4),
+      }),
+      // The age dice for a character built on this background. Empty means the
+      // system default (CONFIG.Cairn.characterGenerator2e.biography.age, RAW
+      // `2d20 + 10`). This REPLACED the world-wide `age-formula` setting: age
+      // is a fact about the life a background describes — an apprentice and a
+      // retired soldier are not the same spread — and one number for every
+      // background in the world could not say that. Validated at roll time,
+      // not here: `rollAge` refuses an `@` reference and anything
+      // `Roll.validate` rejects, warns naming the text, and falls back.
+      ageFormula: str(),
+      // The languages a character built on this background starts knowing.
+      // Plain names out of the Warden's own list (`languages()` in
+      // content-packs.js), stored by NAME for the same reason
+      // `CharacterData.languages` is — the field they are copied into at
+      // generation.
+      languages: strList(),
+      // The question tables ("What went horribly wrong?"), each
+      // `{question, die, options[]}`.
+      //
+      // `die` is the table's shape: one of 4/6/8/10/12, and the option rows
+      // ALWAYS number exactly its faces — the sheet resizes the rows when the
+      // die changes, and `applyChoiceTables` rolls `1d<die>` rather than
+      // counting rows, so a half-built table cannot quietly become a d3. At
+      // most seven tables (BG_MAX_TABLES).
+      //
+      // An option is `{description, bonusGold, items[], containers[], str,
+      // dex, wil, hp}`; the four ability bonuses are integers and may be
+      // negative. Free-form, like the rest of this file's `objList()`s, so
+      // none of those keys is individually declared.
       tables: objList(),
       // "This background grants a second bond." A real field, because the shipped 2e
       // backgrounds express it in PROSE — Fieldwarden's description says "roll a

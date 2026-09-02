@@ -1,7 +1,7 @@
 import { CairnActor } from "./actor/actor.js";
 import { resultText, findTableByName } from "./compendium.js";
 import {
-  docFromPack, documentsOfType, generatorTable, generatorText, itemByName, packFor,
+  docFromPack, documentsOfType, generatorTable, generatorText, itemByName,
   warnNoTable, TABLES,
 } from "./content-packs.js";
 import { Cairn } from "./config.js";
@@ -13,7 +13,7 @@ import {
 import { containerClass, iconForTransport } from "./icons.js";
 import { connectionHeadroom, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { SETTINGS_NS } from "./settings.js";
-import { PERSON_ROLES } from "./data-models.js";
+import { PERSON_ROLES, BG_ABILITY_KEYS, BG_MAX_TABLES, bgTableDie } from "./data-models.js";
 
 // Foundry validates a document flag's scope against real package ids, so flags
 // use the system id "mondolme" (NOT the internal "cairn" JS/settings namespace,
@@ -600,7 +600,7 @@ export const kettlewrightPortraitPath = async (name) => {
  * card (postGenerationRolls) can hand the real Roll objects to ChatMessage and
  * let Dice So Nice animate them. Callers read `.total` themselves. rollAge is
  * deliberately NOT part of this: age is excluded from the card, and it answers
- * with a NUMBER off the Warden's age-formula setting, not a Roll.
+ * with a NUMBER off the background's own age formula, not a Roll.
  */
 
 /** @param {String} formula @returns {Promise<{STR:Roll,DEX:Roll,WIL:Roll}>} */
@@ -617,23 +617,27 @@ export const rollHitProtection = async (formula) => evaluateFormula(formula);
 export const rollGold = async (formula) => evaluateFormula(formula);
 
 /**
- * Roll an age from the Warden's `age-formula` setting, falling back to the
+ * Roll an age from the BACKGROUND's own `ageFormula`, falling back to the
  * caller's formula (the config's one copy, RAW `2d20 + 10`) when the
- * setting is blank or does not parse.
+ * background says nothing or says something that does not parse.
  *
- * This REPLACED the min-age/max-age clamp (2026-08-21, issue #21 both ways —
- * fsmalecho asked for the ceiling AND then reported what clamping did):
+ * The formula moved off the world setting and onto the background (the
+ * `age-formula` setting is gone): age is a fact about the life a background
+ * describes, and one number for every background in the world could not say
+ * that — an apprentice and a retired soldier do not share a spread. A
+ * background with no formula still gets the system default, so nothing has to
+ * be filled in for the die to work.
+ *
+ * The bounds this replaced are staying replaced (2026-08-21, issue #21 both
+ * ways — fsmalecho asked for the ceiling AND then reported what clamping did):
  * holding 2d20 + 10 under a ceiling of 30 made ~57% of rolls exactly 30,
- * because a clamp piles the distribution onto its bound. The cap worked as
- * coded; the design was the defect. The Warden edits the DICE now, so a
- * chosen range arrives as a spread — and with no bounds left to conflict,
- * the floor-wins ruling retired with them. A retired min-age or max-age
- * world row is orphaned data, never read again and never reused as a key.
+ * because a clamp piles the distribution onto its bound. The Warden edits the
+ * DICE, so a chosen range arrives as a spread.
  *
- * Blank falls back SILENTLY — blank is "reset to default", not a mistake. A
+ * Blank falls back SILENTLY — blank is "use the default", not a mistake. A
  * non-blank formula that fails Roll.validate falls back too and WARNS,
  * naming the rejected text: a typo the Warden never hears about is just
- * "the setting does nothing". Validation is on the RAW text, which is right
+ * "the field does nothing". Validation is on the RAW text, which is right
  * in both dice-notation dialects — the Cairn keep-highest rewrite only maps
  * valid arithmetic to valid pool syntax. A formula carrying an `@` reference
  * is refused the same way, BEFORE Roll.validate gets a say — see the guard
@@ -644,12 +648,15 @@ export const rollGold = async (formula) => evaluateFormula(formula);
  * age is nobody's business but the player's — the old bounds never
  * constrained it and the formula does not either.
  *
- * The single choke point for age: all four generation call sites and the
- * sheet's re-roll come through here, so the setting lands everywhere at once.
+ * The single choke point for age: every generation call site and the sheet's
+ * re-roll come through here, so the background's formula lands everywhere at
+ * once. A generator with no background (npc, hireling) passes null and gets
+ * the default.
+ * @param {CairnItem|null} bg  the background whose formula applies, or null
  * @param {String} fallback @returns {Promise<Number>}
  */
-export const rollAge = async (fallback) => {
-  const { formula, configured, usable } = effectiveAgeFormula(fallback);
+export const rollAge = async (bg, fallback) => {
+  const { formula, configured, usable } = effectiveAgeFormula(bg, fallback);
   if (!usable && configured) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.BadAgeFormula", { formula: configured }));
   }
@@ -657,29 +664,31 @@ export const rollAge = async (fallback) => {
 };
 
 /**
- * The formula the age die will ACTUALLY roll: the Warden's `age-formula`
- * setting when it is set and usable, else `fallback`. ONE answer for the die
- * above and for the sheet's tooltip beside Age (review #18 finding 10: the
- * tooltip said "(2d20 + 10)" while the die obeyed the setting), so the two
+ * The formula the age die will ACTUALLY roll: the background's `ageFormula`
+ * when it is set and usable, else `fallback`. ONE answer for the die above and
+ * for the sheet's tooltip beside Age (review #18 finding 10: the tooltip said
+ * "(2d20 + 10)" while the die obeyed the configured formula), so the two
  * cannot disagree — the tooltip shows what a click will roll, fallback
  * included.
  *
- * `usable` is the test rollAge always applied, moved here whole. `@`
- * references are refused before validation — warden-damage.js's guard, copied
- * because the same two client stubs make Roll.validate lie about the whole
- * class: it replaces every `@ref` with "1" before evaluating
- * (dice/roll.mjs:772-790) so it ACCEPTS them, while real evaluation resolves
- * them with `{missing: "0"}` (:689-701) — so "2d20 + @bonus" passed the gate
- * and rolled "2d20 + 0", and "@x + 3" made every age exactly 3, with the
- * warn-and-fall-back contract unreachable for the one input class that needed
- * it most (review #17). Generation has no actor to resolve against, so
- * refusing is the honest answer, not a workaround.
+ * `usable` is the test rollAge always applied. `@` references are refused
+ * before validation — warden-damage.js's guard, copied because the same two
+ * client stubs make Roll.validate lie about the whole class: it replaces every
+ * `@ref` with "1" before evaluating (dice/roll.mjs:772-790) so it ACCEPTS
+ * them, while real evaluation resolves them with `{missing: "0"}` (:689-701) —
+ * so "2d20 + @bonus" passed the gate and rolled "2d20 + 0", and "@x + 3" made
+ * every age exactly 3, with the warn-and-fall-back contract unreachable for
+ * the one input class that needed it most (review #17). Generation has no
+ * actor to resolve against, so refusing is the honest answer, not a
+ * workaround.
+ * @param {CairnItem|null} bg  the background whose formula applies, or null
  * @param {string} fallback
  * @returns {{formula: string, configured: string, usable: boolean}}
- *   `configured` is the trimmed setting (blank when unset), for the warning.
+ *   `configured` is the background's trimmed formula (blank when unset), for
+ *   the warning.
  */
-export const effectiveAgeFormula = (fallback) => {
-  const configured = String(game.settings.get(SETTINGS_NS, "age-formula") ?? "").trim();
+export const effectiveAgeFormula = (bg, fallback) => {
+  const configured = String(bg?.system?.ageFormula ?? "").trim();
   const candidate = configured || String(fallback ?? "");
   const usable = !candidate.includes("@") && Roll.validate(candidate);
   return { formula: usable ? candidate : fallback, configured, usable };
@@ -937,34 +946,115 @@ export const bondEntitlement = (bg, questions = []) => {
 /*  Background choice tables                                                    */
 /* -------------------------------------------------------------------------- */
 
+/** A zeroed FUE/DES/VOL/PG tally. */
+export const noAbilityBonuses = () => Object.fromEntries(BG_ABILITY_KEYS.map((k) => [k, 0]));
+
 /**
- * Roll each of a background's two d6 choice tables (e.g. "What went horribly
- * wrong?") and collect what the rolled option grants: narrative, gear (resolved
- * against the pool), and bonus gold. Each table becomes a structured
- * {question, answer, gold} entry, index-aligned with bg.system.tables, so the
- * sheet can re-roll one question in isolation later; its items are tagged
- * question:<i>.
+ * The four ability bonuses a table option grants, as whole numbers. An option
+ * is a free-form record (see BackgroundData.tables), so anything missing or
+ * unparseable reads 0; NEGATIVES ARE LEGAL and are the point of the field — a
+ * background may cost a character strength as readily as give it.
+ * @param {Object} opt @returns {{str:Number,dex:Number,wil:Number,hp:Number}}
+ */
+export const optionAbilityBonuses = (opt) => Object.fromEntries(BG_ABILITY_KEYS.map((k) => {
+  const n = Number(opt?.[k]);
+  return [k, Number.isFinite(n) ? Math.trunc(n) : 0];
+}));
+
+/**
+ * Starting values plus bonuses, CLAMPED AT ZERO.
+ *
+ * A negative bonus can take an ability below nothing, and nothing is the floor:
+ * Cairn has no negative ability scores, and a character minted with STR -1
+ * would fail every save it can never pass and break the deprivation and
+ * damage arithmetic downstream. The clamp is per ability and applied once, on
+ * the sum — so a -3 against a 2 lands on 0 and not on -1, and two bonuses on
+ * one ability cannot each clamp separately and inflate the result.
+ * @param {Object} base  {str,dex,wil,hp}
+ * @param {Object} bonuses  {str,dex,wil,hp}
+ * @returns {{str:Number,dex:Number,wil:Number,hp:Number}}
+ */
+export const withAbilityBonuses = (base, bonuses) => Object.fromEntries(
+  BG_ABILITY_KEYS.map((k) => [k, Math.max(0, (base?.[k] ?? 0) + (bonuses?.[k] ?? 0))])
+);
+
+/** Where each bonus key lands on a character. `hp` is Hit Protection, which is
+ *  a value/max pair like the three abilities but not one of them. */
+const ABILITY_PATHS = { str: "system.abilities.STR", dex: "system.abilities.DEX", wil: "system.abilities.WIL", hp: "system.hp" };
+
+/**
+ * The actor update that moves a character's four starting numbers by a SIGNED
+ * delta — what a background swap or a re-rolled question owes, and the exact
+ * counterpart of the gold arithmetic beside it: give back what the old answer
+ * granted, apply what the new one grants.
+ *
+ * `max` carries the change and `value` follows it, so a wounded character stays
+ * wounded by the same amount and a healthy one stays full. Both floor at 0, and
+ * `value` is additionally held at or under the new `max` — a -2 on a character
+ * already at full must not leave value above max.
+ *
+ * Keys with a zero delta are omitted entirely, so a swap between two backgrounds
+ * that grant nothing writes nothing.
+ * @param {CairnActor} actor @param {Object} delta  {str,dex,wil,hp}, signed
+ * @returns {Object} a flat update object (possibly empty)
+ */
+export const abilityDeltaUpdate = (actor, delta) => {
+  const update = {};
+  for (const k of BG_ABILITY_KEYS) {
+    const d = delta?.[k] ?? 0;
+    if (!d) continue;
+    const path = ABILITY_PATHS[k];
+    const cur = foundry.utils.getProperty(actor, path) ?? {};
+    const max = Math.max(0, (cur.max ?? 0) + d);
+    update[`${path}.max`] = max;
+    update[`${path}.value`] = Math.min(Math.max(0, (cur.value ?? 0) + d), max);
+  }
+  return update;
+};
+
+/** The signed difference between two bonus tallies (new minus old). */
+export const abilityBonusDelta = (next, prev) => Object.fromEntries(
+  BG_ABILITY_KEYS.map((k) => [k, (next?.[k] ?? 0) - (prev?.[k] ?? 0)])
+);
+
+/**
+ * Roll each of a background's choice tables (e.g. "What went horribly wrong?")
+ * and collect what the rolled option grants: narrative, gear (resolved against
+ * the pool), bonus gold, and the four ability bonuses. Each table becomes a
+ * structured {question, answer, gold, abilities} entry, index-aligned with
+ * bg.system.tables, so the sheet can re-roll one question in isolation later;
+ * its items are tagged question:<i>.
+ *
+ * THE DIE IS THE TABLE'S OWN (`table.die`, one of d4/d6/d8/d10/d12), not the
+ * option count. Those two agree whenever the authoring form wrote the table —
+ * it resizes the rows to the die — and where a hand-edited document disagrees,
+ * the DIE is the truth: it is what the Warden chose and what the printed table
+ * says. A face with no row falls back to the first option rather than granting
+ * nothing, so a short table degrades instead of silently skipping a question.
  *
  * An option may also grant a CONTAINER (Kettlewright's donkey, Outrider's horse,
  * Bonekeeper's burial wagon). A container is an Actor, not an embedded item, so
  * those specs are only collected here and minted once the character Actor exists
  * — see grantContainers.
  * @param {CairnItem} bg
- * @returns {Promise<{questions:{question:String,answer:String,gold:Number}[], items:Object[], containers:Object[], gold:Number}>}
+ * @returns {Promise<{questions:Object[], items:Object[], containers:Object[], gold:Number, abilities:Object}>}
+ *   `abilities` is the SUM of every rolled option's bonuses, for the caller to
+ *   apply on top of the starting values (withAbilityBonuses).
  */
 export const applyChoiceTables = async (bg) => {
-  const out = { questions: [], items: [], containers: [], gold: 0 };
+  const out = { questions: [], items: [], containers: [], gold: 0, abilities: noAbilityBonuses() };
   const tables = bg.system.tables ?? [];
   for (let i = 0; i < tables.length; i++) {
     const table = tables[i];
     const options = table.options ?? [];
     if (!options.length) {
-      out.questions.push({ question: table.question ?? "", answer: "", gold: 0 });
+      out.questions.push({ question: table.question ?? "", answer: "", gold: 0, abilities: noAbilityBonuses() });
       continue;
     }
-    const roll = await evaluateFormula(`1d${options.length}`);
+    const roll = await evaluateFormula(`1d${bgTableDie(table)}`);
     const opt = options[roll.total - 1] ?? options[0];
     const gold = opt.bonusGold ?? 0;
+    const abilities = optionAbilityBonuses(opt);
     const items = (await resolveRefs(opt.items)).map((it) => withGrantSource(it, `question:${i}`));
     out.items.push(...items);
     // The option's own prose rides along with the container spec. What the
@@ -975,7 +1065,11 @@ export const applyChoiceTables = async (bg) => {
       ...c, grantSource: `question:${i}`,
     })));
     out.gold += gold;
-    out.questions.push({ question: table.question ?? "", answer: opt.description ?? "", gold });
+    for (const k of BG_ABILITY_KEYS) out.abilities[k] += abilities[k];
+    // `abilities` is stored ON the question for the same reason `gold` is: the
+    // sheet's per-question re-roll has to give back what this answer granted
+    // before it grants the next one's.
+    out.questions.push({ question: table.question ?? "", answer: opt.description ?? "", gold, abilities });
   }
   return out;
 };
@@ -1009,8 +1103,13 @@ const classifyRef = async (ref) => {
  *    (source must be "2e", an archetype, at least one example name). This is the
  *    pre-share, is-it-self-contained linter (docs/custom-backgrounds-plan.md §7/§9).
  *  - a SAMPLING run (n iterations of the REAL applyChoiceTables): which of each
- *    table's six options fired and the choice-gold spread, so a Warden sees the
- *    shape of what they built.
+ *    table's options fired, the choice-gold spread and the ability-bonus
+ *    spread, so a Warden sees the shape of what they built.
+ *
+ * The starting abilities are reported as the background states them — fixed
+ * four, or "rolled" — because that is half of what a Warden is checking when
+ * they press the button: the bonuses below mean one thing on top of a fixed 10
+ * and another on top of 3d6.
  * @param {CairnItem} bg
  * @param {Number} [n=10]
  * @returns {Promise<Object>}
@@ -1023,6 +1122,13 @@ export const previewBackground = async (bg, n = 10) => {
   if (!sys.archetype) problems.push({ level: "warn", msg: game.i18n.localize("CAIRN.BgAuthor.LintArchetype") });
   if (!(sys.names ?? []).some((s) => String(s).trim())) problems.push({ level: "warn", msg: game.i18n.localize("CAIRN.BgAuthor.LintNames") });
 
+  // An unusable age formula is a silent no-op at generation (rollAge falls back
+  // and warns there); saying so HERE is the point of a linter.
+  const ageFormula = String(sys.ageFormula ?? "").trim();
+  if (ageFormula && !effectiveAgeFormula(bg, Cairn.characterGenerator2e.biography.age).usable) {
+    problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintBadAge", { formula: ageFormula }) });
+  }
+
   const gear = [];
   for (const ref of sys.startingGear ?? []) {
     const kind = await classifyRef(ref);
@@ -1033,7 +1139,11 @@ export const previewBackground = async (bg, n = 10) => {
 
   const tables = [];
   const rawTables = sys.tables ?? [];
+  if (rawTables.length > BG_MAX_TABLES) {
+    problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintTooManyTables", { max: BG_MAX_TABLES, n: rawTables.length }) });
+  }
   for (let ti = 0; ti < rawTables.length; ti++) {
+    const die = bgTableDie(rawTables[ti]);
     const options = [];
     for (let oi = 0; oi < (rawTables[ti].options ?? []).length; oi++) {
       const opt = rawTables[ti].options[oi];
@@ -1043,18 +1153,35 @@ export const previewBackground = async (bg, n = 10) => {
         items.push({ name: it.name ?? "", kind });
         if (kind === "missing") problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintMissingOption", { t: ti + 1, o: oi + 1, name: it.name }) });
       }
-      const blank = !String(opt.description ?? "").trim() && !items.length && !(opt.bonusGold > 0) && !(opt.containers ?? []).length;
+      const abilities = optionAbilityBonuses(opt);
+      const hasBonus = BG_ABILITY_KEYS.some((k) => abilities[k] !== 0);
+      const blank = !String(opt.description ?? "").trim() && !items.length && !(opt.bonusGold > 0)
+        && !(opt.containers ?? []).length && !hasBonus;
       if (blank) problems.push({ level: "warn", msg: game.i18n.format("CAIRN.BgAuthor.LintEmptyOption", { t: ti + 1, o: oi + 1 }) });
-      options.push({ description: opt.description ?? "", bonusGold: opt.bonusGold ?? 0, items, blank });
+      options.push({ description: opt.description ?? "", bonusGold: opt.bonusGold ?? 0, items, abilities, hasBonus, blank });
     }
-    tables.push({ question: rawTables[ti].question ?? "", options, fired: new Array(options.length).fill(0) });
+    // Rows and faces must match: a short table means faces that fall back to
+    // option 1, a long one means rows the die can never reach. The authoring
+    // form keeps them level, so this only fires on a hand-edited document.
+    if (options.length !== die) {
+      problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintDieMismatch", { t: ti + 1, die, n: options.length }) });
+    }
+    tables.push({ question: rawTables[ti].question ?? "", die, options, fired: new Array(options.length).fill(0) });
   }
 
   let goldMin = Infinity, goldMax = -Infinity, goldSum = 0;
+  // The ability-bonus spread across the sample, per ability: what the tables
+  // add to (or take off) the starting numbers, whichever way those arrived.
+  const abilityStats = Object.fromEntries(BG_ABILITY_KEYS.map((k) => [k, { min: Infinity, max: -Infinity, sum: 0 }]));
   for (let i = 0; i < n; i++) {
     const choices = await applyChoiceTables(bg);
     const g = choices.gold ?? 0;
     goldSum += g; goldMin = Math.min(goldMin, g); goldMax = Math.max(goldMax, g);
+    for (const k of BG_ABILITY_KEYS) {
+      const v = choices.abilities[k] ?? 0;
+      const s = abilityStats[k];
+      s.sum += v; s.min = Math.min(s.min, v); s.max = Math.max(s.max, v);
+    }
     choices.questions.forEach((q, ti) => {
       const idx = tables[ti]?.options.findIndex((o) => o.description === q.answer) ?? -1;
       if (idx >= 0) tables[ti].fired[idx] += 1;
@@ -1065,70 +1192,27 @@ export const previewBackground = async (bg, n = 10) => {
     goldMin: goldMin === Infinity ? 0 : goldMin,
     goldMax: goldMax === -Infinity ? 0 : goldMax,
     goldAvg: n ? Math.round(goldSum / n) : 0,
+    abilities: Object.fromEntries(BG_ABILITY_KEYS.map((k) => {
+      const s = abilityStats[k];
+      return [k, {
+        min: s.min === Infinity ? 0 : s.min,
+        max: s.max === -Infinity ? 0 : s.max,
+        avg: n ? Math.round(s.sum / n) : 0,
+      }];
+    })),
   };
 
-  return { name: bg.name, gear, tables, sampling, problems };
-};
+  // What the character STARTS on, before the bonuses above: the background's
+  // own four, or the dice.
+  const sa = sys.startingAbilities ?? {};
+  const startingAbilities = {
+    enabled: !!sa.enabled,
+    ...Object.fromEntries(BG_ABILITY_KEYS.map((k) => [k, Number(sa[k]) || 0])),
+  };
+  const ageFormulaEffective = effectiveAgeFormula(bg, Cairn.characterGenerator2e.biography.age).formula;
+  const bgLanguages = (sys.languages ?? []).filter((s) => String(s).trim());
 
-/* -------------------------------------------------------------------------- */
-/*  Duplicate a background into an editable world pack                         */
-/* -------------------------------------------------------------------------- */
-
-/** The world Item compendium custom backgrounds are duplicated into. */
-const CUSTOM_BG_PACK = "world.custom-backgrounds";
-
-/**
- * Where a duplicated background is written: the Warden's own TRASFONDOS
- * compendium when it can take one, else the auto-created world pack.
- *
- * The order changed with the source (2026-08-29). There is exactly one place
- * backgrounds are READ from now, so writing a copy anywhere else produces a
- * background nothing can roll — which is what "Duplicate" quietly did the moment
- * the discovery scan went away. Writing into the configured compendium is
- * therefore the point of the action, not a convenience.
- *
- * `locked` is the one thing that can refuse it: a compendium that came from a
- * module is read-only, and Foundry rejects the create rather than asking. The
- * world pack is the fallback for exactly that case — the copy survives, the
- * Warden can drag it where they want it, and nothing is lost in silence.
- * @returns {Promise<CompendiumCollection|null>}
- */
-const ensureCustomBackgroundPack = async () => {
-  const configured = packFor("backgrounds");
-  if (configured && !configured.locked) return configured;
-  const existing = game.packs.get(CUSTOM_BG_PACK);
-  if (existing) return existing;
-  // The label is stored on the pack, so it is fixed in whatever language the
-  // Warden was running when it was first created — Foundry has no i18n for
-  // world-compendium labels. Localizing here at least means a Spanish Warden's
-  // world does not acquire an English compendium out of nowhere.
-  return foundry.documents.collections.CompendiumCollection.createCompendium({
-    type: "Item",
-    label: game.i18n.localize("CAIRN.CustomBackgroundsPack"),
-    name: "custom-backgrounds",
-  });
-};
-
-/**
- * Copy a background into an editable compendium as a fully-formed starting point
- * to rename and rework — the "Duplicate into my backgrounds" action
- * (docs/custom-backgrounds-plan.md §8). By-name gear references are kept as-is
- * (they point into the same Objetos compendium the original resolved against, so
- * the copy grants what the original did); a GM who wants a one-off item re-drops
- * it to snapshot. The copy is forced to source "2e" so it runs the 2e generator.
- * @param {CairnItem} bg
- * @returns {Promise<CairnItem|null>}
- */
-export const duplicateBackgroundToWorld = async (bg) => {
-  const pack = await ensureCustomBackgroundPack();
-  if (!pack) return null;
-  const data = bg.toObject();
-  delete data._id;
-  delete data.folder;
-  data.name = `${bg.name} (${game.i18n.localize("CAIRN.BgAuthor.CopySuffix")})`;
-  data.system = { ...data.system, source: "2e" };
-  const created = await Item.implementation.create(data, { pack: pack.collection });
-  return created ?? null;
+  return { name: bg.name, gear, tables, sampling, problems, startingAbilities, ageFormula: ageFormulaEffective, languages: bgLanguages };
 };
 
 /* -------------------------------------------------------------------------- */
@@ -1511,11 +1595,13 @@ export const replaceGrantedContainers = async (actor, source, specs) => {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Generate a Cairn 2e character: 3d6 abilities, 1d6 HP, a 2e background (chosen or
- * random) with a name drawn from its list and its starting gear granted from the
- * pool (weapons/armor equipped), a bond supplying gold and an item, the eight
- * physical/personality traits and age, and the background's two d6 choice tables
- * rolled for extra gear, gold, and story.
+ * Generate a Cairn 2e character: starting abilities and Hit Protection (the
+ * background's own four, or 3d6 a piece and 1d6 when it does not state them), a
+ * 2e background (chosen or random) with a name drawn from its list and its
+ * starting gear granted from the pool (weapons/armor equipped), a bond
+ * supplying gold and an item, the eight physical/personality traits, an age off
+ * the background's own dice, the languages the background grants, and its
+ * choice tables rolled for extra gear, gold, story and ability bonuses.
  * @param {CairnItem|null} chosenBg  a background Item, or null to pick at random
  * @returns {Promise<Object|null>}
  */
@@ -1545,7 +1631,10 @@ export const generate2eCharacter = async (chosenBg = null) => {
   }
 
   const traits = await rollTextItems(Cairn.characterGenerator2e.biography.items);
-  const age = String(await rollAge(Cairn.characterGenerator2e.biography.age));
+  // The age dice are the BACKGROUND's now, not a world setting — a blank or
+  // unusable formula falls back to the system default, warning in the second
+  // case (rollAge).
+  const age = String(await rollAge(bg, Cairn.characterGenerator2e.biography.age));
   const choices = await applyChoiceTables(bg);
 
   // One bond by default; the Fieldwarden background and Outrider's "Always pay
@@ -1569,31 +1658,58 @@ export const generate2eCharacter = async (chosenBg = null) => {
     bondGold += rec.bond.gold;
   }
 
-  const hpRoll = await rollHitProtection("1d6");
   const goldRoll = await rollGold(Cairn.characterGenerator2e.gold);
-  const abilityRolls = await rollAbilities("3d6");
+
+  // THE STARTING NUMBERS. A background that states its own four supplies them
+  // outright and NOTHING is rolled for them — no 3d6, no 1d6, and no Roll
+  // objects, which is why `rolls` below carries only what actually happened.
+  // Otherwise the dice run exactly as they always have.
+  const fixed = bg.system.startingAbilities ?? {};
+  const useFixed = !!fixed.enabled;
+  const hpRoll = useFixed ? null : await rollHitProtection("1d6");
+  const abilityRolls = useFixed ? null : await rollAbilities("3d6");
+  const base = useFixed
+    ? { str: Number(fixed.str) || 0, dex: Number(fixed.dex) || 0, wil: Number(fixed.wil) || 0, hp: Number(fixed.hp) || 0 }
+    : { str: abilityRolls.STR.total, dex: abilityRolls.DEX.total, wil: abilityRolls.WIL.total, hp: hpRoll.total };
+  // The rolled options' bonuses go on top either way — a fixed background can
+  // still be moved by its own questions. Below zero is clamped to zero
+  // (withAbilityBonuses).
+  const start = withAbilityBonuses(base, choices.abilities);
 
   return {
     name,
-    hp: hpRoll.total,
+    hp: start.hp,
     gold: goldRoll.total + bondGold + choices.gold,
     abilities: {
-      STR: abilityRolls.STR.total,
-      DEX: abilityRolls.DEX.total,
-      WIL: abilityRolls.WIL.total,
+      STR: start.str,
+      DEX: start.dex,
+      WIL: start.wil,
     },
-    // The five Rolls the generation chat card shows, carried out whole so
+    // The Rolls the generation chat card shows, carried out whole so
     // postGenerationRolls can hand them to ChatMessage for Dice So Nice.
     // characterToActorData never reads this key, so it stops here and never
     // reaches the document. `gold` is the BARE roll -- the gold FIELD above adds
     // bond and background-choice gold on top, and the card must show what the
     // dice on screen actually read, not the bonus-inflated total.
-    rolls: { hp: hpRoll, STR: abilityRolls.STR, DEX: abilityRolls.DEX, WIL: abilityRolls.WIL, gold: goldRoll },
+    //
+    // hp/STR/DEX/WIL are ABSENT when the background fixed them: there is no die
+    // to animate and none to report. postGenerationRolls falls back to the
+    // character's own starting numbers for those lines, so the card still shows
+    // the four values — it just does not claim they were rolled.
+    rolls: {
+      ...(hpRoll ? { hp: hpRoll } : {}),
+      ...(abilityRolls ? { STR: abilityRolls.STR, DEX: abilityRolls.DEX, WIL: abilityRolls.WIL } : {}),
+      gold: goldRoll,
+    },
     background: bg.name,
     backgroundUuid: bg.uuid,
     contentSource: "2e",
     bonds,
     age,
+    // The languages this background grants at creation, copied by NAME onto the
+    // character (characterToActorData). A background that grants none hands over
+    // an empty list, which is what clears a regenerated character's.
+    languages: [...(bg.system.languages ?? [])],
     traits,
     // Arranged before it is handed over (gear.js orderGrantedItems): weapons,
     // armor, everything else in the order it was granted, the light with its
@@ -1965,7 +2081,11 @@ export const generateBarebonesCharacter = async (chosenBg = null) => {
     contentSource: "barebones",
     failedCareer,
     bonds: [],
-    age: String(await rollAge(Cairn.characterGenerator2e.biography.age)),
+    // The background's own age dice, exactly as 2e — a Barebones background is
+    // the same `background` Item and may carry a formula like any other.
+    age: String(await rollAge(bg, Cairn.characterGenerator2e.biography.age)),
+    // …and the languages it grants, for the same reason.
+    languages: [...(bg.system.languages ?? [])],
     traits: await rollTextItems(Cairn.characterGenerator2e.biography.items),
     // Ordered, exactly as 2e above; the build order here is already close but
     // the rolled weapon and armor arrive AFTER the background's three items.
@@ -1984,14 +2104,16 @@ export const CONTENT_SOURCES = [
   {
     key: "2e",
     label: "CAIRN.ContentSource2e",
-    // The 2e generation path is offered when EITHER the shipped 2e backgrounds or
-    // GM-authored custom (homebrew) 2e backgrounds are enabled. Custom backgrounds
-    // are 2e-format and run the 2e generator, so they share its level-1 button
-    // rather than adding a third one; getBackgroundsFor("2e") then unions whichever
-    // pools are on. Shipped off + custom on = a homebrew-only game.
-    enabled: () =>
-      game.settings.get(SETTINGS_NS, "content-source-2e") ||
-      game.settings.get(SETTINGS_NS, "content-source-custom"),
+    // ALWAYS ON, and there is no setting left to say otherwise. The two
+    // switches this used to read (`content-source-2e` / `content-source-custom`)
+    // filtered a canon-versus-homebrew distinction that no longer exists: there
+    // is one backgrounds compendium, whatever the Warden put in it is what the
+    // generator rolls, and `getBackgroundsFor` has answered `allBackgrounds()`
+    // regardless of source since the compendium rework. A predicate with one
+    // possible answer is worse than none, so it is gone rather than pinned true
+    // — `enabled` stays on the entry only because the Barebones one still needs
+    // it and `enabledContentSources` calls it on both.
+    enabled: () => true,
   },
   {
     key: "barebones",
@@ -2620,6 +2742,15 @@ export const changeBackground = async (actor, newBg = null) => {
 
   // Trade the old questions' coins for the new ones'.
   const oldQGold = (actor.system.questions ?? []).reduce((n, q) => n + (q.gold ?? 0), 0);
+  // …and their ABILITY bonuses, the same trade in the same place: take back what
+  // the old answers granted, apply what the new ones grant. The character's own
+  // base numbers are NOT touched — a swap has never re-rolled 3d6 and does not
+  // start now, so a background that fixes its starting abilities changes only
+  // the characters GENERATED on it, never one it is swapped onto.
+  const oldQBonus = (actor.system.questions ?? []).reduce((acc, q) => {
+    for (const k of BG_ABILITY_KEYS) acc[k] += q.abilities?.[k] ?? 0;
+    return acc;
+  }, noAbilityBonuses());
   // No `contentSource` here on purpose: a character does not change edition. Every
   // caller is source-scoped — the picker only ever offers this character's own
   // edition, and a cross-edition DROP is refused outright (_onDropBackground) — so a
@@ -2631,6 +2762,7 @@ export const changeBackground = async (actor, newBg = null) => {
     "system.backgroundUuid": bg.uuid,
     "system.questions": choices.questions,
     "system.gold": Math.max(0, (actor.system.gold ?? 0) - oldQGold + choices.gold - clampGold),
+    ...abilityDeltaUpdate(actor, abilityBonusDelta(choices.abilities, oldQBonus)),
   };
   // Write bonds only when the clamp bit — preservation stays the default, and
   // an untouched array is not re-written wholesale for nothing.
@@ -2687,8 +2819,12 @@ const characterToActorData = (characterData) => ({
     // Multiple bonds live in system.bonds (each with a stable id).
     bonds: characterData.bonds ?? [],
     age: characterData.age ?? "",
+    // The languages the background granted, by NAME. Set unconditionally, like
+    // the omen and scar resets below: a background that grants none hands over
+    // an empty list, and regenerating onto it must clear the last one's.
+    languages: characterData.languages ?? [],
     ...(characterData.traits ? { traits: characterData.traits } : {}),
-    // 2e stores the background's two choice-table answers as structured,
+    // 2e stores the background's choice-table answers as structured,
     // individually re-rollable questions.
     biography: characterData.biography ?? "",
     questions: characterData.questions ?? [],
@@ -2881,12 +3017,18 @@ const postGenerationRolls = async (actor, characterData, roller = null, { waitFo
     // viewer's client rebuilds the card in its own language at render
     // (localizeGenerationCard, off the renderChatMessageHTML hook). The
     // content stored beside it is the same card in the composer's language.
+    //
+    // hp/STR/DEX/WIL fall back to the character's own starting numbers, because
+    // a background may FIX them (BackgroundData.startingAbilities) and then
+    // there is no die for that line — see generate2eCharacter's `rolls`. The
+    // card still shows all four values; only the animated dice are missing,
+    // which is the honest picture of what happened.
     const numbers = {
       name: actor.name,
-      hp: rolls.hp.total,
-      str: rolls.STR.total,
-      dex: rolls.DEX.total,
-      wil: rolls.WIL.total,
+      hp: rolls.hp?.total ?? characterData.hp,
+      str: rolls.STR?.total ?? characterData.abilities?.STR,
+      dex: rolls.DEX?.total ?? characterData.abilities?.DEX,
+      wil: rolls.WIL?.total ?? characterData.abilities?.WIL,
       // The BARE gold roll, not actor.system.gold -- bond and background-choice
       // gold are added on top of it, and the card must agree with the dice.
       gold: rolls.gold.total,
@@ -2902,7 +3044,10 @@ const postGenerationRolls = async (actor, characterData, roller = null, { waitFo
     if (who) speaker.alias = who;
     const message = await ChatMessage.create({
       speaker,
-      rolls: [rolls.hp, rolls.STR, rolls.DEX, rolls.WIL, rolls.gold],
+      // Only the Rolls that HAPPENED — a fixed-ability background rolled no
+      // dice for hp/STR/DEX/WIL, and a hole in this array is a Roll that cannot
+      // be reconstructed on the receiving client.
+      rolls: [rolls.hp, rolls.STR, rolls.DEX, rolls.WIL, rolls.gold].filter(Boolean),
       content,
       flags: { [FLAG_SCOPE]: { [GENERATION_ROLLS_FLAG]: numbers } },
     });
@@ -3099,8 +3244,10 @@ export const generateHireling = async () => {
     abilities: h?.abilities ?? { STR: 10, DEX: 10, WIL: 10 },
     hp: h?.hp ?? 6,
     // A person, not just a statblock (2026-08-01): the biography the PC
-    // generator rolls, through the SAME paths — rollAge honours the Warden's
-    // minimum-age floor, rollTextItems draws the eight biography trait tables.
+    // generator rolls, through the SAME paths — rollTextItems draws the eight
+    // biography trait tables. `rollAge` takes NULL for the background: a
+    // hireling has a career, not a background Item, so there is no `ageFormula`
+    // to honour and the system default is the whole answer.
     // PRONOUNS ARE NEVER ROLLED (2026-08-20, user ruling). They were a uniform
     // pick of three from 2026-08-01 until now, on the reasoning that a
     // generated stranger needs an answer on arrival. They do not: pronouns are
@@ -3108,7 +3255,7 @@ export const generateHireling = async () => {
     // deciding something no die should. Stated blank rather than omitted, so a
     // full re-roll — a whole new person — clears the last one's.
     pronouns: "",
-    age: String(await rollAge(Cairn.characterGenerator2e.biography.age)),
+    age: String(await rollAge(null, Cairn.characterGenerator2e.biography.age)),
     traits: await rollTextItems(Cairn.characterGenerator2e.biography.items),
     items: orderGrantedItems(await buildHirelingItems(h)),
   };
@@ -3494,11 +3641,12 @@ export const generateNpc = async () => {
     },
     hp: hpRoll.total,
     // Same paths a hireling's biography uses, so the two cannot diverge on
-    // anything that is not the point of the split: rollAge honours the Warden's
-    // min/max age settings, and pronouns are left BLANK for the Warden to
-    // state — see generateHireling for the ruling.
+    // anything that is not the point of the split: rollAge takes null for the
+    // background (an NPC's Background is a line of TEXT off a table, not a
+    // background Item, so it carries no age formula), and pronouns are left
+    // BLANK for the Warden to state — see generateHireling for the ruling.
     pronouns: "",
-    age: String(await rollAge(Cairn.characterGenerator2e.biography.age)),
+    age: String(await rollAge(null, Cairn.characterGenerator2e.biography.age)),
     traits: await rollNpcTraits(),
     items: orderGrantedItems(await buildNpcGear(background)),
   };

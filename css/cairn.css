@@ -2021,17 +2021,6 @@ textarea.omen-input {
     color: var(--ab-muted);
 }
 
-/* The background's credit line in Background & Notes. Muted like the source
-   label above: it is a citation the page owes, not something a player reads at
-   the table, and it must not compete with the bonds and questions above it.
-   No small-caps — a licence code and two proper names are not decoration. */
-.background-credit {
-    margin: 8px 0 0;
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--ab-muted);
-}
-
 /* Dice + magnifier beside the background name: re-roll it, or open the picker.
    Sit tight against the name so they read as controls on it, not on the line. */
 .background-roll,
@@ -3330,7 +3319,7 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     color: var(--ab-error);
 }
 
-/* The two d6 tables. */
+/* The question tables: a variable number of them, each on its own die. */
 .bg-edit-table {
     border: 1px solid var(--ab-edge);
     border-radius: 4px;
@@ -3404,18 +3393,113 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     background: var(--ab-ok-wash);
 }
 
-/* Background authoring toolbar (Test ×10 / Duplicate) + Test-×10 report dialog. */
+/* The background's own starting numbers. Four boxes on one row; when the enable
+   checkbox is off they are DISABLED and this class dims them, so "inert" is
+   visible rather than only discoverable by clicking. */
+.bg-abilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.bg-abilities.is-inert {
+    opacity: 0.45;
+}
+
+.bg-ability-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+}
+
+.bg-ability-box input {
+    width: 56px;
+}
+
+.bg-ability-label {
+    font-weight: bold;
+}
+
+/* Question, die pick-list and the remove control on one line above a table's
+   options. The question takes the slack so the die and the ✕ stay put. */
+.bg-table-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.bg-table-head .bg-table-question {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.bg-table-die-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.bg-table-die {
+    width: 62px;
+}
+
+.bg-table-add {
+    display: inline-block;
+    margin: 4px 0 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    text-decoration: underline;
+}
+
+.bg-table-remove {
+    flex: 0 0 auto;
+    cursor: pointer;
+    color: var(--ab-muted);
+}
+
+.bg-table-remove:hover {
+    color: var(--ab-error);
+}
+
+/* The four ability bonuses on one option row. Smaller than the starting-ability
+   boxes above: these are per-answer modifiers, not the character's numbers. */
+.bg-option-abilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 3px;
+}
+
+.bg-option-ability {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.78em;
+}
+
+.bg-option-ability input {
+    width: 46px;
+}
+
+/* The granted-languages picker borrows the actor sheet's .scar-list markup, so
+   only the height needs saying here — the authoring form is already a tall
+   scroll box and a second 260px pane inside it reads as a wall. */
+.bg-language-list {
+    max-height: 160px;
+}
+
+/* Background authoring toolbar (Test ×10) + Test-×10 report dialog. */
 .bg-edit-toolbar {
     display: flex;
     gap: 12px;
     margin: 2px 0 8px;
     padding-bottom: 6px;
     border-bottom: 1px solid var(--ab-edge);
-}
-
-.bg-edit-toolbar.readonly {
-    border-bottom: none;
-    margin-bottom: 4px;
 }
 
 .bg-edit-toolbar a {
@@ -3428,6 +3512,27 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     font-size: 0.9em;
     max-height: 60vh;
     overflow-y: auto;
+}
+
+.bg-preview-die,
+.background-table-die {
+    font-weight: normal;
+    font-size: 0.85em;
+    color: var(--ab-muted);
+}
+
+.bg-preview-start {
+    margin: 2px 0;
+}
+
+.bg-preview-rolled {
+    font-style: italic;
+    color: var(--ab-muted);
+}
+
+.bg-preview-bonus {
+    font-size: 0.85em;
+    color: var(--ab-muted);
 }
 
 .bg-preview h4 {

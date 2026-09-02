@@ -30,9 +30,12 @@ Cairn.characterGenerator2e = {
     // rules as written; the retired min-age's 21 default was an OVERRIDE,
     // and preserving it as the new default briefly happened and was reversed
     // the same day, so ages 12..20 are possible again out of the box, as the
-    // book says). This is the ONE copy: the `age-formula` setting registers
-    // it as its default and rollAge falls back to it when the Warden's own
-    // formula is blank or invalid. A Warden who wants the old floor writes
+    // book says). This is the ONE copy, and the SYSTEM DEFAULT: `rollAge`
+    // falls back to it whenever the character's background states no formula
+    // of its own (`BackgroundData.ageFormula`) or states one that does not
+    // parse, and the authoring form shows it as that field's placeholder. The
+    // world-wide `age-formula` setting that used to hold a default is gone —
+    // age belongs to the background. A Warden who wants the old floor writes
     // the pool form {2d20 + 10, 21}kh — max(roll, 21), the hint's example;
     // the docs/dice-formulas.md guide explains the whole notation.
     // (min-age/max-age clamping is RETIRED, 2026-08-21 — issue #21: clamping

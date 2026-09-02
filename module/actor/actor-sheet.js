@@ -1,11 +1,11 @@
-import { regenerateActor, canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula } from "../character-generator.js";
+import { regenerateActor, canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula, optionAbilityBonuses, abilityBonusDelta, abilityDeltaUpdate } from "../character-generator.js";
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
 import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
 import { resultText } from "../compendium.js";
 import { generatorTable, languages, TABLES } from "../content-packs.js";
 import { SETTINGS_NS } from "../settings.js";
 import { CONTAINER_ART_CHOICES, CONTAINER_CLASSES } from "../icons.js";
-import { NPC_ROLES, PERSON_ROLES } from "../data-models.js";
+import { NPC_ROLES, PERSON_ROLES, bgTableDie } from "../data-models.js";
 
 /**
  * The roles with something to randomize: the two people and the monster.
@@ -1218,16 +1218,37 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * npc (context.showBiography).
    * @private
    */
+  /**
+   * The background document this actor's age formula comes from, or null.
+   *
+   * Only characters carry `backgroundUuid` — a hireling has a career and an NPC
+   * a line of text — so everyone else answers null and `effectiveAgeFormula`
+   * hands back the system default.
+   * @returns {Promise<CairnItem|null>}
+   * @private
+   */
+  async _ageBackgroundDoc() {
+    const uuid = this.actor.system.backgroundUuid;
+    return uuid ? (await fromUuid(uuid)) ?? null : null;
+  }
+
   async _prepareBiographyContext(context) {
-    // The age die's tooltip names the formula a click will ROLL — the Warden's
-    // age-formula setting, or the config fallback when that is blank or
-    // unusable — through the same helper the die itself reads, so the two
+    // The age die's tooltip names the formula a click will ROLL — this
+    // character's BACKGROUND formula, or the config fallback when that is blank
+    // or unusable — through the same helper the die itself reads, so the two
     // cannot disagree (review #18: a literal "(2d20 + 10)" outlived the
-    // setting by a day). Formatted here rather than with {{localize}} because
-    // the value is per-WORLD, not per-language; `data-tooltip` on the control
-    // (user ruling), so it looks like the Die of Fate's beside it.
+    // configured formula by a day). Formatted here rather than with
+    // {{localize}} because the value is per-BACKGROUND, not per-language;
+    // `data-tooltip` on the control (user ruling), so it looks like the Die of
+    // Fate's beside it.
+    //
+    // Resolved HERE rather than in _prepareCharacterContext because this block
+    // is shared with role-npc people, who have no `backgroundUuid` at all and
+    // must simply get the default. The resolved document is stashed on the
+    // context so the character path below does not look it up a second time.
+    context.ageBackground = await this._ageBackgroundDoc();
     context.rollAgeTitle = game.i18n.format("CAIRN.RollAgeTitle", {
-      formula: effectiveAgeFormula(CONFIG.Cairn?.characterGenerator2e?.biography?.age).formula,
+      formula: effectiveAgeFormula(context.ageBackground, CONFIG.Cairn?.characterGenerator2e?.biography?.age).formula,
     });
     // Trait pick-lists: each trait's source table supplies a <select> of options
     // so a player can pick a value (or keep an off-table one).
@@ -1343,19 +1364,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await this._prepareBiographyContext(context);
 
     // Background description (from the linked Item) + a friendly source label,
-    // shown in the sheet header. "2e" -> "Cairn 2e".
-    const bgUuid = this.actor.system.backgroundUuid;
-    const bg = bgUuid ? await fromUuid(bgUuid) : null;
+    // shown in the sheet header. "2e" -> "Cairn 2e". The document was already
+    // resolved by the biography block above (for the age formula), so this
+    // reads its answer rather than making a second lookup.
+    const bg = context.ageBackground ?? null;
     context.backgroundDescription = bg?.system?.description
       ? cleanDescription(await foundry.applications.ux.TextEditor.implementation.enrichHTML(
           bg.system.description, { relativeTo: this.actor }))
       : "";
-    // The background's credit line, shown in Background & Notes. Same field the
-    // printed footer uses, off the SAME `bg` already resolved above — no second
-    // lookup. A citation's two names, title and licence code are what a reader
-    // in any language needs. Empty for the canon 2e and Barebones backgrounds by
-    // design, and empty renders nothing.
-    context.backgroundAttribution = String(bg?.system?.attribution ?? "").trim();
     // The background name for the header (generated case).
     context.backgroundName = this.actor.system.background ?? "";
     context.contentSourceLabel = sourceLabel(this.actor.system.contentSource);
@@ -2390,32 +2406,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       ["mondolme/icons/", "CAIRN.PrintCreditGameIcons"],
     ];
     const artCredit = ART_CREDITS.find(([prefix]) => (actor.img ?? "").includes(prefix))?.[1];
-    // …and the background credits whoever WROTE it, straight off the document's
-    // own `attribution` field. The shipped class backgrounds carry Gordon
-    // McCormick's citation because the page reproduces his prose — the tagline
-    // under Traits and both rolled question/answer pairs are his sentences
-    // verbatim, and the Yochai Gal line above does not attribute him.
+    // NO per-background credit line. The `attribution` field it printed is gone
+    // from BackgroundData: a Warden writes their own backgrounds in their own
+    // world, and a per-document citation line was machinery for a shipped
+    // catalogue this system no longer has. Cairn's own credit below is
+    // unconditional and covers the rules the page reproduces.
     //
-    // This was a FLAG lookup for one day (2026-08-15) and the field replaced it
-    // the same day, on the user's reading: derived from provenance, the credit
-    // could never be turned off, so a Warden who duplicated a Cleric and
-    // rewrote every word was stuck printing his name over their own writing.
-    // A field is editable, so the line belongs to whoever owns the text. The
-    // canon 2e and Barebones backgrounds ship with it EMPTY and print one
-    // credit as before — Cairn's own line is unconditional, and filling theirs
-    // would name Yochai Gal twice.
-    //
-    // Authored text on the printed page: it goes into the joined string that
-    // reaches `{{ credits }}`, which escapes. Never move it to a triple-stash.
-    // The other two lines are sentences and end in a stop; an authored citation
-    // ends in "CC BY-SA 4.0" and ran straight into the art credit beside it. The
-    // stop is added HERE rather than asked of the author, because "remember to
-    // end with a period" is not a thing a licence field should demand.
-    const bgCredit = String(bg?.system?.attribution ?? "").trim();
     // The generated-with line is unconditional and joined LAST (user ask
     // 2026-08-21): every footer, every role, ENDS with it.
     const credits = [L("CAIRN.PrintCreditText"),
-      bgCredit && (/[.!?]$/.test(bgCredit) ? bgCredit : `${bgCredit}.`),
       artCredit ? L(artCredit) : "",
       L("CAIRN.PrintCreditGenerated")].filter(Boolean).join(" ");
 
@@ -3531,16 +3530,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /* -------------------------------------------- */
 
   /**
-   * Re-roll the character's age (the Warden's age-formula setting, RAW
-   * `2d20 + 10` by default) into the age field.
+   * Re-roll the character's age into the age field, on the dice its BACKGROUND
+   * names (`system.ageFormula`) — RAW `2d20 + 10` when the background says
+   * nothing, and for anyone who has no background at all.
    * @this {CairnActorSheet}
    */
   static async #onRollAge(event) {
     event.preventDefault();
-    // rollAge (not evaluateFormula) so the sheet re-roll obeys the Warden's
-    // age-formula setting, exactly as generation does — the config value is
-    // only the FALLBACK for a blank or invalid setting.
-    const total = await rollAge(CONFIG.Cairn?.characterGenerator2e?.biography?.age);
+    // rollAge (not evaluateFormula) so the sheet re-roll reads the background's
+    // formula exactly as generation does — the config value is only the
+    // FALLBACK for a blank or invalid one. The background is resolved fresh
+    // rather than read off the render context: a Warden may have edited the
+    // formula since this sheet was drawn.
+    const bg = await this._ageBackgroundDoc();
+    const total = await rollAge(bg, CONFIG.Cairn?.characterGenerator2e?.biography?.age);
     await this.actor.update({ "system.age": String(total) });
   }
 
@@ -3761,10 +3764,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Re-roll a single background question in isolation: re-roll that table's d6
-   * (from the source background via `backgroundUuid`), replace only that
-   * question's answer, and sync the items/gold it grants (options carry gear as
-   * references, resolved through resolveRefs like generation does).
+   * Re-roll a single background question in isolation: re-roll that table's own
+   * die (from the source background via `backgroundUuid`), replace only that
+   * question's answer, and sync the items, gold and ability bonuses it grants
+   * (options carry gear as references, resolved through resolveRefs like
+   * generation does).
+   *
+   * `bgTableDie`, not the option count — the SAME rule applyChoiceTables rolls
+   * on, so a question re-rolled here and one rolled at generation cannot land on
+   * different dice.
    * @this {CairnActorSheet}
    */
   static async #onRerollQuestion(event, target) {
@@ -3785,7 +3793,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         ui.notifications.warn(game.i18n.localize("CAIRN.RerollQuestionUnavailable"));
         return;
       }
-      const roll = await evaluateFormula(`1d${options.length}`);
+      const roll = await evaluateFormula(`1d${bgTableDie(table)}`);
       const opt = options[roll.total - 1] ?? options[0];
 
       const newItems = (await resolveRefs(opt.items)).map((it) => withGrantSource(it, `question:${idx}`));
@@ -3797,9 +3805,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const oldGold = questions[idx]?.gold ?? 0;
       const newGold = opt.bonusGold ?? 0;
       const gold = Math.max(0, (this.actor.system.gold ?? 0) - oldGold + newGold);
-      questions[idx] = { question: table.question ?? "", answer: opt.description ?? "", gold: newGold };
-      // abNoStatusCard: a question re-roll's gold swing is grant machinery.
-      await this.actor.update({ "system.questions": questions, "system.gold": gold }, { abNoStatusCard: true });
+      // The ability bonuses swing exactly as the gold does: the old answer's
+      // come off, the new answer's go on. The stored `abilities` on the question
+      // record is what makes that reversible — same reason `gold` is stored.
+      const newBonus = optionAbilityBonuses(opt);
+      const abilityUpdate = abilityDeltaUpdate(this.actor, abilityBonusDelta(newBonus, questions[idx]?.abilities));
+      questions[idx] = { question: table.question ?? "", answer: opt.description ?? "", gold: newGold, abilities: newBonus };
+      // abNoStatusCard: a question re-roll's gold and ability swing is grant machinery.
+      await this.actor.update({ "system.questions": questions, "system.gold": gold, ...abilityUpdate }, { abNoStatusCard: true });
     } finally {
       this._rerolling = false;
     }

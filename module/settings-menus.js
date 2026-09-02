@@ -180,8 +180,8 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
       sync();
     }
 
-    // Bold a phrase within a label (the three content-source rows name their
-    // product). The phrase is LOCALIZED, not an English literal (review #6):
+    // Bold a phrase within a label (the content-source row names its product).
+    // The phrase is LOCALIZED, not an English literal (review #6):
     // the label searched is the translated setting name, so an English phrase
     // only ever matched where a translator kept the product name verbatim. A
     // language whose label drops the phrase degrades to no bold — the i < 0

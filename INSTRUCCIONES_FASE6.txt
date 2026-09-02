@@ -1,0 +1,150 @@
+MONDOLME — Fase 6: el objeto Trasfondo
+=========================================
+
+Sobre la fase 5 ya aplicada.
+
+
+CÓMO APLICARLO
+--------------
+
+Igual que la fase 5: hay que BORRAR antes, porque se eliminan archivos.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. Borra estas cinco carpetas completas de tu repositorio:
+
+     module
+     tools
+     lang
+     css
+     templates
+
+3. Descomprime el ZIP dentro de la carpeta del repositorio y reemplaza
+   system.json y package.json cuando Windows pregunte.
+
+4. Commit y push, por ejemplo:
+
+     Fase 6: el objeto Trasfondo
+
+
+CARACTERÍSTICAS INICIALES
+-------------------------
+
+El trasfondo tiene ahora una sección con una casilla y cuatro recuadros:
+FUE, DES, VOL y PG.
+
+Si la marcas, un personaje creado con ese trasfondo empieza con esos números
+exactos y NO se tira ningún dado. Si la dejas sin marcar, se tira lo de
+siempre: 3d6 por característica y 1d6 de PG.
+
+Los valores por defecto de los cuatro recuadros son 10, 10, 10 y 4 — la
+media de 3d6 y de 1d6 — para que marcar la casilla nunca te deje un
+personaje a cero por descuido.
+
+
+TABLAS DE PREGUNTAS
+-------------------
+
+Antes eran dos tablas fijas de seis opciones. Ahora añades y quitas tablas
+hasta un máximo de siete, y a cada una le eliges su dado: d4, d6, d8, d10
+o d12. El dado decide cuántas respuestas tiene la tabla.
+
+Si reduces el dado de una tabla, se pierden las respuestas del final. El
+sistema solo te pregunta si alguna de las que va a borrar tiene algo escrito
+(texto, oro, un objeto o una bonificación); si están vacías las quita sin
+molestarte. Lo mismo al borrar una tabla entera.
+
+Cada respuesta tiene ahora, además del texto, el oro y el objeto
+arrastrable, cuatro recuadros pequeños: FUE, DES, VOL y PG. Si sale esa
+respuesta, se suman a las características iniciales del personaje.
+
+Pueden ser negativos. Si una bonificación negativa dejara una característica
+por debajo de cero, se queda en cero: Cairn no tiene puntuaciones negativas y
+una FUE de −1 rompería las cuentas del daño y la privación más adelante.
+
+
+IDIOMAS Y EDAD
+--------------
+
+El trasfondo tiene dos campos nuevos más:
+
+  Idiomas iniciales — marcas los que concede, de la lista que definiste en
+  Configuración general. Un personaje creado con ese trasfondo los recibe.
+
+  Fórmula de edad — la tirada de edad de quien se cree con ese trasfondo.
+  Vacío usa la del sistema (2d20 + 10).
+
+Ese segundo campo SUSTITUYE al ajuste de configuración que había: la edad ya
+no es una regla del mundo sino un hecho del trasfondo, como pediste. El dado
+de edad de la ficha también lee de ahí.
+
+
+LO QUE SE QUITÓ DEL TRASFONDO
+-----------------------------
+
+  - El botón de duplicar trasfondos, y con él toda esa mecánica.
+  - La línea de créditos, tanto el campo como su impresión en el pie de la
+    hoja de personaje.
+
+
+AJUSTES ELIMINADOS
+------------------
+
+  Fórmula de edad          se muda al trasfondo (arriba).
+  Ofrecer trasfondos 2e    ya no filtraba nada: hay un solo compendio de
+  Ofrecer trasfondos       trasfondos y no queda canon ni casero que
+  caseros                  distinguir. Te lo señalé en la fase 3 y ahora
+                           se van.
+
+La sección "Creación de personajes" sigue existiendo, con sus otros seis
+ajustes.
+
+
+VÍNCULOS AHORA SON OBLIGACIONES
+-------------------------------
+
+Barrido completo del idioma: en toda la interfaz, lo que antes eran
+«Vínculos» del personaje ahora son «Obligaciones» — la ficha, la hoja
+impresa, el autor de trasfondos y los avisos.
+
+La palabra «Vínculos» queda libre para la pestaña que relaciona actores
+entre sí, que es la fase 7.
+
+
+DOS SITIOS QUE HUBO QUE MOVER CON ELLO
+--------------------------------------
+
+Te los cuento porque no estaban en tu lista pero son la misma regla:
+
+1. El botón de volver a tirar UNA pregunta en la ficha también tiraba
+   "1d(número de respuestas)". Ahora usa el dado de su tabla, y al cambiar
+   la respuesta cambia también las bonificaciones: quita las de la vieja y
+   pone las de la nueva, igual que ya hacía con el oro.
+
+2. Cambiar el trasfondo de un personaje hace ese mismo intercambio con todas
+   sus preguntas a la vez. Lo que NO hace, ni antes ni ahora, es volver a
+   tirar las características base: cambiar de trasfondo nunca ha vuelto a
+   tirar 3d6. Así que un trasfondo con características fijas solo afecta a
+   los personajes creados con él.
+
+3. La tarjeta de chat de la generación mostraba cinco tiradas. Con
+   características fijas no hay dados que enseñar para cuatro de ellas, así
+   que sigue mostrando los cinco valores pero ya no afirma que se tiraron.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 122 archivos de código pasan la comprobación de sintaxis.
+- system.json, package.json y lang/es.json son JSON válido.
+- Todos los textos que usa el código existen en el idioma español.
+- Ninguna referencia viva a los tres ajustes eliminados.
+- No queda ni un «Vínculo» donde deba decir «Obligación».
+- Cada campo del formulario del trasfondo tiene su hueco en los datos (si no
+  lo tuviera, lo que escribieras ahí se perdería en silencio al guardar).
+
+
+SIGUIENTE: Fase 7 — las fichas. Las cuatro pestañas del PJ, la descripción
+en primera persona con sus generadores, la cabecera del PNJ con lo de
+contratar, la ficha del Libro, y la pestaña «Vínculos y notas» con las
+relaciones entre actores según su rol.

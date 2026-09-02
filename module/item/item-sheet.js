@@ -1,13 +1,19 @@
 import { resolveGearItem } from "../gear.js";
-import { previewBackground, duplicateBackgroundToWorld } from "../character-generator.js";
+import { previewBackground } from "../character-generator.js";
 import { languages } from "../content-packs.js";
 import { canReadBook } from "../magic.js";
-import { BOOK_PAGE_KEYS } from "../data-models.js";
+import {
+  BOOK_PAGE_KEYS, BG_ABILITY_KEYS, BG_TABLE_DICE, BG_DEFAULT_DIE, BG_MAX_TABLES, bgTableDie,
+} from "../data-models.js";
 import { bindEditorClickAwaySave, cleanDescription, formatCount, sourceLabel } from "../utils.js";
 import { pickArt } from "../art-picker.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
+
+/** The i18n key labelling each of the four starting abilities. FUE/DES/VOL are
+ *  the bare ability keys the whole system uses; PG is Hit Protection. */
+const ABILITY_LABELS = { str: "STR", dex: "DEX", wil: "WIL", hp: "CAIRN.HitProtection" };
 
 /** HTML-escape for report text built by hand (not through Handlebars). */
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -25,16 +31,28 @@ const kindBadge = (kind) => {
   return `<span class="bg-kind ${cls}" title="${esc(game.i18n.localize(label))}"><i class="fas ${icon}"></i></span>`;
 };
 
+/** A signed bonus, as it reads on a report line: "+2", "-1", nothing at 0. */
+const signed = (n) => (n > 0 ? `+${n}` : String(n));
+
+/** "FUE +2 · PG -1" for a {str,dex,wil,hp} record, or "" when it is all zeroes. */
+const abilityChipText = (a = {}) => BG_ABILITY_KEYS
+  .filter((k) => (a[k] ?? 0) !== 0)
+  .map((k) => `${game.i18n.localize(ABILITY_LABELS[k])} ${signed(a[k])}`)
+  .join(" · ");
+
 /**
  * Render a previewBackground() report to HTML for the Test-×10 dialog: a problems
- * banner (errors then warnings, or a green all-clear), the starting gear with
- * resolution badges, and each table's options with how often each fired across the
- * sample plus the choice-gold spread.
+ * banner (errors then warnings, or a green all-clear), what the character starts
+ * on (the background's own four numbers, or the dice) with its age formula and
+ * granted languages, the starting gear with resolution badges, and each table —
+ * headed by its own die — with how often each option fired across the sample,
+ * the bonuses each carries, and the gold and ability spreads.
  */
 const renderPreviewReport = (r) => {
+  const L = (k) => esc(game.i18n.localize(k));
   const parts = [];
   if (!r.problems.length) {
-    parts.push(`<p class="bg-preview-ok"><i class="fas fa-check-circle"></i> ${esc(game.i18n.localize("CAIRN.BgAuthor.LintClean"))}</p>`);
+    parts.push(`<p class="bg-preview-ok"><i class="fas fa-check-circle"></i> ${L("CAIRN.BgAuthor.LintClean")}</p>`);
   } else {
     const row = (p) => `<li class="bg-preview-${p.level}"><i class="fas ${p.level === "error" ? "fa-circle-xmark" : "fa-circle-exclamation"}"></i> ${esc(p.msg)}</li>`;
     const errs = r.problems.filter((p) => p.level === "error");
@@ -42,33 +60,95 @@ const renderPreviewReport = (r) => {
     parts.push(`<ul class="bg-preview-problems">${errs.map(row).join("")}${warns.map(row).join("")}</ul>`);
   }
 
+  // What a character built on this background STARTS on, before any table
+  // bonus: the four fixed numbers, or a statement that the dice decide.
+  parts.push(`<h4>${L("CAIRN.BgAuthor.StartingAbilities")}</h4>`);
+  const sa = r.startingAbilities ?? {};
+  parts.push(sa.enabled
+    ? `<p class="bg-preview-start">${BG_ABILITY_KEYS.map((k) => `${L(ABILITY_LABELS[k])} <strong>${Number(sa[k]) || 0}</strong>`).join(" · ")}</p>`
+    : `<p class="bg-preview-start bg-preview-rolled">${L("CAIRN.BgAuthor.StartingAbilitiesRolled")}</p>`);
+  parts.push(`<p class="bg-preview-start">${esc(game.i18n.format("CAIRN.BgAuthor.PreviewAge", { formula: r.ageFormula ?? "" }))}</p>`);
+  parts.push(`<p class="bg-preview-start">${esc(game.i18n.format("CAIRN.BgAuthor.PreviewLanguages", {
+    list: r.languages?.length ? r.languages.join(", ") : game.i18n.localize("CAIRN.NoneYet"),
+  }))}</p>`);
+
   if (r.gear.length) {
-    parts.push(`<h4>${esc(game.i18n.localize("CAIRN.BackgroundStartingGear"))}</h4>`);
-    parts.push(`<ul class="bg-preview-gear">${r.gear.map((g) => `<li>${kindBadge(g.kind)} ${esc(g.name) || `<em>${esc(game.i18n.localize("CAIRN.BgAuthor.Unnamed"))}</em>`}</li>`).join("")}</ul>`);
+    parts.push(`<h4>${L("CAIRN.BackgroundStartingGear")}</h4>`);
+    parts.push(`<ul class="bg-preview-gear">${r.gear.map((g) => `<li>${kindBadge(g.kind)} ${esc(g.name) || `<em>${L("CAIRN.BgAuthor.Unnamed")}</em>`}</li>`).join("")}</ul>`);
   }
 
   r.tables.forEach((t) => {
-    parts.push(`<h4>${esc(t.question) || `<em>${esc(game.i18n.localize("CAIRN.BgAuthor.Unnamed"))}</em>`}</h4>`);
+    const title = esc(t.question) || `<em>${L("CAIRN.BgAuthor.Unnamed")}</em>`;
+    parts.push(`<h4>${title} <span class="bg-preview-die">d${t.die}</span></h4>`);
     const rows = t.options.map((o, i) => {
       const items = o.items.map((it) => `${kindBadge(it.kind)} ${esc(it.name)}`).join(", ");
       const gold = o.bonusGold ? ` <span class="bg-preview-gold">+${o.bonusGold}g</span>` : "";
+      const chip = abilityChipText(o.abilities);
+      const bonus = chip ? ` <span class="bg-preview-bonus">${esc(chip)}</span>` : "";
       const fired = `<span class="bg-preview-fired">${t.fired[i]}/${r.sampling.n}</span>`;
-      const desc = esc(o.description) || `<em class="bg-preview-blank">${esc(game.i18n.localize("CAIRN.BgAuthor.EmptyOption"))}</em>`;
-      return `<li>${fired} ${desc}${gold}${items ? `<div class="bg-preview-items">${items}</div>` : ""}</li>`;
+      const desc = esc(o.description) || `<em class="bg-preview-blank">${L("CAIRN.BgAuthor.EmptyOption")}</em>`;
+      return `<li>${fired} ${desc}${gold}${bonus}${items ? `<div class="bg-preview-items">${items}</div>` : ""}</li>`;
     });
     parts.push(`<ol class="bg-preview-options">${rows.join("")}</ol>`);
   });
 
   parts.push(`<p class="bg-preview-sample">${esc(game.i18n.format("CAIRN.BgAuthor.GoldSpread", { avg: r.sampling.goldAvg, min: r.sampling.goldMin, max: r.sampling.goldMax }))}</p>`);
+  // The ability spread the tables produce across the sample. Printed only when
+  // some option actually moves a number — on a background with no bonuses the
+  // line would be four zeroes saying nothing.
+  const spread = BG_ABILITY_KEYS
+    .filter((k) => r.sampling.abilities?.[k] && (r.sampling.abilities[k].min !== 0 || r.sampling.abilities[k].max !== 0))
+    .map((k) => {
+      const s = r.sampling.abilities[k];
+      return `${game.i18n.localize(ABILITY_LABELS[k])} ${signed(s.min)}…${signed(s.max)}`;
+    })
+    .join(" · ");
+  if (spread) {
+    parts.push(`<p class="bg-preview-sample">${esc(game.i18n.format("CAIRN.BgAuthor.AbilitySpread", { spread }))}</p>`);
+  }
   return `<div class="bg-preview">${parts.join("")}</div>`;
 };
 
-/** A custom 2e background always has exactly two d6 question tables, six options
- *  each — a fixed form, not an open-ended builder (see docs/custom-backgrounds-plan.md
- *  §6 Fork B). The generator's `applyChoiceTables` rolls `1d<options.length>`, so
- *  six options == a d6. */
-const TABLE_COUNT = 2;
-const OPTIONS_PER_TABLE = 6;
+/** {key, label, value} rows for the four ability boxes, off any {str,dex,wil,hp}
+ *  record. One builder for the starting-abilities block and every option row. */
+const abilityRows = (src = {}) => BG_ABILITY_KEYS.map((key) => ({
+  key,
+  label: ABILITY_LABELS[key],
+  value: Number(src[key]) || 0,
+}));
+
+/** A table option in its stored shape, with every field present and the four
+ *  ability bonuses coerced to whole numbers (negatives kept). Snapshots inside
+ *  `items` and any `containers` ride through untouched — the DOM cannot carry
+ *  them, so a handler that rebuilt them from the form would lose them. */
+const normalizedOption = (so = {}) => ({
+  description: so.description ?? "",
+  bonusGold: so.bonusGold ?? 0,
+  items: so.items ?? [],
+  containers: so.containers ?? [],
+  ...Object.fromEntries(BG_ABILITY_KEYS.map((k) => [k, Number(so[k]) || 0])),
+});
+
+/**
+ * Does this option hold anything a Warden would miss? The test behind the
+ * shrink warning: text, gold, an item, a container or an ability bonus. An
+ * all-zero, all-blank row is scaffolding and is dropped without asking.
+ */
+const optionHasContent = (o = {}) =>
+  !!String(o.description ?? "").trim()
+  || (Number(o.bonusGold) || 0) !== 0
+  || (o.items ?? []).length > 0
+  || (o.containers ?? []).length > 0
+  || BG_ABILITY_KEYS.some((k) => (Number(o[k]) || 0) !== 0);
+
+/** Ask before throwing authored rows away. Resolves false on ✕, which reads as
+ *  "no" the way every other destructive dialog in the system does. */
+const confirmDataLoss = async (title, message) =>
+  foundry.applications.api.DialogV2.confirm({
+    window: { title: game.i18n.localize(title), icon: "fas fa-triangle-exclamation" },
+    content: `<p>${message}</p>`,
+    rejectClose: false,
+  });
 
 /**
  * The extra tabs each item type carries beyond Description, in the order they
@@ -158,13 +238,14 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       // and spells — through the system's art picker instead, which is where
       // the Game-Icons gallery lives.
       editImage: CairnItemSheet.#onEditImage,
-      duplicateBackground: CairnItemSheet.#onDuplicateBackground,
       testBackground: CairnItemSheet.#onTestBackground,
       addName: CairnItemSheet.#onAddName,
       removeName: CairnItemSheet.#onRemoveName,
       addGear: CairnItemSheet.#onAddGear,
       removeGear: CairnItemSheet.#onRemoveGear,
       removeOptionItem: CairnItemSheet.#onRemoveOptionItem,
+      addTable: CairnItemSheet.#onAddTable,
+      removeTable: CairnItemSheet.#onRemoveTable,
     },
   };
 
@@ -291,7 +372,8 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
     if (this.item.type === "book") await this._prepareBook(context);
     if (this.item.type === "background") {
-      context.isGM = game.user.isGM;
+      // No `isGM` here any more: it gated the Duplicate button on both branches,
+      // and the button is gone. Nothing else on this sheet asks who is looking.
       if (this.isEditable) await this._prepareBackgroundEditor(context);
       // Only reachable when the sheet is NOT editable, so the flag was always true.
       else await this._prepareBackgroundReadOnly(context);
@@ -369,11 +451,18 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       })
     );
     // The Details tab's questions and options. Display copies only; the editor
-    // branch keeps its raw inputs.
+    // branch keeps its raw inputs. The die is shown beside the question because
+    // it is now the table's own — a reader cannot infer it from the row count on
+    // a document nobody can open the editor for.
     context.backgroundTables = (this.item.system.tables ?? []).map((tbl) => ({
       question: tbl.question ?? "",
+      die: bgTableDie(tbl),
       options: (tbl.options ?? []).map((o) => ({ description: o.description ?? "" })),
     }));
+    // The four starting numbers, but ONLY when this background states them —
+    // otherwise there is nothing to show and the dice speak for themselves.
+    const sa = this.item.system.startingAbilities ?? {};
+    context.readOnlyAbilities = sa.enabled ? abilityRows(sa) : null;
     // Same derived label the editor branch shows — the read-only header printed
     // the raw stored enum ("2e"), which sourceLabel exists to prevent drifting
     // copies of. Third copy retired.
@@ -381,11 +470,12 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   }
 
   /**
-   * Editable authoring form: pick-lists, the current names, gear rows (with
-   * resolved/derived tags and a snapshot marker), and the two d6 tables padded to
-   * the fixed 2×6 shape for display. Nothing here is persisted — the padded shape
-   * only reaches the document when the GM edits a field (handlers write a
-   * normalized array via _normalizedTables).
+   * Editable authoring form: pick-lists, the starting-ability boxes, the current
+   * names, gear rows (with resolved/derived tags and a snapshot marker), the
+   * language ticks, the age formula, and the question tables padded to each
+   * table's own die. Nothing here is persisted — the padded shape only reaches
+   * the document when the GM edits a field (handlers write a normalized array
+   * via _normalizedTables).
    * @private
    */
   async _prepareBackgroundEditor(context) {
@@ -414,17 +504,46 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
         return { name: g.name, uses: g.uses ?? "", isSnapshot: false, tags: doc ? gearTags(doc.system, g.uses) : [], missing: !doc && !!g.name };
       })
     );
+    // The four starting numbers. Always rendered; the enable checkbox decides
+    // whether the inputs are live, so an author can see what is waiting behind
+    // the switch instead of a section that appears out of nowhere.
+    context.startingAbilityRows = abilityRows(this.item.system.startingAbilities ?? {});
+
+    // The languages this background grants, off the Warden's own list — the SAME
+    // source and the same markup as the actor sheet's picker. A language ticked
+    // before the Warden edited the setting still shows, rather than vanishing
+    // from the form with the background still granting it (the actor sheet's
+    // orphan rule, and for the same reason).
+    const granted = this.item.system.languages ?? [];
+    const worldLanguages = languages();
+    context.languageOptions = worldLanguages.map((name) => ({ name, selected: granted.includes(name) }));
+    for (const name of granted) {
+      if (!worldLanguages.includes(name)) context.languageOptions.push({ name, selected: true, orphan: true });
+    }
+
+    // The age formula's placeholder and hint both name the system default, so
+    // "leave it blank" is a statement rather than a guess. Off the config's one
+    // copy, which is what rollAge falls back to.
+    context.defaultAgeFormula = CONFIG.Cairn?.characterGenerator2e?.biography?.age ?? "";
+
+    context.maxTables = BG_MAX_TABLES;
     const tables = this.item.system.tables ?? [];
-    context.editTables = Array.from({ length: TABLE_COUNT }, (_, ti) => {
-      const st = tables[ti] ?? {};
+    context.canAddTable = tables.length < BG_MAX_TABLES;
+    context.editTables = tables.map((st) => {
+      const die = bgTableDie(st);
       return {
         question: st.question ?? "",
-        options: Array.from({ length: OPTIONS_PER_TABLE }, (_, oi) => {
+        die,
+        dieChoices: BG_TABLE_DICE.map((v) => ({ value: v, label: `d${v}`, selected: v === die })),
+        // As many rows as the die has faces — padded for display when the stored
+        // array is short, so a table always LOOKS like the die it rolls on.
+        options: Array.from({ length: die }, (_, oi) => {
           const so = st.options?.[oi] ?? {};
           return {
             description: so.description ?? "",
             bonusGold: so.bonusGold ?? 0,
             items: (so.items ?? []).map((it) => ({ name: it.name, isSnapshot: !!it.itemData })),
+            abilityRows: abilityRows(so),
           };
         }),
       };
@@ -432,27 +551,26 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   }
 
   /**
-   * A deep clone of the background's tables padded to the fixed 2×6 shape,
-   * preserving each option's real items (with their itemData snapshots) and
-   * containers. Handlers mutate this and write it back, so editing one field on a
-   * blank background materializes the full structure without dropping any data.
+   * A deep clone of the background's tables in their canonical shape: every
+   * table padded to its OWN die's face count, every option carrying all its
+   * fields (including the four ability bonuses), and each option's real items —
+   * with their `itemData` snapshots — and containers preserved. Handlers mutate
+   * this and write it back, so editing one field on a blank table materializes
+   * the full structure without dropping any data.
+   *
+   * NOT truncated to BG_MAX_TABLES: the cap belongs on the ADD action, and
+   * enforcing it here would silently delete an eighth table because someone
+   * typed in the first one's question.
    * @private
    */
   _normalizedTables() {
     const src = foundry.utils.deepClone(this.item.system.tables ?? []);
-    return Array.from({ length: TABLE_COUNT }, (_, ti) => {
-      const st = src[ti] ?? {};
+    return src.map((st) => {
+      const die = bgTableDie(st);
       return {
         question: st.question ?? "",
-        options: Array.from({ length: OPTIONS_PER_TABLE }, (_, oi) => {
-          const so = st.options?.[oi] ?? {};
-          return {
-            description: so.description ?? "",
-            bonusGold: so.bonusGold ?? 0,
-            items: so.items ?? [],
-            containers: so.containers ?? [],
-          };
-        }),
+        die,
+        options: Array.from({ length: die }, (_, oi) => normalizedOption(st.options?.[oi] ?? {})),
       };
     });
   }
@@ -567,11 +685,49 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       await commit({ "system.startingGear": gear });
     });
 
-    // --- The two d6 tables -----------------------------------------------------
+    // --- Granted languages -----------------------------------------------------
+    // The whole checked set, every time, exactly as the actor sheet's picker
+    // does it: managed here rather than through form serialization so unticking
+    // the LAST one reliably stores an empty array instead of dropping the key.
+    on(".language-check", async () => {
+      const langs = [...el.querySelectorAll(".language-check:checked")].map((o) => o.value);
+      await commit({ "system.languages": langs });
+    });
+
+    // --- The question tables ---------------------------------------------------
     on(".bg-table-question", async (ev) => {
       const tables = this._normalizedTables();
       tables[Number(ev.currentTarget.dataset.t)].question = ev.currentTarget.value;
       await commit({ "system.tables": tables });
+    });
+    // Changing the die RESIZES the table: growing appends blank rows, shrinking
+    // drops the tail. Shrinking is destructive, so a row that holds anything
+    // (text, gold, an item, a container or an ability bonus) is confirmed first
+    // — there is no undo on an item document, and the rows go the moment the
+    // update lands. Declining puts the select back by re-rendering from stored
+    // data. This is the ONE commit here that must render: the row count on
+    // screen has changed.
+    on(".bg-table-die", async (ev) => {
+      const ti = Number(ev.currentTarget.dataset.t);
+      const die = Number(ev.currentTarget.value);
+      const tables = this._normalizedTables();
+      const table = tables[ti];
+      if (!table || !BG_TABLE_DICE.includes(die) || table.die === die) return;
+      const doomed = table.options.slice(die).filter(optionHasContent);
+      if (doomed.length) {
+        const ok = await confirmDataLoss(
+          "CAIRN.BgAuthor.ShrinkTitle",
+          game.i18n.format("CAIRN.BgAuthor.ShrinkWarn", { n: doomed.length, die: `d${die}` })
+        );
+        // Declining puts the select back the only way it can be put back: a
+        // re-render from stored data. Guarded on `rendered` because the dialog
+        // is awaited and the sheet may have been closed behind it — rendering a
+        // closed application would reopen it.
+        if (!ok) { if (this.rendered) this.render(); return; }
+      }
+      table.die = die;
+      table.options = Array.from({ length: die }, (_, oi) => normalizedOption(table.options[oi] ?? {}));
+      await commit({ "system.tables": tables }, true);
     });
     on(".bg-option-desc", async (ev) => {
       const tables = this._normalizedTables();
@@ -582,6 +738,18 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
       const tables = this._normalizedTables();
       const v = parseInt(ev.currentTarget.value, 10);
       tables[Number(ev.currentTarget.dataset.t)].options[Number(ev.currentTarget.dataset.o)].bonusGold = Number.isNaN(v) ? 0 : Math.max(0, v);
+      await commit({ "system.tables": tables });
+    });
+    // The four ability bonuses on one option row. NO Math.max here, unlike gold:
+    // a negative bonus is the point of the field — a background may cost a
+    // character strength as readily as give it. The clamp that matters is at
+    // GENERATION (withAbilityBonuses), where the sum meets a real character and
+    // cannot take an ability below zero.
+    on(".bg-option-ability-input", async (ev) => {
+      const { t, o, k } = ev.currentTarget.dataset;
+      const tables = this._normalizedTables();
+      const v = parseInt(ev.currentTarget.value, 10);
+      tables[Number(t)].options[Number(o)][k] = Number.isNaN(v) ? 0 : v;
       await commit({ "system.tables": tables });
     });
   }
@@ -632,20 +800,6 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
   }
 
-  /**
-   * "Duplicate into my backgrounds": copy this background into the GM's editable
-   * world compendium (created on first use) as a starting point, and open the copy.
-   * Available on locked shipped backgrounds — the intended way to fork one.
-   * @this {CairnItemSheet}
-   */
-  static async #onDuplicateBackground(event) {
-    event.preventDefault();
-    const copy = await duplicateBackgroundToWorld(this.item);
-    if (!copy) return;
-    ui.notifications.info(game.i18n.format("CAIRN.BgAuthor.Duplicated", { name: copy.name }));
-    copy.sheet.render(true);
-  }
-
   /** @this {CairnItemSheet} */
   static async #onAddName() {
     await this.item.update({ "system.names": [...(this.item.system.names ?? []), ""] });
@@ -675,6 +829,51 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     const { t: ti, o, i } = target.dataset;
     const tables = this._normalizedTables();
     tables[Number(ti)].options[Number(o)].items.splice(Number(i), 1);
+    await this.item.update({ "system.tables": tables });
+  }
+
+  /**
+   * Add a question table: a d6 with six blank rows, the shape most 2e questions
+   * take. The cap is enforced HERE — `_normalizedTables` deliberately does not,
+   * so an over-full document is never trimmed as a side effect of an unrelated
+   * edit — and a refusal SAYS so, because the add link is hidden at the cap and
+   * a click that arrives anyway (a stale render) must not do nothing in silence.
+   * @this {CairnItemSheet}
+   */
+  static async #onAddTable() {
+    const tables = this._normalizedTables();
+    if (tables.length >= BG_MAX_TABLES) {
+      ui.notifications.warn(game.i18n.format("CAIRN.BgAuthor.TablesFull", { max: BG_MAX_TABLES }));
+      return;
+    }
+    tables.push({
+      question: "",
+      die: BG_DEFAULT_DIE,
+      options: Array.from({ length: BG_DEFAULT_DIE }, () => normalizedOption()),
+    });
+    await this.item.update({ "system.tables": tables });
+  }
+
+  /**
+   * Remove a question table. Confirmed whenever it holds anything — the same
+   * rule, and the same test, as shrinking one: a whole table going without a
+   * word would be stranger than a single row asking.
+   * @this {CairnItemSheet}
+   */
+  static async #onRemoveTable(event, target) {
+    const ti = Number(target.dataset.t);
+    const tables = this._normalizedTables();
+    const table = tables[ti];
+    if (!table) return;
+    const hasContent = !!String(table.question ?? "").trim() || table.options.some(optionHasContent);
+    if (hasContent) {
+      const ok = await confirmDataLoss(
+        "CAIRN.BgAuthor.RemoveTableTitle",
+        game.i18n.format("CAIRN.BgAuthor.RemoveTableWarn", { n: ti + 1 })
+      );
+      if (!ok) return;
+    }
+    tables.splice(ti, 1);
     await this.item.update({ "system.tables": tables });
   }
 

@@ -1,5 +1,5 @@
 {
-  "CAIRN.AddBond": "Añadir un vínculo",
+  "CAIRN.AddBond": "Añadir una obligación",
   "CAIRN.AddFatigue": "Añadir fatiga",
   "CAIRN.AddItem": "Añadir objeto",
   "CAIRN.Age": "Edad",
@@ -27,25 +27,22 @@
   "CAIRN.BackgroundNames": "Nombres de ejemplo",
   "CAIRN.BackgroundSource": "Fuente",
   "CAIRN.BackgroundStartingGear": "Equipo inicial",
+  "CAIRN.BgAuthor.AbilitySpread": "Variación de características por las opciones tiradas: {spread}.",
   "CAIRN.BgAuthor.AddGear": "Añadir equipo por nombre",
   "CAIRN.BgAuthor.AddName": "Añadir un nombre",
+  "CAIRN.BgAuthor.AddTable": "Añadir una tabla de preguntas",
+  "CAIRN.BgAuthor.AgeFormula": "Fórmula de edad",
+  "CAIRN.BgAuthor.AgeFormulaHint": "Los dados que se tiran para la edad de un personaje creado con este trasfondo, y también con el dado de edad de su ficha. Déjalo vacío para usar la del sistema ({formula}). Por ejemplo, 2d6 + 18 da edades de 20 a 30, y 3d10 las reparte más. Si escribes algo que no sea una tirada válida, se usa la predeterminada y se te avisa.",
+  "CAIRN.BgAuthor.AgeFormulaLabel": "Dados de edad",
   "CAIRN.BgAuthor.Archetype": "Arquetipo",
-  "CAIRN.BgAuthor.Attribution": "Línea de créditos",
-  "CAIRN.BgAuthor.AttributionHint": "Quién escribió este trasfondo y bajo qué licencia. Lo que escribas aquí se imprime en el pie de cada hoja de personaje creada a partir de él, así que déjalo en una sola línea: un título, un nombre y la licencia. Déjalo vacío para tu trabajo propio no compartido: el crédito de Cairn se imprime en todas las hojas de todos modos. Si has adaptado el trasfondo de otra persona, su crédito ya está aquí — consérvalo mientras quede algo de lo que escribió, y sustitúyelo por el tuyo cuando ya no quede nada.",
-  "CAIRN.BgAuthor.AttributionPlaceholder": "Título — Autor · CC BY-SA 4.0",
-  "CAIRN.BgAuthor.BondsTable": "Tabla de Vínculos",
-  "CAIRN.BgAuthor.BondsTableHint": "Especifica una tabla de tiradas propia de la que extraer los vínculos de este trasfondo: crea una en la sección «Tablas» o en un compendio, y escribe aquí su nombre. Déjalo en blanco si quieres utilizar los vínculos de Cairn 2.ª edición. Tus propias filas solo muestran su texto: el editor de tablas de Foundry no puede registrar el oro inicial ni el equipo que incluyen las filas de la 2.ª edición, así que incluye cualquier dato mecánico en el texto de la fila y deja que el jugador lo aplique.",
-  "CAIRN.BgAuthor.BondsTablePlaceholder": "Vínculos",
+  "CAIRN.BgAuthor.BondsTable": "Tabla de Obligaciones",
+  "CAIRN.BgAuthor.BondsTableHint": "Especifica una tabla de tiradas propia de la que extraer las obligaciones de este trasfondo: crea una en la sección «Tablas» o en un compendio, y escribe aquí su nombre. Déjalo en blanco si quieres utilizar las obligaciones de Cairn 2.ª edición. Tus propias filas solo muestran su texto: el editor de tablas de Foundry no puede registrar el oro inicial ni el equipo que incluyen las filas de la 2.ª edición, así que incluye cualquier dato mecánico en el texto de la fila y deja que el jugador lo aplique.",
+  "CAIRN.BgAuthor.BondsTablePlaceholder": "Obligaciones",
   "CAIRN.BgAuthor.BonusGold": "Oro adicional",
-  "CAIRN.BgAuthor.CopySuffix": "Copiar",
   "CAIRN.BgAuthor.DropGearHint": "Arrastra un objeto hasta aquí para añadir una copia independiente.",
   "CAIRN.BgAuthor.DropItemHint": "Arrastra un objeto hasta aquí",
-  "CAIRN.BgAuthor.Duplicate": "Duplicar en Trasfondos personalizados",
-  "CAIRN.BgAuthor.DuplicateHint": "Copia esto en tu compendio de mundo «Trasfondos personalizados», que es editable, como punto de partida.",
-  "CAIRN.BgAuthor.DuplicateOnDetails": "Este trasfondo viene con el sistema y está bloqueado. Abre la pestaña «Detalles» y usa «Duplicar en Trasfondos personalizados» para hacer una copia que puedas editar.",
-  "CAIRN.BgAuthor.Duplicated": "Copiado en Trasfondos personalizados como \"{name}\".",
-  "CAIRN.BgAuthor.EditOnDetails": "Abre la pestaña «Detalles» para editar este trasfondo: su equipo inicial, sus tablas de preguntas y su línea de créditos.",
-  "CAIRN.BgAuthor.EmptyOption": "(opción vacía: un dado de seis caras (d6) puede seguir sacando este resultado)",
+  "CAIRN.BgAuthor.EditOnDetails": "Abre la pestaña «Detalles» para editar este trasfondo: sus características iniciales, su equipo inicial, sus idiomas, su fórmula de edad y sus tablas de preguntas.",
+  "CAIRN.BgAuthor.EmptyOption": "(opción vacía: el dado de la tabla puede sacarla igualmente)",
   "CAIRN.BgAuthor.GearPlaceholder": "Nombre del objeto (p. ej., raciones)",
   "CAIRN.BgAuthor.GoldSpread": "Oro extra por las elecciones realizadas: promedio {avg} (rango {min}–{max}) sobre 10 tiradas.",
   "CAIRN.BgAuthor.KindEmpty": "Sin título",
@@ -53,24 +50,43 @@
   "CAIRN.BgAuthor.KindName": "Resuelve por nombre a partir de un paquete",
   "CAIRN.BgAuthor.KindRolled": "Se genera aleatoriamente al crear el personaje",
   "CAIRN.BgAuthor.KindSnapshot": "Captura instantánea",
+  "CAIRN.BgAuthor.Languages": "Idiomas iniciales",
+  "CAIRN.BgAuthor.LanguagesEmpty": "Todavía no has definido ningún idioma: añádelos en «Configuración general» y volverán a aparecer aquí.",
+  "CAIRN.BgAuthor.LanguagesHint": "Marca los idiomas que conoce desde el principio un personaje creado con este trasfondo. Se copian a su ficha al generarlo; después puede cambiarlos allí.",
   "CAIRN.BgAuthor.LintArchetype": "Ningun arquetipo establecido — no aparecerá agrupado en el selector.",
+  "CAIRN.BgAuthor.LintBadAge": "La fórmula de edad («{formula}») no es una tirada de dados válida: al crear un personaje se usará la predeterminada del sistema.",
   "CAIRN.BgAuthor.LintClean": "Parece que todo está resuelto: cada recompensa se ha concedido.",
+  "CAIRN.BgAuthor.LintDieMismatch": "Tabla {t}: el dado es d{die} pero tiene {n} opciones. Vuelve a elegir el dado para ajustar las filas.",
   "CAIRN.BgAuthor.LintEmptyGear": "La fila de equipo inicial no tiene nombre.",
-  "CAIRN.BgAuthor.LintEmptyOption": "Tabla {t}, opción {o} está vacía — Un d6 puede seguir tirándose, aunque no otorgue nada..",
+  "CAIRN.BgAuthor.LintEmptyOption": "Tabla {t}, opción {o}: está vacía — el dado puede sacarla igualmente, aunque no otorgue nada.",
   "CAIRN.BgAuthor.LintMissingGear": "Equipo inicial \"{name}\" no sirve de nada: desaparecerá sin más. Arrastra el objeto para hacer una captura o corrige el nombre.",
   "CAIRN.BgAuthor.LintMissingOption": "Tabla {t}, opción {o}: \"{name}\" no sirve de nada: desaparecerá sin más. Arrastra el objeto para hacer una captura o corrige el nombre.",
   "CAIRN.BgAuthor.LintNames": "Si no se indican nombres de ejemplo, se utiliza el nombre del propio trasfondo.",
   "CAIRN.BgAuthor.LintSource": "La fuente no es \"Cairn 2e\", por eso no aparecerá en el selector de la 2.ª edición.",
+  "CAIRN.BgAuthor.LintTooManyTables": "Este trasfondo tiene {n} tablas de preguntas y el máximo es {max}. Elimina las que sobren.",
   "CAIRN.BgAuthor.NamePlaceholder": "p. ej., Selene",
   "CAIRN.BgAuthor.NoBackgroundDrop": "No se puede añadir un trasfondo a un trasfondo.",
+  "CAIRN.BgAuthor.OptionAbilitiesHint": "Lo que esta opción suma o resta a las características iniciales. Puedes usar números negativos; ninguna característica baja de 0.",
   "CAIRN.BgAuthor.OptionPlaceholder": "Qué ocurre y qué otorga (en prosa)",
+  "CAIRN.BgAuthor.PreviewAge": "Edad: {formula}.",
+  "CAIRN.BgAuthor.PreviewLanguages": "Idiomas iniciales: {list}.",
   "CAIRN.BgAuthor.QuestionPlaceholder": "Pregunta (por ejemplo: ¿Qué pasó en tu última actuación?)",
-  "CAIRN.BgAuthor.SecondBond": "Concede dos vínculos",
-  "CAIRN.BgAuthor.SecondBondHint": "Los personajes con este trasfondo tiran dos veces en la tabla de vínculos, en lugar de una. Si el resultado de la tirada indica que hay que volver a tirar, se suma su propio vínculo a los ya obtenidos.",
+  "CAIRN.BgAuthor.RemoveTable": "Eliminar esta tabla",
+  "CAIRN.BgAuthor.RemoveTableTitle": "Eliminar la tabla",
+  "CAIRN.BgAuthor.RemoveTableWarn": "La tabla {n} tiene contenido escrito. Si la eliminas, se pierde. ¿Quieres continuar?",
+  "CAIRN.BgAuthor.SecondBond": "Concede dos obligaciones",
+  "CAIRN.BgAuthor.SecondBondHint": "Los personajes con este trasfondo tiran dos veces en la tabla de obligaciones, en lugar de una. Si el resultado de la tirada indica que hay que volver a tirar, se suma su propia obligación a las ya obtenidas.",
+  "CAIRN.BgAuthor.ShrinkTitle": "Reducir la tabla",
+  "CAIRN.BgAuthor.ShrinkWarn": "Al cambiar el dado a {die} se eliminan las últimas filas de la tabla, y {n} de ellas tienen contenido escrito que se perderá. ¿Quieres continuar?",
   "CAIRN.BgAuthor.SnapshotHint": "Con este trasfondo, se mantiene una copia fija; las modificaciones posteriores realizadas en el objeto de origen no se reflejan.",
-  "CAIRN.BgAuthor.SourceHint": "Asignale un arquetipo para que aparezca agrupado en el selector de creación de personajes, y activa \"Ofrecer trasfondos personalizados de 2.ª edición\" en «Configuración» para que aparezca allí.",
-  "CAIRN.BgAuthor.Tables": "Tablas de Preguntas (2 × d6)",
-  "CAIRN.BgAuthor.TablesHint": "Dos tablas de d6, con seis opciones cada una. Al crear el personaje, se lanza un dado por cada tabla, lo que le otorga su descripción, su oro y sus objetos.",
+  "CAIRN.BgAuthor.SourceHint": "Asígnale un arquetipo para que aparezca agrupado en el selector de creación de personajes.",
+  "CAIRN.BgAuthor.StartingAbilities": "Características iniciales",
+  "CAIRN.BgAuthor.StartingAbilitiesEnabled": "Este trasfondo fija las características iniciales",
+  "CAIRN.BgAuthor.StartingAbilitiesRolled": "Sin marcar, al crear el personaje se tiran 3d6 por característica y 1d6 de PG.",
+  "CAIRN.BgAuthor.TableDie": "Dado",
+  "CAIRN.BgAuthor.Tables": "Tablas de preguntas",
+  "CAIRN.BgAuthor.TablesFull": "Ya tienes el máximo de {max} tablas de preguntas.",
+  "CAIRN.BgAuthor.TablesHint": "Cada tabla tiene su propio dado y tantas opciones como caras. Al crear el personaje se tira una vez por tabla, y la opción que salga otorga su descripción, su oro, sus objetos y sus bonificadores de características. Puedes tener hasta {max} tablas.",
   "CAIRN.BgAuthor.Test": "Prueba ×10",
   "CAIRN.BgAuthor.TestHint": "Haz una simulación de este trasfondo 10 veces: comprueba que todas las recompensas se resuelvan y observa la diferencia entre la opción y el oro.",
   "CAIRN.BgAuthor.TestTitle": "Prueba: {name}",
@@ -105,7 +121,7 @@
   "CAIRN.Bio.ViceVirtueNpc": "Es {list}.",
   "CAIRN.Blast": "Estallido",
   "CAIRN.BoldMeanEquipped": "(negrita significa equipado)",
-  "CAIRN.Bond": "Vínculo",
+  "CAIRN.Bond": "Obligación",
   "CAIRN.BookBulkyTip": "Un libro siempre es voluminoso: ocupa dos espacios y no puedes desmarcarlo.",
   "CAIRN.BookLanguage": "Idioma",
   "CAIRN.BookLanguageLocked": "No conoces el idioma en el que está escrito este libro: solo puedes leer su descripción, no sus páginas.",
@@ -123,7 +139,7 @@
   "CAIRN.Career": "Profesión",
   "CAIRN.ChangeBackground": "Cambiar trasfondo",
   "CAIRN.ChangeBackgroundQ": "Cambia el trasfondo de este personaje por {name}?",
-  "CAIRN.ChangeBackgroundTip": "Se eliminan el equipo inicial del trasfondo anterior y los objetos que otorgaban sus preguntas, y en su lugar se generan los del nuevo trasfondo. Se conservan los vínculos, el retrato y las notas.",
+  "CAIRN.ChangeBackgroundTip": "Se eliminan el equipo inicial del trasfondo anterior y los objetos que otorgaban sus preguntas, y en su lugar se generan los del nuevo trasfondo. Se conservan las obligaciones, el retrato y las notas.",
   "CAIRN.ChangeBackgroundTitle": "Cambiar trasfondo",
   "CAIRN.ChangeFailedCareer": "Cambiar carrera fallida",
   "CAIRN.ChangeLog": {
@@ -178,8 +194,6 @@
   "CAIRN.ContainerArtTabKinds": "Tipos",
   "CAIRN.ContentSource2e": "Cairn 2e",
   "CAIRN.ContentSourceBarebones": "Cairn Barebones",
-  "CAIRN.ContentSourceCanon2e": "Cairn 2e canon",
-  "CAIRN.ContentSourceCustom": "Cairn 2e casero",
   "CAIRN.ContentSourcePrompt": "¿A partir de qué edición se debería generar este personaje?",
   "CAIRN.ContentSourceTitle": "Elige una fuente de contenido",
   "CAIRN.Cost": "Coste",
@@ -191,7 +205,6 @@
   "CAIRN.CriticalDamageStatusFor": "Daño crítico — {key}",
   "CAIRN.CriticalDamageToggle": "Daño crítico (FUE): marcar o desmarcar. Un PJ herido de gravedad solo puede arrastrarse por el suelo hasta que sea estabilizado.",
   "CAIRN.Current": "Actual",
-  "CAIRN.CustomBackgroundsPack": "Trasfondos caseros",
   "CAIRN.CustomPortraitCategory.Companion": "Compañeros",
   "CAIRN.CustomPortraitCategory.Monster": "Monstruos",
   "CAIRN.CustomPortraitCategory.Npc": "PNJ",
@@ -310,11 +323,11 @@
   "CAIRN.GoldTip": "Las monedas pesan: las primeras {n} son insignificantes (sin peso); cada {n} adicional ocupa un espacio del inventario.",
   "CAIRN.GoldTipWeightless": "El oro no tiene peso en este juego — nunca ocupa espacios en el inventario.",
   "CAIRN.GrantBackground": "Trasfondo",
-  "CAIRN.GrantBond": "Vínculo",
+  "CAIRN.GrantBond": "Obligación",
   "CAIRN.GrantContainer": "Contenedor",
   "CAIRN.GrantFailedCareer": "Carrera fallida",
   "CAIRN.GrantQuestion": "Pregunta",
-  "CAIRN.GrantTagsHint": "Los objetos etiquetados como «Trasfondo», «Vínculo», «Pregunta» o «Carrera fallida» se asignaron durante la creación del personaje.",
+  "CAIRN.GrantTagsHint": "Los objetos etiquetados como «Trasfondo», «Obligación», «Pregunta» o «Carrera fallida» se asignaron durante la creación del personaje.",
   "CAIRN.GrimoireAddFatigue": "Añade {count} fatiga",
   "CAIRN.GrimoireCast": "Lanzar hechizo",
   "CAIRN.GrimoireCastFlavor": "Hechizo de {name}",
@@ -416,7 +429,6 @@
     "GrimoireNoDice": "a {name} no le quedan espacios libres — no puede lanzar dados mágicos. Debe liberar espacio del inventario.",
     "GrimoireNoPages": "{name} no tiene ningún hechizo escrito — escribe alguno en sus páginas desde la ficha del libro.",
     "LastBackground": "Debe permanecer activado al menos un trasfondo.",
-    "LastSource": "Debe permanecer activada al menos una fuente de trasfondos: se ha vuelto a activar Cairn 2e.",
     "LeftOverloaded": "Te has ido del mercado sobrecargado — la PG se reduce a 0 hasta que liberes un espacio.",
     "MarketplaceDisabled": "El Guardián ha cerrado el mercado.",
     "MaxSlotsOccupied": "Se han utilizado todos los espacios de inventario.",
@@ -528,7 +540,7 @@
   "CAIRN.PortraitUrlSet": "Establecer",
   "CAIRN.Print": "Imprimir",
   "CAIRN.PrintArmorPoints": "{armor} de armadura",
-  "CAIRN.PrintBonds": "Vínculos",
+  "CAIRN.PrintBonds": "Obligaciones",
   "CAIRN.PrintCreditAspeheim": "Retrato de Jon Aspeheim, con licencia CC BY 4.0.",
   "CAIRN.PrintCreditGameIcons": "Retrato de game-icons.net, con licencia CC BY 3.0; los autores de los iconos aparecen en art/game-icons/CREDITS.md.",
   "CAIRN.PrintCreditGenerated": "Generado e impreso con Mondolme para Foundry VTT.",
@@ -556,10 +568,10 @@
   "CAIRN.Relic": "Reliquia",
   "CAIRN.RelicTip": "Una reliquia es un objeto mágico y puede ser cualquier cosa: una piedra, una espada, un yelmo, un par de zapatos. Al marcarla, aparece una pestaña llamada «Recarga»; al rellenarla, el contador de este objeto pasa de «usos» a «cargas».",
   "CAIRN.Remove": "Eliminar",
-  "CAIRN.RemoveBond": "Eliminar este vínculo",
+  "CAIRN.RemoveBond": "Eliminar esta obligación",
   "CAIRN.RemoveFatigue": "Quitar fatiga",
   "CAIRN.ReorderHint": "Arrastra un objeto para cambiar el orden de tu inventario.",
-  "CAIRN.RerollBond": "Volver a tirar el vínculo",
+  "CAIRN.RerollBond": "Volver a tirar la obligación",
   "CAIRN.RerollQuestion": "Volver a tirar esta pregunta",
   "CAIRN.RerollQuestionUnavailable": "Este personaje no tiene trasfondo a partir del cual volver a tirar la pregunta.",
   "CAIRN.Reseed": "Rellenar",
@@ -607,10 +619,6 @@
   "CAIRN.ScrollTip": "Un pergamino de hechizo es ese hechizo escrito una sola vez en un papel: es insignificante, de un solo uso y desaparece al leerlo. Al marcarlo, se conservan todas esas características y aparece como un pergamino en el inventario.",
   "CAIRN.SetLimit": "Establecer limite",
   "CAIRN.Settings": {
-    "AgeFormula": {
-      "hint": "Los dados que se tiran para la edad de cada persona generada, y también con el dado de edad de las fichas. Por defecto 2d20 + 10, la tirada del libro. ¿Quieres un mínimo? {2d20 + 10, 21}kh tira 2d20 + 10 pero nunca baja de 21. ¿Quieres un rango? 2d6 + 18 da edades de 20 a 30. Déjalo vacío para usar la predeterminada. Con la notación de dados de Cairn activada, d20 + d20 se queda con el dado más alto; 2d20 + 10 suma.",
-      "label": "Fórmula de edad para los personajes generados"
-    },
     "AllowPlayerGenerate": {
       "label": "Permite a los jugadores crear personajes"
     },
@@ -636,17 +644,9 @@
     "CharacterInventoryLimit": {
       "label": "Establece el límite de equipo por personaje en lugar de de forma global"
     },
-    "ContentSource2e": {
-      "hint": "Ofrece los 20 trasfondos de Cairn 2e al generar un personaje. Si hay más de una fuente activada, el generador pregunta cuál se quiere utilizar.",
-      "label": "Ofrecer hojas de personaje Cairn 2e"
-    },
     "ContentSourceBarebones": {
       "hint": "Ofrece los 100 trasfondos «Barebones» de Cairn al crear un personaje. Los personajes «Barebones» siguen las mismas reglas que los de la 2.ª edición; solo difieren en su creación.",
       "label": "Ofrecer hojas de personaje Cairn Barebones"
-    },
-    "ContentSourceCustom": {
-      "hint": "A la hora de crear un personaje, incluye los trasfondos de la 2.ª edición creados por el Guardián que figuran en los compendios del mundo. Aparecerán junto a los trasfondos de Cairn 2.ª edición incluidos en el juego; desactiva la opción «Ofrecer hojas de personaje Cairn 2e» para generar personajes únicamente a partir de tus trasfondos caseros.",
-      "label": "Ofrecer trasfondos caseros 2e"
     },
     "CustomPortraitFolder": {
       "hint": "Una carpeta con tus propios retratos de personajes (en relación con la raíz de datos de Foundry). Cuando contenga imágenes, los nuevos personajes y mercenarios las utilizarán en lugar de las ilustraciones de Jon Aspeheim incluidas de serie, y el selector de retratos mostrará una pestaña «Personalizado». Déjala vacía o sin rellenar para utilizar únicamente los retratos incluidos de serie. La carpeta predeterminada se crea automáticamente; solo tienes que arrastrar las imágenes a ella y hacer clic en «Actualizar» en el selector.",
@@ -665,31 +665,31 @@
     "GroupInventoryButton": "Configurar inventario",
     "GroupInventoryHint": "El límite de espacios, el tope de inventario, el mercado y las monedas por espacio.",
     "Languages": {
-      "label": "Idiomas de la ambientación",
-      "hint": "La lista de idiomas de tu mundo, separados por comas. Por ejemplo: Común, Élfico, Enano. Son los que podrás asignar a un personaje o a un PNJ en su ficha, y los que podrás elegir al escribir un libro."
+      "hint": "La lista de idiomas de tu mundo, separados por comas. Por ejemplo: Común, Élfico, Enano. Son los que podrás asignar a un personaje o a un PNJ en su ficha, y los que podrás elegir al escribir un libro.",
+      "label": "Idiomas de la ambientación"
     },
     "MaxEquipSlots": {
       "label": "Número máximo de espacios de inventario por personaje"
     },
     "PackBackgrounds": {
-      "label": "Compendio de trasfondos",
-      "hint": "Nombre del compendio con los trasfondos que pueden elegir los jugadores. El sistema tiene en cuenta todos sus objetos de tipo Trasfondo."
+      "hint": "Nombre del compendio con los trasfondos que pueden elegir los jugadores. El sistema tiene en cuenta todos sus objetos de tipo Trasfondo.",
+      "label": "Compendio de trasfondos"
     },
     "PackGenerators": {
-      "label": "Compendio de generadores",
-      "hint": "Nombre del compendio donde los generadores de PJ, PNJ y facciones buscan sus tablas. Debe contener tablas llamadas: Obligaciones, Vestimenta, Rostro, Cabello, Presagios, Físico, Cicatrices, Piel, Voz, Hechizos, Defecto, Virtud, Trasfondo, Facción, Objetivo, Peculiaridad, Armadura, Equipo, Arma, Ventaja, Cantidad, Agenda, Agente, Obstáculo, Rasgo 1, Rasgo 2, Cumpleaños, Nombres y Percances. Escríbelo tal y como aparece en la barra lateral de compendios."
+      "hint": "Nombre del compendio donde los generadores de PJ, PNJ y facciones buscan sus tablas. Debe contener tablas llamadas: Obligaciones, Vestimenta, Rostro, Cabello, Presagios, Físico, Cicatrices, Piel, Voz, Hechizos, Defecto, Virtud, Trasfondo, Facción, Objetivo, Peculiaridad, Armadura, Equipo, Arma, Ventaja, Cantidad, Agenda, Agente, Obstáculo, Rasgo 1, Rasgo 2, Cumpleaños, Nombres y Percances. Escríbelo tal y como aparece en la barra lateral de compendios.",
+      "label": "Compendio de generadores"
     },
     "PackItems": {
-      "label": "Compendio de objetos",
-      "hint": "Nombre del compendio con las armas, armaduras y equipo. El sistema busca aquí por nombre cada vez que un trasfondo, una obligación o una profesión conceden un objeto."
+      "hint": "Nombre del compendio con las armas, armaduras y equipo. El sistema busca aquí por nombre cada vez que un trasfondo, una obligación o una profesión conceden un objeto.",
+      "label": "Compendio de objetos"
     },
     "PackMarket": {
-      "label": "Compendio del mercado",
-      "hint": "Nombre del compendio con las existencias del mercado. Debe contener tablas llamadas: Armas, Armadura, Equipo y Contenedores. Cada fila apunta al objeto que se pone a la venta."
+      "hint": "Nombre del compendio con las existencias del mercado. Debe contener tablas llamadas: Armas, Armadura, Equipo y Contenedores. Cada fila apunta al objeto que se pone a la venta.",
+      "label": "Compendio del mercado"
     },
     "PackNpcBackgrounds": {
-      "label": "Compendio de trasfondos de PNJ",
-      "hint": "Nombre del compendio con los trasfondos que usa el generador de PNJ. Puede ser el mismo que el de los jugadores o uno aparte, con trasfondos más simples. El sistema tiene en cuenta todos sus objetos de tipo Trasfondo."
+      "hint": "Nombre del compendio con los trasfondos que usa el generador de PNJ. Puede ser el mismo que el de los jugadores o uno aparte, con trasfondos más simples. El sistema tiene en cuenta todos sus objetos de tipo Trasfondo.",
+      "label": "Compendio de trasfondos de PNJ"
     },
     "ShowGenerateHeader": {
       "label": "Mostrar el botón «Regenerar» en el encabezado de la ficha de personaje"
@@ -699,7 +699,7 @@
       "label": "Mostrar los resultados de la creación de personajes en el chat"
     },
     "ShowGrantTags": {
-      "label": "Mostrar las etiquetas de origen de los objetos (Trasfondo / Vínculo / Pregunta)"
+      "label": "Mostrar las etiquetas de origen de los objetos (Trasfondo / Obligación / Pregunta)"
     },
     "ShowGrantTagsPrint": {
       "label": "Mostrar las etiquetas de origen de los objetos en las hojas impresas"
