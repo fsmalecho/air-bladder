@@ -55,53 +55,65 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
-          # The whole history: check:translations below baselines on the
-          # PREVIOUS release tag, and a shallow checkout reaches no tag at all,
-          # on which the guard degrades to its first two rules and prints OK.
-          fetch-depth: 0
 
-      # Build the LevelDB compendia from src/packs/ (packs/ is gitignored)
+      # Node is here for the manifest-substitution step and the gates below.
+      # There is deliberately NO `npm ci`: this system ships no compendia to
+      # build and the gates below need nothing but Node itself, so installing
+      # dependencies would add a failure mode (and a registry round-trip) that
+      # buys the release nothing.
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-      - run: npm ci
 
-      # Build FIRST, gate second: the gates assert on the tree as it will ship,
-      # and one of them needs the shipped shape to exist — check:licence anchors
-      # its LICENSE.txt path detection on real top-level directories, so with
-      # packs/ absent every packs/ reference silently fell out of its list and
-      # the zip-coverage check reported the zip shipping an unnamed directory.
-      # That failed the first 0.1.10 tag (2026-08-04): the gates ran at steps
-      # 5–12 while build:packs sat at step 13, an order no local run ever has,
-      # because a working tree always carries built packs.
-      - run: npm run build:packs
+      # The offline gates, BEFORE anything is published. A tag push used to be
+      # able to publish whatever was in the tree, so something must refuse.
+      #
+      # This is deliberately a SMALL gate. The nine checks that used to sit here
+      # were written for a system that shipped 30 compendia, seven item types and
+      # seven languages; four of them no longer exist and the rest assert on a
+      # shape this fork left behind. A gate that cannot pass is not a gate — it
+      # is a tag that never publishes. What survives is what still protects a
+      # release: code that parses, and manifests that parse and agree with the
+      # files beside them. Add checks back as they earn their place.
 
-      # The offline gates, BEFORE anything is published (review 2026-08-04: a
-      # tag push used to publish whatever was in the tree — no workflow ran a
-      # single check, including check:fields, which guards the htmlFields
-      # sanitization declarations CLAUDE.md classes as a security control).
-      # These are the offline half of docs/release-testing.md; they need no
-      # Foundry and finish in seconds. check:warden is deliberately absent —
-      # it fetches the live SRD from another repo, and a release should not be
-      # hostage to someone else's outage; it stays a pre-tag step on the
-      # developer's machine.
-      - run: npm run check:manifest
-      - run: npm run check:fields
-      - run: npm run check:refs
-      - run: npm run check:traits
-      - run: npm run check:licence
-      - run: npm run check:probes
-      - run: npm run i18n:check
-      - run: npm run i18n:source
-      # The translation-loss guard — mandatory both sides of a release by user
-      # ruling (2026-08-11), and review #19 found it in neither this list nor
-      # the PR-merge recipe. On a tag checkout `git describe` names the tag
-      # being BUILT, so `--exclude` moves the baseline to the previous release:
-      # the one whose translations this build must not have lost.
-      - run: npm run check:translations -- --exclude "$RELEASE_TAG"
+      - name: Every module file parses
+        run: |
+          set -e
+          find module -name "*.js" -print0 | xargs -0 -n1 node --check
+          echo "module/: syntax OK"
 
-      # Substitute the version and the manifest/download URLs in system.json.
-      # A node one-liner rather than a third-party action (review #19): the
+      - name: Manifests parse, and the manifest agrees with the tree
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const m = JSON.parse(fs.readFileSync("system.json", "utf8"));
+
+            // Every declared language file must exist, or Foundry renders raw
+            // translation keys at every player with no error anyone can see.
+            for (const l of m.languages ?? []) {
+              if (!fs.existsSync(l.path)) throw new Error(`system.json declares ${l.path}, which is not in the tree`);
+              JSON.parse(fs.readFileSync(l.path, "utf8"));
+            }
+
+            // Same for the entry point and the stylesheet.
+            for (const f of [...(m.esmodules ?? []), ...(m.styles ?? []).map((x) => x.src)]) {
+              if (!fs.existsSync(f)) throw new Error(`system.json declares ${f}, which is not in the tree`);
+            }
+
+            // This system ships no compendia. If that ever changes, the zip
+            // line below has to learn about packs/ again — so fail loudly here
+            // rather than publish a release whose packs are silently absent.
+            if ((m.packs ?? []).length) throw new Error("system.json declares packs, but the release zip ships none");
+
+            // Every item and actor type needs a sheet template, or opening one
+            // gives a blank window and a 404 in the console.
+            for (const t of Object.keys(m.documentTypes?.Item ?? {})) {
+              const f = `templates/item/${t}-sheet.html`;
+              if (!fs.existsSync(f)) throw new Error(`item type "${t}" has no ${f}`);
+            }
+            console.log("system.json: OK");
+          '
+
       # microsoft/variable-substitution@v1 this used is ARCHIVED (last push
       # 2023-01) and declares `using: node12` — it ran on 0.1.17 only because
       # GitHub forces retired runtimes onto Node 24, which its changelog ends
@@ -127,7 +139,11 @@ jobs:
       # template.json was dropped when the sub-type schemas moved to TypeDataModel
       # (module/data-models.js). zip skips a missing file silently, so this listed a
       # file that had not existed for releases without anyone noticing.
-      - run: zip -r ./system.zip README.md README.es.md LICENSE.txt system.json art/ css/ fonts/ icons/ lang/ logo/ module/ packs/ templates/
+      # packs/ is gone with the compendia: this system reads its content from a
+      # module the Warden points it at (see module/content-packs.js), so there
+      # is nothing to build and nothing to ship. The manifest gate above fails
+      # the release if system.json ever declares packs again.
+      - run: zip -r ./system.zip README.md README.es.md LICENSE.txt system.json art/ css/ fonts/ icons/ lang/ logo/ module/ templates/
 
       # Create/update the release with the built files
       - name: Update Release with Files

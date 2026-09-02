@@ -1,0 +1,161 @@
+MONDOLME — Fase 8: publicar e instalar
+=========================================
+
+Sobre la fase 7 ya aplicada. Es la última.
+
+
+PRIMERO: APLICA EL ZIP COMO SIEMPRE
+-----------------------------------
+
+Borra estas cinco carpetas y descomprime encima:
+
+     module
+     tools
+     lang
+     css
+     templates
+
+Reemplaza system.json y package.json cuando Windows pregunte.
+
+Y ESTA VEZ TAMBIÉN la carpeta oculta .github (activa "Elementos ocultos" en
+la pestaña Vista del Explorador si no la ves): ahí está la automatización de
+publicación, y es lo que ha cambiado en esta fase.
+
+Commit y push, por ejemplo:
+
+     Fase 8: publicación
+
+
+QUÉ HABÍA ROTO
+--------------
+
+La automatización que publica las versiones estaba escrita para el sistema
+del autor: compilaba los 30 compendios y pasaba nueve comprobaciones antes de
+publicar. De esas nueve, cuatro ya no existen, la compilación tampoco, y el
+paquete final intentaba meter una carpeta borrada.
+
+Es decir: si hubieras subido una etiqueta, la publicación habría fallado
+antes de empezar.
+
+La he reescrito. Ahora hace dos comprobaciones, y las he ejecutado aquí
+mismo, exactamente como las ejecutará GitHub:
+
+  1. Que todos los archivos de código del sistema se leen sin errores.  PASA
+  2. Que el manifiesto concuerda con lo que hay en el árbol.             PASA
+
+La segunda comprueba cuatro cosas concretas: que existe el archivo de idioma
+que declara, que existen su punto de entrada y su hoja de estilos, que no
+declara compendios (si algún día vuelve a declararlos, el paquete tendría que
+aprender a llevarlos, así que falla a propósito), y que cada tipo de objeto
+tiene su plantilla de ficha.
+
+Quité las otras siete a conciencia: estaban escritas para 30 compendios,
+siete tipos de objeto y siete idiomas, y ninguna puede pasar en este sistema.
+Una comprobación que no puede pasar no protege nada — solo impide publicar.
+
+
+CÓMO PUBLICAR TU PRIMERA VERSIÓN
+--------------------------------
+
+1. ACTIVA LAS AUTOMATIZACIONES EN TU FORK (solo la primera vez).
+   Entra en https://github.com/fsmalecho/air-bladder, pestaña "Actions".
+   GitHub te dirá que los workflows de un fork están desactivados y te
+   ofrecerá un botón para activarlos. Púlsalo.
+
+2. CREA LA ETIQUETA DE VERSIÓN.
+   En GitHub Desktop, pestaña "History", clic derecho sobre tu último commit
+   -> "Create Tag..." -> escribe:
+
+        0.1.0
+
+   El nombre TIENE que ser tres números separados por puntos. Si escribes
+   "v0.1.0" o "0.1" la automatización no se dispara.
+
+3. SÚBELA.
+   Pulsa "Push origin". GitHub Desktop sube la etiqueta con el commit.
+
+4. ESPERA.
+   Vuelve a la pestaña "Actions" de tu repositorio. Verás la ejecución en
+   marcha; tarda un par de minutos. Si sale en verde, ya tienes tu primera
+   Release publicada con los dos archivos que Foundry necesita.
+
+5. INSTALA EN FOUNDRY.
+   Configuración -> Sistemas de juego -> Instalar sistema, y pega esta URL en
+   el campo "Manifest URL":
+
+     https://github.com/fsmalecho/air-bladder/releases/latest/download/system.json
+
+   Fíjate en que dice "latest": esa URL siempre apunta a tu versión más
+   reciente, así que no tendrás que cambiarla nunca. Cada vez que subas una
+   etiqueta nueva, Foundry te ofrecerá la actualización.
+
+   El Air Bladder oficial que ya tienes instalado NO se toca: son sistemas
+   distintos para Foundry, y por eso hicimos el renombrado de la fase 1.
+
+6. INSTALA EL MÓDULO DE CONTENIDO.
+   Es el otro ZIP, el que te pasé en la fase 3. Copia su carpeta en
+   ...\FoundryVTT\Data\modules\ y actívalo en tu mundo.
+
+7. ASIGNA LOS CINCO COMPENDIOS.
+   Configuración del sistema -> Configurar ajustes generales, y escribe:
+
+     Compendio de generadores ....... Generadores
+     Compendio del mercado .......... Mercado
+     Compendio de trasfondos ........ Trasfondos
+     Compendio de trasfondos de PNJ . Trasfondos PNJ
+     Compendio de objetos ........... Objetos
+
+   Y en "Idiomas de la ambientación", tu lista separada por comas.
+
+
+LA VERSIÓN
+----------
+
+He puesto 0.1.0 en el system.json. La automatización la sobrescribe con el
+nombre de la etiqueta al publicar, así que el número que manda es el que
+escribas en el paso 2 — esto solo evita que el árbol siga diciendo que es
+Air Bladder 0.1.18.
+
+Empezar en 0.1.0 y no en 1.0.0 es deliberado: nada de esto se ha abierto
+todavía en Foundry.
+
+
+REPASO DE LOS GENERADORES
+-------------------------
+
+Comprobado que los dos generadores siguen coherentes con todo lo que ha
+cambiado desde la fase 3:
+
+  - Las 13 tablas que piden (Trasfondo, Vestimenta, Rostro, Facción,
+    Objetivo, Cabello, Nombres, Físico, Peculiaridad, Piel, Voz, Defecto,
+    Virtud) resuelven todas a un nombre real. Ninguna apunta al vacío.
+
+  - El generador de PJ usa las características iniciales del trasfondo si
+    las tiene, tira la edad y el cumpleaños, concede los idiomas, y deja las
+    preguntas y las obligaciones en blanco.
+
+  - La barra lateral de actores tiene sus dos botones inyectados (Crear
+    personaje y Crear pnj) más el "Crear actor" propio de Foundry, y el de
+    facciones está en la barra de diarios, donde lo pediste.
+
+  - Las 29 tablas de Generadores y las 4 de Mercado que el sistema busca son
+    exactamente las que documenta el LÉEME del módulo de contenido: ni una de
+    más, ni una de menos.
+
+
+LO QUE VA A PASAR AL ABRIRLO
+----------------------------
+
+Nada de esto se ha probado dentro de Foundry — no tengo forma de abrirlo. Lo
+que está verificado es que el código se lee sin errores, que los datos
+encajan, que los textos existen y que los enlaces internos apuntan a sitios
+reales. Eso descarta una clase entera de fallos, pero no los de
+comportamiento.
+
+Así que espera encontrar cosas al usarlo. Cuando las encuentres, apúntalas y
+las arreglamos: ahora los cambios son pequeños y localizados, no fases
+enteras.
+
+Empieza por lo más revelador: crea un personaje con "Crear personaje" y mira
+si llega como esperas. Necesitarás haber metido antes, como mínimo, un
+trasfondo en el compendio de Trasfondos y algún objeto en el de Objetos.
