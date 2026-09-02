@@ -1,0 +1,97 @@
+{{!-- No <form> here: ApplicationV2 supplies it (DocumentSheetV2 sets tag: "form").
+      A nested one is dropped by the parser, taking this element's class with it.
+
+      A PERGAMINO (2026-09-02): one spell written on paper, read once. Its own
+      type since that date — it was a `spell` with a checkbox — because it turned
+      out to differ from a memorised spell in every way a rule can be about: it
+      is petty, it stacks, it changes hands, it is destroyed by casting, and it
+      is WRITTEN IN A LANGUAGE.
+
+      ONE TAB, and the language gate falls on it. That is the whole difference
+      from the Libro's gate: a book keeps its Descripción and loses its three
+      numbered pages, because a book's description is what the cover says. A
+      scroll's description IS the spell, so when the reader cannot read it there
+      is nothing left to show, and the sheet says why instead. The editor is not
+      merely hidden — `_prepareScroll` hands the template no text at all, so the
+      spell is absent from the DOM rather than one inspector away. --}}
+<div class="item-sheet-grid scroll">
+    <!-- Portrait -->
+    <div class="item-sheet-section-portrait">
+        <img class="portrait" src="{{item.img}}" data-action="editImage" data-edit="img" title="{{nameDisplay}}" />
+    </div>
+    <!-- Name -->
+    <div class="item-sheet-section-name">
+        <input class="name-input" type="text" name="name" value="{{nameDisplay}}"
+            placeholder="{{ localize 'CAIRN.Name' }}" />
+    </div>
+
+    <!-- Petty. SHOWN AND DISABLED, the Libro's Bulky box precedent: a Pergamino
+         is always petty (SCROLL_PINNED in module/item/item.js), and a player
+         reading the sheet should be able to see the rule rather than discover it
+         from the slot count. Disabled inputs are not submitted, so the box can
+         never write anything either way. -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.weightless"
+            data-tooltip="{{ localize 'CAIRN.ScrollPettyTip' }}">{{ localize 'CAIRN.Weightless' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="checkbox" checked disabled id="{{@root.idp}}-system.weightless" data-dtype="Boolean" />
+        </div>
+    </div>
+
+    <!-- Language. The options are the Warden's own list (the "Idiomas de la
+         ambientación" setting, read through content-packs.js `languages`), plus
+         a blank row for "not decided" and, when the stored value is no longer in
+         that list, the stored value itself — so re-wording the setting cannot
+         silently blank a scroll. Same field and same reasoning as the Libro's. -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.language">{{ localize 'CAIRN.BookLanguage' }}</label>
+        <div class="resource-input-wrapper">
+            <select name="system.language" id="{{@root.idp}}-system.language" data-dtype="String">
+                <option value="" {{#if (eq system.language "")}}selected{{/if}}>{{ localize 'CAIRN.BookLanguageNone' }}</option>
+                {{#each scrollLanguages as |lang|}}
+                <option value="{{lang}}" {{#if (eq lang ../system.language)}}selected{{/if}}>{{lang}}</option>
+                {{/each}}
+            </select>
+        </div>
+    </div>
+
+    <!-- Cost -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.cost">{{ localize 'CAIRN.Cost' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="text" name="system.cost" id="{{@root.idp}}-system.cost" value="{{system.cost}}"
+                data-dtype="Number" />
+        </div>
+    </div>
+
+    <!-- Quantity. A real, editable field here where the spell has none: a scroll
+         is an object on the table and three copies of one are three castings.
+         Casting spends one and the last takes the row with it (magic.js
+         `castScroll`). -->
+    <div class="resource-counter long-counter">
+        <label class="large-resource-label" for="{{@root.idp}}-system.quantity">{{ localize 'CAIRN.Quantity' }}</label>
+        <div class="resource-input-wrapper">
+            <input type="text" name="system.quantity" id="{{@root.idp}}-system.quantity" value="{{system.quantity}}"
+                data-dtype="Number" />
+        </div>
+    </div>
+
+    <div class="item-sheet-section-tabs">
+        <nav class="tabs" data-group="primary">
+            {{#each tabs}}
+            <a class="item {{this.cssClass}}" data-action="tab" data-group="{{this.group}}"
+                data-tab="{{this.id}}">{{ localize this.label }}</a>
+            {{/each}}
+        </nav>
+        <section class="content">
+            <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
+                {{#if scrollReadable}}
+                <prose-mirror name="system.description" value="{{system.description}}" toggled collaborate relative
+                    data-document-uuid="{{item.uuid}}">{{{enrichedDescription}}}</prose-mirror>
+                {{else}}
+                <p class="book-language-locked">{{ localize 'CAIRN.ScrollLanguageLocked' }}</p>
+                {{/if}}
+            </div>
+        </section>
+    </div>
+</div>

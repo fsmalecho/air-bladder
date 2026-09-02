@@ -1,7 +1,7 @@
 import { resolveGearItem } from "../gear.js";
 import { previewBackground } from "../character-generator.js";
 import { languages } from "../content-packs.js";
-import { canReadBook } from "../magic.js";
+import { canReadItem } from "../magic.js";
 import {
   BOOK_PAGE_KEYS, BG_ABILITY_KEYS, BG_TABLE_DICE, BG_DEFAULT_DIE, BG_MAX_TABLES, bgTableDie,
 } from "../data-models.js";
@@ -314,7 +314,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // sheet is the Descripción tab alone. Not merely hidden — `_prepareBook`
     // hands the template no pages either, so the spell texts are absent from
     // the DOM rather than one inspector away.
-    const locked = this.item.type === "book" && !canReadBook(this.item);
+    const locked = this.item.type === "book" && !canReadItem(this.item);
     const extra = locked ? null : EXTRA_TABS[this.item.type];
     if (extra) config.tabs.push(...extra);
     if (this.item.system?.relic) config.tabs.push(RELIC_TAB);
@@ -372,6 +372,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.maxUsesLabel = recharges ? "CAIRN.MaxCharges" : "CAIRN.MaxUses";
 
     if (this.item.type === "book") await this._prepareBook(context);
+    if (this.item.type === "scroll") this._prepareScroll(context);
     if (this.item.type === "background") {
       // No `isGM` here any more: it gated the Duplicate button on both branches,
       // and the button is gone. Nothing else on this sheet asks who is looking.
@@ -409,7 +410,7 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     const configured = languages();
     context.bookLanguages = (!stored || configured.includes(stored))
       ? configured : [stored, ...configured];
-    context.bookReadable = canReadBook(this.item);
+    context.bookReadable = canReadItem(this.item);
     if (!context.bookReadable) {
       context.bookPages = [];
       return;
@@ -431,6 +432,42 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
         enrichedText: await enrich(page.text),
       };
     }));
+  }
+
+  /**
+   * The Pergamino's language list and its gate.
+   *
+   * Same list and same orphan rule as `_prepareBook`: `languages()` is the ONE
+   * source for what a language may be, and a stored value that has since fallen
+   * out of the Warden's setting rides along as its own option, so re-wording the
+   * setting cannot silently blank the language off every scroll already written.
+   *
+   * WHERE THE GATE FALLS IS THE DIFFERENCE. A Libro loses its three numbered
+   * tabs and keeps its Descripción — a book's description is what the cover
+   * says, and reading which language you are locked out of is the point. A
+   * scroll's description IS the spell, so an unreadable one loses the
+   * description itself, and the template puts the locked sentence where the
+   * editor was.
+   *
+   * `enrichedDescription` is BLANKED rather than merely unrendered: the template
+   * could be trusted to skip it, but the value would still be sitting in the
+   * render context, and this repo's rule for the gate is that the words never
+   * reach the DOM. The `value` attribute on the editor is the same hazard, which
+   * is why the whole `<prose-mirror>` goes and not just its light-DOM half.
+   *
+   * NOT async, unlike its book twin: nothing here awaits.
+   * @private
+   */
+  _prepareScroll(context) {
+    const stored = this.item.system.language ?? "";
+    const configured = languages();
+    context.scrollLanguages = (!stored || configured.includes(stored))
+      ? configured : [stored, ...configured];
+    context.scrollReadable = canReadItem(this.item);
+    if (!context.scrollReadable) {
+      context.enrichedDescription = "";
+      context.system = { ...context.system, description: "" };
+    }
   }
 
   /**

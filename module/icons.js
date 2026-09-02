@@ -181,7 +181,7 @@ export const containerClassLabel = (name = "", legacyKind = "", stored = "") =>
  * "item" type (scrolls, bags, chests). Tools are NOT detectable by name — they
  * are a whole pack — so the importer maps that pack directly; everything created
  * at runtime falls through to the generic bindle.
- * @param {String} type  item type: weapon | armor | book | spell | item | background
+ * @param {String} type  item type: weapon | armor | book | spell | scroll | item | background
  * @param {String} [name]
  * @returns {String}  a systems/mondolme/icons/*.svg path
  */
@@ -189,11 +189,12 @@ export const iconForItem = (type = "item", name = "") => {
   switch (type) {
     case "weapon": return P("weapons");
     case "armor": return P("armor");
-    // Both faces of the retired `spellbook` type, split in two. A Hechizo takes
-    // the book glyph as its resting state; ticking Pergamino swaps it for
-    // SPELLSCROLL_ICON in CairnItem, which is the one place that flag decides art.
+    // The three faces of the retired `spellbook` type. A Libro and a Hechizo
+    // share the book glyph; a Pergamino has its own, which is the whole point
+    // of it being a separate object on the table.
     case "book": return P("spellbook");
     case "spell": return P("spellbook");
+    case "scroll": return P("spellscroll");
     case "background": return P("background");
     // `case "transport"` stood here and went with the `transport` ITEM type.
     // Container and vehicle ACTORS still get their art from iconForTransport
@@ -216,10 +217,13 @@ export const iconForItem = (type = "item", name = "") => {
 };
 
 /**
- * The two faces of a spellbook document. `scroll` swaps between them, so both are
- * named here and neither is written out at the call site: an item.js that hardcoded
- * the paths would be a second source of truth, which is how the tools pack was left
- * behind on .png through the 2026-07-28 SVG swap.
+ * The two magic glyphs, named here rather than written out at a call site: a
+ * hardcoded path elsewhere would be a second source of truth, which is how the
+ * tools pack was left behind on .png through the 2026-07-28 SVG swap.
+ *
+ * `iconForItem` above answers for both types now (2026-09-02, when Pergamino
+ * became a type), so these two are for anything that needs the path without a
+ * document in hand.
  */
 export const SPELLSCROLL_ICON = P("spellscroll");
 export const SPELLBOOK_ICON = P("spellbook");

@@ -1,4 +1,4 @@
-import { evaluateFormula, getInfoFromDropData, askDamageQuality, damageFormulaFor, damageQualityLabel } from "./utils.js";
+import { evaluateFormula, getInfoFromDropData, askDamageQuality, damageFormulaFor, damageQualityLabel, ammoWeapon, outOfAmmo, spendAmmo } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
 
 /**
@@ -71,6 +71,15 @@ export const rollItemMacro = async (actorId, itemId) => {
 
   const weaponName = item.name;
 
+  // AMMUNITION, on the SAME two helpers the sheet's damage control uses
+  // (utils.js). This path had none until 2026-09-02 — the macro predates
+  // ranged weapons — so a bow dragged to the hotbar fired for free while the
+  // identical roll from the sheet spent an arrow. Refuse before the dialog,
+  // spend after it and before the die: dismissing the dialog must cost nothing,
+  // and the arrow leaves the bow whatever the die then says.
+  const ranged = ammoWeapon(item);
+  if (outOfAmmo(ranged)) return;
+
   const usePanic = game.settings.get(SETTINGS_NS, "use-panic");
   const panicked = usePanic && actor.system.panicked;
 
@@ -87,6 +96,8 @@ export const rollItemMacro = async (actorId, itemId) => {
     if (quality === null) return; // dismissed: roll nothing
   }
   const rollSchema = damageFormulaFor(quality, item.system.damageFormula);
+
+  if (!(await spendAmmo(ranged))) return;
 
   // determine roll result
   const roll = await evaluateFormula(rollSchema, actor.getRollData());

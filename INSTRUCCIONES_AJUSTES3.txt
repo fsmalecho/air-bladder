@@ -1,0 +1,169 @@
+MONDOLME — Ajustes 3: pergaminos, memorizar y cinco arreglos
+=============================================================
+
+Sobre los Ajustes 2 ya aplicados.
+14 archivos modificados, 1 nuevo. Ninguno eliminado.
+
+
+CÓMO APLICARLO
+--------------
+
+No hay que borrar nada: se modifican archivos y se añade uno.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+
+2. Descomprime este ZIP dentro de la carpeta del repositorio, encima de lo que
+   ya hay. Cuando Windows pregunte, "Reemplazar" para todos.
+
+3. Commit y push:
+
+     Ajustes 3: el pergamino como tipo, memorizar hechizos, munición en macros
+
+4. Etiqueta 2.0.3 (o el siguiente número que te toque), push, espera a Actions,
+   y actualiza el sistema en Foundry.
+
+   IMPORTANTE: esta vez el sistema añade un TIPO DE OBJETO nuevo. Foundry lee
+   los tipos del system.json al arrancar, así que hay que recargar el mundo
+   (F5) después de actualizar, no solo cerrar la ficha.
+
+
+LOS SIETE PUNTOS
+----------------
+
+1. LA MUNICIÓN EN EL MACRO — ARREGLADO.
+   El macro de la barra se escribió antes de que existieran las armas a
+   distancia y nunca se enteró de la munición: la misma tirada gastaba una
+   flecha desde la ficha y ninguna desde la barra.
+
+   Ahora los dos caminos usan las mismas dos funciones (utils.js): rechazar
+   antes del diálogo si el carcaj está vacío, y gastar después del diálogo y
+   antes del dado. Ese orden importa: cancelar el diálogo no debe costar nada,
+   y la flecha sale del arco diga lo que diga el dado — fallar sigue siendo
+   disparar.
+
+2. TOOLTIP EN LAS RESPUESTAS DEL TRASFONDO.
+   Cada respuesta ya tirada lleva un subrayado de puntos: al pasar el ratón
+   por encima lista los objetos, los vínculos, el oro y las bonificaciones de
+   características que esa respuesta le dio al personaje.
+
+   Se construye con lo que el personaje TIENE, no con la fila de la tabla del
+   trasfondo: los objetos se encuentran por la etiqueta con la que se
+   concedieron, y el oro y las características están guardados en la respuesta
+   (por eso una re-tirada sabe devolverlos). Así que si borras la daga que
+   concedía una respuesta, el tooltip deja de prometerla.
+
+   Una respuesta sin tirar no lleva tooltip; no hay nada que describir todavía.
+
+3. LA TIPOGRAFÍA DE LOS ENCABEZADOS.
+   «Contactos», «Compañeros», «Contratados» y «Otros vínculos», y los
+   encabezados de grupo de las preguntas, pasan a la letra del resto de la
+   ficha.
+
+   La causa: son etiquetas <h3>/<h4>, y Foundry le aplica a los encabezados una
+   tipografía de titular propia. La jerarquía la siguen marcando el tamaño y la
+   negrita; la letra ya es la misma.
+
+4. EL PERGAMINO, TIPO DE OBJETO PROPIO.
+   Ya no es una casilla del hechizo. Al crear un objeto verás «Pergamino» en la
+   lista de tipos, junto a Hechizo y Libro.
+
+   Lo que es:
+     - INSIGNIFICANTE. No ocupa espacio. La casilla se muestra marcada y
+       desactivada, para que la regla se vea en vez de deducirse.
+     - APILABLE. Tiene campo de Cantidad, y esa cantidad ES la munición: lanzar
+       gasta una copia, y la última se lleva la fila consigo.
+     - TRANSFERIBLE. Se arrastra al equipo de otro actor como cualquier objeto.
+       (El hechizo sigue sin poder: un hechizo memorizado no cambia de manos.)
+     - SIN EL COLOR del hechizo en el inventario. Ese tinte es de la fila
+       «hechizo» y el pergamino ya no lo es.
+     - CON IDIOMA. Un desplegable igual que el del libro.
+
+   EL CANDADO DE IDIOMA CAE SOBRE LA DESCRIPCIÓN, y esa es la diferencia con el
+   libro: un libro pierde sus tres páginas y conserva la Descripción, porque la
+   descripción de un libro es lo que pone en la cubierta. La descripción de un
+   pergamino ES el hechizo, así que si no conoces el idioma no queda nada que
+   enseñar: la ficha dice por qué, el panel del inventario también, y lanzarlo
+   se rechaza.
+
+   Los pergaminos que reparten los trasfondos («pergamino de hechizo
+   aleatorio») ya salen con el tipo nuevo.
+
+5. MEMORIZAR HECHIZO.
+   Un grimorio lleva un segundo botón en su fila del inventario, con un icono
+   de cerebro. Abre una ventana con un desplegable de sus hechizos; al aceptar,
+   crea el objeto Hechizo en el equipo del personaje y escribe en el chat:
+
+     (Nombre) ha memorizado (Hechizo) durante 10 minutos.
+
+   Los diez minutos son ficción y no caducan solos, como pediste: el mensaje
+   está para que tú, como Guardián, sepas que ese personaje ha dedicado diez
+   minutos de tiempo de juego y puedas llevar el reloj de la mesa.
+
+   Las condiciones son las mismas que las de lanzar — tiene que ser un
+   grimorio, con alguna página escrita, y el portador tiene que conocer su
+   idioma — así que los dos botones aparecen y desaparecen juntos.
+
+   NO SE PUEDE MEMORIZAR DOS VECES. Se compara por nombre: los hechizos que ya
+   tienes ni siquiera salen en el desplegable, y además se vuelve a comprobar
+   al aceptar, por si otro jugador memorizó el mismo mientras la ventana estaba
+   abierta.
+
+   Y un detalle que no pediste pero que la regla exige: un hechizo memorizado
+   ocupa un espacio, así que memorizar es adquirir, y con la mochila llena se
+   rechaza igual que se rechaza soltarle un objeto encima.
+
+6. EL HECHIZO NO SE APILA.
+   Fuera el campo de Cantidad de su ficha, y fijada en 1 por dentro. Un hechizo
+   está en tu cabeza o no lo está.
+
+7. (De regalo, porque venía en el mismo hilo)
+   El panel del inventario de un pergamino en idioma desconocido tampoco
+   enseña la descripción — la misma puerta que cerramos ayer para los libros,
+   aplicada al tipo nuevo desde el primer día.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 26 archivos de código del sistema pasan la comprobación de sintaxis.
+- Las dos comprobaciones que ejecuta GitHub al publicar: ambas pasan. La
+  segunda incluye «cada tipo de objeto tiene su plantilla de ficha», así que el
+  tipo nuevo está cubierto por el propio control de publicación.
+- Ningún import apunta a algo que ya no exista, nombre por nombre.
+- Buscadas todas las lecturas del antiguo `system.scroll`: cero. El icono, el
+  prefijo del inventario, el apilado, el muro de transferencia y la ficha ya no
+  preguntan por la casilla, sino por el tipo.
+- Idiomas: 691 claves, 16 nuevas (memorizar, pergamino, tooltips) y 2 retiradas
+  (la casilla y su explicación). Ninguna clave que use el código falta.
+- Las 17 plantillas tienen sus bloques bien cerrados.
+- El CSS cierra sus 453 llaves.
+
+
+DOS TRAMPAS CERRADAS DE PASO
+----------------------------
+
+- Fijar la cantidad del hechizo en 1 sin más habría hecho DESAPARECER un
+  hechizo que se fusionara con otro del mismo nombre. Ni el libro ni el hechizo
+  se apilan ya; el pergamino sí, que es lo que se quería.
+
+- El diálogo de memorizar devuelve `false` al cancelar y no `null`. DialogV2
+  resuelve un botón como «lo que devuelva la función ?? el nombre de la
+  acción», así que un `null` se convierte en la cadena "cancel", que es
+  verdadera — y habría memorizado algo al pulsar Cancelar. Es la misma trampa
+  que ya está documentada en el diálogo de lanzar.
+
+
+QUÉ MIRAR PRIMERO
+-----------------
+
+  1. Crea un objeto de tipo Pergamino, ponle un idioma que tu personaje NO
+     tenga, y dáselo: la ficha y el panel del inventario deben negarte el
+     texto, y el botón de lanzar no debe aparecer.
+  2. Quítale el idioma o dáselo al personaje: aparece el botón, lanzarlo pide
+     confirmación y gasta una copia. Ponle Cantidad 3 y lánzalo tres veces.
+  3. Arrastra un pergamino de un personaje a otro: debe dejarte. Prueba lo
+     mismo con un hechizo: debe negarse.
+  4. En un grimorio cuyo idioma conozcas, pulsa el cerebro y memoriza un
+     hechizo. Vuelve a pulsarlo: ese hechizo ya no está en la lista.
+  5. Arrastra un arco a la barra de macros y dispáralo desde ahí: debe bajar la
+     munición.

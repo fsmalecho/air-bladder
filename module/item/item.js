@@ -1,6 +1,6 @@
 import { SETTINGS_NS } from "../settings.js";
 import { grantSourceLabel } from "../utils.js";
-import { iconForItem, SPELLBOOK_ICON, SPELLSCROLL_ICON } from "../icons.js";
+import { iconForItem } from "../icons.js";
 import { BOOK_PAGE_KEYS } from "../data-models.js";
 
 /**
@@ -14,40 +14,36 @@ import { BOOK_PAGE_KEYS } from "../data-models.js";
  */
 export const FATIGUE_NAME = "Fatigue";
 
-/* `SPELLSCROLL_NAME` stood here and is GONE with the `abSpellscrollTypeOption`
-   hook that was its only reader. That hook injected a second "Spellscroll" option
-   into the Create Item dialog, keyed on `option[value="spellbook"]`; there is no
-   such type any more, and a scroll is now a `spell` with its own checkbox. The
-   English-storage rule the constant existed to keep is unchanged for FATIGUE_NAME
-   above, which is the only stored name the code still matches on. */
-
 /**
- * Every Pergamino is petty and single-use — the Warden's rule, and the one thing
- * that separates a scroll from the spell it holds. So it is derived from the
- * `scroll` flag rather than typed in: the spell sheet offers no Petty box and no
- * Max uses field, and these values are written whenever the flag is.
+ * Every Pergamino is PETTY — it weighs nothing and costs no slot — and is never
+ * equipped. The Warden's rule, and the sheet offers neither box, so this is
+ * where it is true.
  *
- * `bulky: false` rides along because a spell is never bulky either way (see
- * SPELL_PINNED) and a scroll least of all — pinning it in both directions means
- * no path can leave a two-slot scroll behind.
+ * `bulky: false` rides along because pinning one of the two exclusive flags
+ * without the other would leave "bulky AND petty" reachable by API.
  *
- * `uses.value` is deliberately absent: it is set once, on the transition to
- * `scroll: true` (a fresh scroll has its use), and left alone afterwards so
- * marking one spent survives the next save. Forcing it here would silently refill
- * every scroll on every edit.
+ * `quantity` is DELIBERATELY ABSENT: a Pergamino stacks (2026-09-02, user
+ * ruling), and its quantity is the count of copies — three scrolls of the same
+ * spell are three castings, and `castScroll` spends one. Pinning it would be
+ * pinning the ammunition to full.
+ *
+ * `uses` is absent for the same reason it no longer exists on the model: the
+ * flagged version counted a single use there, which made a stack of scrolls
+ * unrepresentable.
  */
-const SCROLL_PINNED = { weightless: true, bulky: false, equipped: false, "uses.max": 1 };
+const SCROLL_PINNED = { weightless: true, bulky: false, equipped: false };
 
 /**
- * A plain Hechizo: exactly ONE slot, always. Never bulky, never petty — the two
- * checkboxes the spell sheet therefore does not offer — and no uses counter,
- * which is what ticking `scroll` off restores.
+ * A plain Hechizo: exactly ONE slot and exactly ONE copy, always. Never bulky,
+ * never petty, no uses counter, no quantity field on its sheet — a memorised
+ * spell is in your head or it is not, so a stack of two was never a quantity of
+ * anything (`quantity: 1` joined this pin 2026-09-02, user ask).
  *
  * Pinned rather than defaulted, the SCROLL_PINNED rule: a schema `initial` is a
  * value a Warden unticks, and "a spell costs one slot" is a statement about
  * every write.
  */
-const SPELL_PINNED = { weightless: false, bulky: false, "uses.max": 0, "uses.value": 0 };
+const SPELL_PINNED = { weightless: false, bulky: false, quantity: 1, "uses.max": 0, "uses.value": 0 };
 
 /**
  * A Libro: ALWAYS bulky, two slots, and ALWAYS a single copy.
@@ -117,10 +113,9 @@ export class CairnItem extends Item {
    */
   static getDefaultArtwork(itemData) {
     const type = itemData?.type ?? "item";
-    const img = type === "spell" && itemData?.system?.scroll
-      ? SPELLSCROLL_ICON
-      : iconForItem(type, itemData?.name ?? "");
-    return { img };
+    // The scroll branch that stood here is GONE with the flag it read: `scroll`
+    // is a TYPE now, so `iconForItem` answers for it like every other one.
+    return { img: iconForItem(type, itemData?.name ?? "") };
   }
 
   /**
@@ -181,11 +176,10 @@ export class CairnItem extends Item {
   }
 
   /**
-   * Hold a spell to the scroll invariant, and a book to the bulky one, at write
-   * time — whichever path wrote it: the sheet's Pergamino box, generation, a
-   * drag-and-drop copy, an importer, or `Actor#createOwnedItem` (which rebuilds
-   * `system.weightless` from a top-level field, so it would hand back an
-   * un-petty scroll on its own).
+   * Hold each type to its invariant at write time — whichever path wrote it:
+   * the sheet, generation, a drag-and-drop copy, an importer, or
+   * `Actor#createOwnedItem` (which rebuilds `system.weightless` from a
+   * top-level field, so it would hand back an un-petty scroll on its own).
    *
    * Written to the document rather than derived in `prepareData`, so the stored
    * data is true — a derived-only petty flag would be a lie to anything reading the
@@ -236,10 +230,7 @@ export class CairnItem extends Item {
     // image is still ours to change, and a bag was not — so ticking Pergamino on
     // a dialog-created spell silently left the bag in place.
     if (!this.img || this.img === this.constructor.DEFAULT_ICON) {
-      const art = this.type === "spell" && this.system.scroll
-        ? SPELLSCROLL_ICON
-        : iconForItem(this.type, this.name);
-      this.updateSource({ img: art });
+      this.updateSource({ img: iconForItem(this.type, this.name) });
     }
 
     // A LIBRO IS BULKY, from its first write. No transition to catch here the
@@ -249,99 +240,41 @@ export class CairnItem extends Item {
       this.updateSource({ system: { ...BOOK_PINNED } });
       return;
     }
-
-    if (this.type !== "spell") return;
-    // A plain spell is one slot: neither bulky nor petty, no uses counter. The
-    // scroll case takes over below.
-    if (!this.system.scroll) {
-      this.updateSource({ system: { ...SPELL_PINNED } });
+    // A PERGAMINO is petty and never equipped. Its `quantity` is left alone —
+    // it is the count of copies, and a stack of three is three castings.
+    if (this.type === "scroll") {
+      this.updateSource({ system: { ...SCROLL_PINNED } });
       return;
     }
-    const pinned = { ...SCROLL_PINNED };
-    // A scroll created straight from the flag arrives UNSPENT — pinning only `max`
-    // left `value` at the schema default of 0, so a new scroll rendered as already
-    // used up. One created with an explicit count keeps it, which is what lets a
-    // generated spent scroll be copied across without refilling it.
-    if (foundry.utils.getProperty(data ?? {}, "system.uses.value") === undefined) {
-      pinned["uses.value"] = 1;
-    }
-    this.updateSource({ system: pinned });
+    // A HECHIZO is one slot, one copy: neither bulky nor petty, no uses
+    // counter. There is no scroll branch here since 2026-09-02 — a scroll is
+    // its own type above, so nothing has to be told apart.
+    if (this.type === "spell") this.updateSource({ system: { ...SPELL_PINNED } });
   }
 
   /**
-   * The same invariants on edit, plus the Pergamino transition. Ticking it makes
-   * a fresh scroll (its one use unspent) and unticking restores a plain
-   * one-slot Hechizo; while the flag merely stays on, `uses.value` is left alone
-   * so a spent scroll stays spent. A Libro has no transition at all — it is
-   * bulky before and after.
+   * The same invariants on edit.
    *
-   * The art follows the flag only when it is still ours to change — a Warden who
-   * picked their own image keeps it.
+   * NO TRANSITIONS LEFT (2026-09-02). This method used to carry the whole
+   * becoming-a-scroll dance — normalizing a ForcedDeletion on the flag,
+   * telling a real tick from a payload that merely carried it, re-pinning the
+   * one use, swapping the art — because a Pergamino was a `spell` with a
+   * checkbox and the checkbox could be flipped. It is its own TYPE now, and a
+   * document's type is immutable, so there is no flip to catch: each type
+   * simply holds its own invariant through every edit.
+   *
+   * Held rather than refused, the long-standing rule here: an API write that
+   * tries to un-petty a scroll or un-bulk a book lands with that part silently
+   * stripped, and the rest of the edit goes through. Neither sheet offers the
+   * boxes, so only an API write can even try.
    * @override
    */
   async _preUpdate(changed, options, user) {
     const allowed = await super._preUpdate(changed, options, user);
     if (allowed === false) return false;
 
-    // A Libro stays bulky through every edit, including one that names Bulky
-    // itself. The sheet's box is disabled, so only an API write can even try —
-    // and it is stripped rather than refused, the scroll-pin precedent: the
-    // rest of the edit lands, the un-bulking silently does not.
-    if (this.type === "book") {
-      foundry.utils.mergeObject(changed, { system: { ...BOOK_PINNED } });
-      return;
-    }
-
-    if (this.type !== "spell") return;
-
-    // The OPERATOR spelling, normalized before any guard reads it (review
-    // #17): a ForcedDeletion resets a field to its schema initial — false,
-    // for this required boolean — and is a truthy OBJECT, so it walked
-    // straight past every equality and truthiness test below: a scroll reset
-    // that took the BECOMING-scroll branch and pinned scroll uses onto a
-    // non-scroll. On a required boolean the operator IS a plain `false` write
-    // (and passing it through to the schema draws a "may not be undefined"
-    // validation complaint on its way to the same end state), so it is
-    // rewritten to one here and the guards below reason about booleans only.
-    if (changed.system?.scroll instanceof foundry.data.operators.ForcedDeletion) {
-      changed.system.scroll = false;
-    }
-
-    // A TRANSITION, not a presence. `_preUpdate` is handed the FULL cleaned
-    // payload, not the diff (client-backend.mjs:229-238), and the spell sheet
-    // submits the Pergamino checkbox with every `submitOnChange` — so
-    // `!== undefined` alone was true for EVERY edit of a scroll's sheet, each
-    // one re-entered the becoming-scroll branch below and re-pinned
-    // `uses.value: 1`: a spent scroll refilled on a Cost edit, and the Uses
-    // field could never store 0 (review #18). Compared to the STORED flag,
-    // only a real tick or untick is a transition; a payload merely carrying the
-    // flag falls through to the hold branch, which leaves `uses.value` alone.
-    const scrollChanged = changed.system?.scroll !== undefined
-      && !!changed.system.scroll !== !!this.system.scroll;
-    if (scrollChanged) {
-      // Safe to read as truthiness only because the normalization above has
-      // already rewritten a ForcedDeletion to plain `false` — un-normalized,
-      // the truthy operator took this branch while resetting the flag.
-      const becomingScroll = !!changed.system.scroll;
-      foundry.utils.mergeObject(changed, {
-        system: becomingScroll ? { ...SCROLL_PINNED, "uses.value": 1 } : SPELL_PINNED,
-      });
-      // Re-art only while the image is still ours to change — a Warden who picked
-      // their own keeps it. The default bag counts as ours: items created before
-      // the class-art fill above still carry it, and leaving those on a bag was
-      // the whole reported defect.
-      const was = becomingScroll ? SPELLBOOK_ICON : SPELLSCROLL_ICON;
-      if (this.img === was || this.img === this.constructor.DEFAULT_ICON) {
-        changed.img = becomingScroll ? SPELLSCROLL_ICON : SPELLBOOK_ICON;
-      }
-      return;
-    }
-    // No transition: hold whichever invariant is in force for a spell being
-    // edited. Both are held, not just the scroll's — a plain spell is one slot
-    // by the same rule a scroll is petty, and the sheet offers neither box.
-    foundry.utils.mergeObject(changed, {
-      system: this.system.scroll ? { ...SCROLL_PINNED } : { ...SPELL_PINNED },
-    });
+    const pinned = { book: BOOK_PINNED, scroll: SCROLL_PINNED, spell: SPELL_PINNED }[this.type];
+    if (pinned) foundry.utils.mergeObject(changed, { system: { ...pinned } });
   }
 
   /**
@@ -411,7 +344,10 @@ export class CairnItem extends Item {
           this.system.icon = "book";
           break;
         case "spell":
-          this.system.icon = this.system.scroll ? "scroll" : "hat-wizard";
+          this.system.icon = "hat-wizard";
+          break;
+        case "scroll":
+          this.system.icon = "scroll";
           break;
         case "weapon":
           this.system.icon = "sword";

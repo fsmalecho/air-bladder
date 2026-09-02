@@ -1337,6 +1337,13 @@
     text-underline-offset: 2px;
 }
 
+/* The «ha memorizado X durante 10 minutos» card. Deliberately PLAIN — it is a
+   statement of elapsed time for the Warden, not a result — so it takes the
+   quiet italics a note gets and none of the cast card's chrome. */
+.chat-message .cairn-memorized {
+    font-style: italic;
+}
+
 /* The Add-N-Fatigue button on the cast whisper: Foundry's default button
    chrome (the Die of Fate rule's shape) with the inventory fatigue-row glow
    on it -- the same teal on the control that mints those rows, so cause and
@@ -1920,13 +1927,18 @@ textarea.omen-input {
    questions it introduces — that size difference is the whole request — and
    ruled underneath so a group reads as a group even when it holds one
    question. Shown on the character sheet and on the background's own
-   read-only Details tab, from the same class. */
+   read-only Details tab, from the same class.
+
+   `font-family: inherit` (2026-09-02, same day, user ask): it is an <h3>, so
+   core's heading face applied, and the Alegreya this first carried was a third
+   face again. SIZE and weight carry the hierarchy; the letterform stays the
+   sheet's, so a heading reads as the same voice as the question under it. */
 .background-group-heading {
     margin: 16px 0 8px 0;
     padding-bottom: 3px;
     border: none;
     border-bottom: 1px solid var(--ab-rule);
-    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
+    font-family: inherit;
     font-size: 1.35em;
     font-variant: small-caps;
     font-weight: bold;
@@ -1964,6 +1976,18 @@ textarea.omen-input {
 
 .question-answer {
     margin: 2px 0 0 0;
+}
+
+/* An answer that carries the "everything this gave you" hover (2026-09-02): a
+   dotted underline says there is something to hover, the way the cast card's
+   resolved values do. `fit-content` so the affordance sits under the words and
+   not under the whole line's width. */
+.question-answer.has-grant-tip {
+    width: fit-content;
+    max-width: 100%;
+    cursor: help;
+    text-decoration: underline dotted var(--ab-rule-strong);
+    text-underline-offset: 3px;
 }
 
 /* A bare <hr> is drawn from core LITERALS, not from the palette: a #b5b3a4 top
@@ -3048,6 +3072,13 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 
 .connection-group-heading {
     margin: 0 0 4px 0;
+    /* The SHEET's own face, not Foundry's heading face (2026-09-02, user ask).
+       These are <h4>, and core styles h1–h6 in a window with its display font,
+       so «Contactos» / «Compañeros» / «Contratados» were set in a typeface that
+       appears nowhere else on the sheet. They are labels over a list, not
+       display headings. Same reason and same fix as
+       `.background-group-heading`. */
+    font-family: inherit;
     font-size: 12px;
     font-weight: bold;
     text-transform: uppercase;

@@ -16,10 +16,14 @@
  * importing a world copy.
  *
  * THREE WAYS TO CAST, one back half (`reportCast`):
- *   - from a Libro: pick one of the book's non-empty pages (`castFromBook`);
- *   - a Hechizo: the spell item casts itself (`castSpell`);
- *   - a Pergamino: a Hechizo with `scroll` ticked — confirmed first, because
- *     the cast destroys the paper, and deleted after the card (`castSpell`).
+ *   - from a GRIMORIO: pick one of the book's non-empty pages (`castFromBook`);
+ *   - a HECHIZO: the spell item casts itself (`castSpell`);
+ *   - a PERGAMINO: its own item type — confirmed first, because the cast
+ *     destroys the paper, and one copy spent after the card (`castScroll`).
+ *
+ * And ONE way to acquire: MEMORIZAR (`memorizeFromBook`), which copies a
+ * grimoire's page into the caster's inventory as a Hechizo. It is not a cast —
+ * no dice, no fatigue — so it lives beside them rather than among them.
  */
 import { FATIGUE_NAME, bookPages } from "./item/item.js";
 import { findTableByName } from "./compendium.js";
@@ -55,10 +59,14 @@ export const booksOn = (actor) =>
   actor ? actor.items.filter((i) => i.type === "book" && i.system?.grimoire) : [];
 
 /**
- * THE LANGUAGE GATE. A Libro is written in one language (`system.language`,
- * chosen on its sheet from the Warden's configured list); a person knows a
- * list of them (`system.languages`). Someone who does not know a book's
- * language cannot reach its pages — not on the sheet, not in a cast.
+ * THE LANGUAGE GATE. A WRITTEN THING — a Libro or a Pergamino — is written in
+ * one language (`system.language`, chosen on its sheet from the Warden's
+ * configured list); a person knows a list of them (`system.languages`). Someone
+ * who does not know the language cannot reach the words: not on the sheet, not
+ * in the inventory panel, not in a cast.
+ *
+ * ONE function for both types since 2026-09-02. `canReadBook` is kept as an
+ * alias below because half a dozen call sites say "book" and mean it.
  *
  * Two deliberate exemptions, each an answer to "who is being kept out":
  *
@@ -85,13 +93,17 @@ export const booksOn = (actor) =>
  * @param {CairnActor|null} [actor] the reader; defaults to the book's owner
  * @returns {boolean}
  */
-export const canReadBook = (book, actor = book?.parent ?? null) => {
-  const language = String(book?.system?.language ?? "").trim();
+export const canReadItem = (item, actor = item?.parent ?? null) => {
+  const language = String(item?.system?.language ?? "").trim();
   if (!language) return true;
   if (actor?.documentName !== "Actor") return true;
   return (actor.system?.languages ?? [])
     .some((known) => String(known).trim() === language);
 };
+
+/** `canReadItem` under the name the book-side callers use. One implementation;
+ *  a Pergamino and a Libro are gated by the same question. */
+export const canReadBook = canReadItem;
 
 /* `pagesOfGrimoire`, `groupPagesUnderBooks` and `ensureGrimoireKey` stood here
    and are GONE with the bound-page machinery.
@@ -476,6 +488,146 @@ export const castFromBook = async (actor, book = null) => {
   }, picked.dice);
 };
 
+/* -------------------------------------------------------------------------- */
+/*  Memorizar                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * MEMORIZE a spell out of a Grimorio: copy one of its pages into the caster's
+ * inventory as a Hechizo (2026-09-02, user ask).
+ *
+ * It is NOT a cast and deliberately shares none of the cast machinery: no dice,
+ * no fatigue, no mishap. What it produces is an ordinary `spell` item — one
+ * slot, one copy, castable in its own right and never transferable — whose name
+ * is the page's name and whose description is the page's text.
+ *
+ * THE SAME THREE GATES the cast has, in the same order and for the same
+ * reasons: the book must be a Grimorio (a plain Libro's pages are not spells),
+ * the caster must be able to READ it (an unreadable page cannot be studied any
+ * more than it can be read aloud), and it must have a written page to offer.
+ * Re-derived here rather than trusted from the row that was clicked, the
+ * affordance/enforcement split this repo keeps everywhere.
+ *
+ * NO DUPLICATES. Matched on the spell's NAME against the character's existing
+ * Hechizos, case-insensitively and trimmed, because that is the identity a
+ * player reads: two rows called "Detectar magia" is a bookkeeping accident, not
+ * two spells. Already-known pages are dropped from the picker (so the choice
+ * offered is always a choice that can be made) AND refused on the way out (so a
+ * picker left open while another client memorised the same page cannot land it
+ * twice).
+ *
+ * THE TEN MINUTES ARE FICTION and stay in the message: the point is that the
+ * Warden sees a character spent ten minutes of game time studying, and manages
+ * the clock at the table. Nothing here expires, and nothing here reads
+ * `game.time` — a spell that vanished on its own would be a rule the Warden did
+ * not get to apply.
+ *
+ * @param {CairnActor} actor
+ * @param {CairnItem} book   the Grimorio to study
+ * @returns {Promise<CairnItem|null>} the created Hechizo, or null
+ */
+export const memorizeFromBook = async (actor, book) => {
+  if (actor?.type !== "character") return null;
+  if (book?.type !== "book" || !book.system?.grimoire) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotAGrimoire", { name: book?.name ?? "" }));
+    return null;
+  }
+  if (!canReadItem(book, actor)) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.BookLanguageUnknown",
+      { name: book.name, language: book.system.language }));
+    return null;
+  }
+
+  // A memorised spell takes a SLOT, so memorising is ordinary acquisition and
+  // takes the ordinary rule: a full pack refuses, exactly as dropping an item
+  // on a full character does (`_onDropItem`). The two exceptions to that rule
+  // are elsewhere and stay there — what generation grants, and Fatigue, which
+  // is imposed rather than acquired.
+  if (actor.isEncumbered()) {
+    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.MaxSlotsOccupied"));
+    return null;
+  }
+
+  const known = new Set(actor.items
+    .filter((i) => i.type === "spell")
+    .map((i) => String(i.name).trim().toLowerCase()));
+  const pages = bookPages(book);
+  if (!pages.length) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoPages", { name: book.name }));
+    return null;
+  }
+  const available = pages.filter((p) => !known.has(pageLabel(p).trim().toLowerCase()));
+  if (!available.length) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.AllMemorized", { name: book.name }));
+    return null;
+  }
+
+  const options = available
+    .map((p) => `<option value="${esc(p.key)}">${esc(pageLabel(p))}</option>`).join("");
+  const chosenKey = await foundry.applications.api.DialogV2.wait({
+    window: {
+      title: game.i18n.format("CAIRN.MemorizeTitle", { book: book.name }),
+      icon: "fas fa-brain",
+    },
+    content: `
+      <div class="form-group">
+        <label>${game.i18n.localize("CAIRN.GrimoireCastSpell")}</label>
+        <select name="page">${options}</select>
+      </div>
+      <p class="notes">${game.i18n.localize("CAIRN.MemorizeHint")}</p>`,
+    buttons: [
+      {
+        action: "ok",
+        label: game.i18n.localize("CAIRN.Memorize"),
+        icon: "fas fa-brain",
+        default: true,
+        // `button.form` is the <form> DialogV2 wraps the content in — the same
+        // way `askCast` above reads its select.
+        callback: (_ev, button) => String(button.form?.elements?.page?.value ?? "") || false,
+      },
+      // `false`, never `null`: DialogV2 resolves a button as
+      // `(await callback(...)) ?? button.action` (dialog.mjs:273), so `null` is
+      // indistinguishable from NO callback and falls through to the string
+      // "cancel" — truthy. See the long note on `askCast`'s cancel button.
+      { action: "cancel", label: game.i18n.localize("CAIRN.Cancel"), callback: () => false },
+    ],
+    rejectClose: false,
+  });
+  if (!chosenKey) return null;
+
+  // Also covers a ✕ that somehow resolved to an action string rather than
+  // null: no page has that key, so it lands here rather than memorising one.
+  const page = available.find((p) => p.key === chosenKey);
+  if (!page) return null;
+  const name = pageLabel(page);
+  // The duplicate test again, on the way OUT: the dialog was an await.
+  if (actor.items.some((i) => i.type === "spell"
+    && String(i.name).trim().toLowerCase() === name.trim().toLowerCase())) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.AlreadyMemorized", { spell: name }));
+    return null;
+  }
+
+  // `createEmbeddedDocuments`, not `createOwnedItem`: this is machinery, and
+  // the owned-item route rebuilds `system.weightless` from a top-level field
+  // and raises its own affordances. `_preCreate` pins the Hechizo invariant
+  // (one slot, one copy) and stamps the art, so nothing is stated here that
+  // the type does not already guarantee.
+  const [made] = await actor.createEmbeddedDocuments("Item", [{
+    name,
+    type: "spell",
+    system: { description: page.text },
+  }], { abNoStatusCard: true });
+
+  // The message is the POINT of the feature: it tells the Warden that ten
+  // minutes of game time have gone by. Spoken by the character, like a cast.
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="cairn-memorized">${game.i18n.format("CAIRN.MemorizedCard",
+      { actor: foundry.utils.escapeHTML(actor.name), spell: foundry.utils.escapeHTML(name) })}</div>`,
+  });
+  return made ?? null;
+};
+
 /**
  * "The magic undoes the paper" — ONE format-free localization key, never
  * `localize("…") + name + "?"`. Spanish OPENS the question with «¿», which no
@@ -490,53 +642,98 @@ const confirmScrollCast = () =>
   });
 
 /**
- * Cast a HECHIZO — and, with `scroll` ticked, a PERGAMINO.
+ * Cast a HECHIZO.
  *
  * A spell casts ITSELF: its name is the spell's name and `system.description`
  * is the text, so there is no page picker, only the dice.
  *
- * A Pergamino is the same cast with a beginning and an end. BEFORE anything is
- * rolled it asks, because the paper does not survive being read; AFTER the card
- * is posted the item is DELETED from the actor — that ordering is deliberate,
- * so a card that fails to post can never eat the scroll. Dismissing the
- * confirmation spends nothing and rolls nothing.
+ * The scroll half of this function moved to `castScroll` below when Pergamino
+ * became its own type (2026-09-02). The two really had diverged: one is
+ * permanent and one is paper, one has no language and the other does, one is a
+ * single copy and the other stacks.
  *
  * @param {CairnActor} actor
- * @param {CairnItem} spell   a `spell` item, scroll or not
+ * @param {CairnItem} spell   a `spell` item
  * @returns {Promise<ChatMessage|null>}
  */
 export const castSpell = async (actor, spell) => {
   if (actor?.type !== "character") return null;
   if (spell?.type !== "spell") return null;
-  const isScroll = !!spell.system.scroll;
-  // A scroll generated already-spent (gear.js hands out those) has nothing left
-  // to read. Every other scroll carries its one use from `_preCreate`.
-  if (isScroll && (spell.system.uses?.value ?? 0) < 1) {
-    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ScrollSpent"));
-    return null;
-  }
-  // The dice check comes BEFORE the confirmation, deliberately: there is no
-  // point asking somebody to burn a scroll for a cast their inventory cannot
-  // pay for. It is still "before anything is rolled" either way — the roll is
-  // three statements below, after the picker.
+
   const maxDice = magicDice(actor);
   if (maxDice < 1) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoDice", { name: actor.name }));
     return null;
   }
-  if (isScroll && !(await confirmScrollCast())) return null;
 
   const picked = await askCast(maxDice, {
     title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: spell.name }),
   });
   if (!picked) return null;
 
-  const card = await reportCast(actor, spell, picked.dice);
-  // The paper goes AFTER the report, so a failed card never destroys a scroll.
-  // Deleted rather than marked spent: `delete()` straight on the document, not
-  // `deleteOwnedItem`, which raises its own "Delete X?" confirmation — the
-  // caster has already answered that question above and must not be asked twice.
-  if (isScroll) await spell.delete();
+  return reportCast(actor, spell, picked.dice);
+};
+
+/**
+ * Cast a PERGAMINO: the same cast with a beginning and an end.
+ *
+ * BEFORE anything is rolled it asks, because the paper does not survive being
+ * read; AFTER the card is posted ONE COPY is spent — that ordering is
+ * deliberate, so a card that fails to post can never eat a scroll. Dismissing
+ * the confirmation spends nothing and rolls nothing.
+ *
+ * THE LANGUAGE GATE applies (2026-09-02, user ruling): a scroll is a written
+ * thing, so a caster who cannot read it cannot read it aloud either. Checked
+ * FIRST, before the dice and before the confirmation — there is no sense asking
+ * somebody to burn paper they cannot use, and `_prepareContext` withholds the
+ * control anyway, so this is the enforcement half.
+ *
+ * SPENDING IS A QUANTITY, not a use count: a scroll stacks, so casting takes
+ * one copy off the pile and the last copy takes the row with it. `delete()` and
+ * `update()` straight on the document, never `deleteOwnedItem`, which raises
+ * its own "Delete X?" — the caster has already answered that above and must not
+ * be asked twice.
+ *
+ * @param {CairnActor} actor
+ * @param {CairnItem} scroll  a `scroll` item
+ * @returns {Promise<ChatMessage|null>}
+ */
+export const castScroll = async (actor, scroll) => {
+  if (actor?.type !== "character") return null;
+  if (scroll?.type !== "scroll") return null;
+
+  if (!canReadItem(scroll, actor)) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.ScrollLanguageUnknown",
+      { name: scroll.name, language: scroll.system.language }));
+    return null;
+  }
+  const left = scroll.system.quantity ?? 0;
+  if (left < 1) {
+    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ScrollSpent"));
+    return null;
+  }
+
+  // The dice check comes BEFORE the confirmation, deliberately: there is no
+  // point asking somebody to burn a scroll for a cast their inventory cannot
+  // pay for.
+  const maxDice = magicDice(actor);
+  if (maxDice < 1) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.GrimoireNoDice", { name: actor.name }));
+    return null;
+  }
+  if (!(await confirmScrollCast())) return null;
+
+  const picked = await askCast(maxDice, {
+    title: game.i18n.format("CAIRN.GrimoireCastTitle", { spell: scroll.name }),
+  });
+  if (!picked) return null;
+
+  const card = await reportCast(actor, scroll, picked.dice);
+  // Re-read the count: the picker was an await, and the +/- controls on the row
+  // (or a second client) can have emptied the pile in the meantime.
+  const now = scroll.system.quantity ?? 0;
+  if (now <= 1) await scroll.delete();
+  else await scroll.update({ "system.quantity": now - 1 });
   return card;
 };
 

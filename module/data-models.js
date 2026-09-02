@@ -790,37 +790,80 @@ class BookData extends CairnDataModel {
 }
 
 /**
- * A Hechizo, and — with `scroll` ticked — a Pergamino.
+ * A Hechizo: one spell a character has in their head.
  *
- * A scroll is NOT a type, for the same reason a relic is not (see relicFields
- * above), only more so: given the rule that every spellscroll is petty and
- * single-use, a scroll carries no data a spell does not. It is the same spell
- * with two values pinned, and its text IS the spell's text. A `pergamino` type
- * would duplicate this model and its sheet to express that, and because Foundry
- * treats a document's `type` as immutable, a spell could never become a scroll.
+ * ONE SLOT, ALWAYS — never bulky, never petty — and ALWAYS A SINGLE COPY. All
+ * three are pinned on the document in `CairnItem._preCreate`/`_preUpdate`
+ * (SPELL_PINNED), not with schema initials here, so that EVERY path agrees:
+ * the sheet, generation, a drag-and-drop copy, and `createOwnedItem` (which
+ * rebuilds `system.weightless` from a top-level field).
  *
- * ONE SLOT, ALWAYS — never bulky, never petty — until `scroll` is ticked, and
- * then petty and single-use. Both halves are pinned on the document in
- * `CairnItem._preCreate`/`_preUpdate` (SPELL_PINNED / SCROLL_PINNED), not with
- * schema initials here, so that EVERY path agrees: the sheet checkbox,
- * generation, a drag-and-drop copy, and `createOwnedItem` (which rebuilds
- * `system.weightless` from a top-level field and would otherwise quietly
- * un-petty a scroll). `uses.value` stays free so a player can mark a scroll
- * spent; only `max` is pinned.
+ * `quantity` joined the pin 2026-09-02 (user ask) and the Cantidad field came
+ * off the sheet with it: a memorised spell is either in your head or it is not,
+ * so "×2" was never a quantity of anything. `consumable()` stays for the uses
+ * counter a relic-like spell might want; nothing pins it.
  *
- * A SECOND BOOLEAN stood beside `scroll` and is GONE. It marked which of two
- * WORDINGS a spell carried — the canon text, or the one an optional rules
- * variant re-worded to scale on [dice]/[sum] — so a world-wide conversion could
- * tell what it had already swapped. Those rules are simply how magic works now,
- * there is no second wording to distinguish, and the conversion that was the
- * flag's only writer is gone. Do not re-add it.
+ * THE `scroll` FLAG IS GONE (2026-09-02, user ruling: "el pergamino se
+ * convierte en un tipo diferente de objeto y no en una casilla de hechizo").
+ * A Pergamino is `ScrollData` below. The two really are different things now
+ * and not one thing with a switch: a scroll is petty, stacks, changes hands
+ * freely and is written in a LANGUAGE, and a spell is none of those.
+ *
+ * A SECOND BOOLEAN stood beside `scroll` and is GONE too. It marked which of
+ * two WORDINGS a spell carried — the canon text, or the one an optional rules
+ * variant re-worded to scale on [dice]/[sum]. Those rules are simply how magic
+ * works now. Do not re-add it.
  */
 class SpellData extends CairnDataModel {
   static defineSchema() {
     return {
       ...universal(),
       ...consumable(),
-      scroll: bool(),
+    };
+  }
+}
+
+/**
+ * A Pergamino: one spell written on a sheet of paper, read once.
+ *
+ * ITS OWN TYPE since 2026-09-02, where it was a `spell` with a checkbox. The
+ * old note argued a scroll "carries no data a spell does not" and that a type
+ * would make becoming-a-scroll unrepresentable. Both premises fell:
+ *
+ *   - It carries a LANGUAGE, exactly as a Libro does, and nothing about a
+ *     memorised spell has a language — you either know the spell or you do not.
+ *   - Nothing ever becomes a scroll. A scroll is found or bought; a spell is
+ *     memorised out of a grimoire. Neither turns into the other, so the
+ *     immutable-`type` objection had no case to answer.
+ *
+ * And the differences are now everything a rule can be about: PETTY (weightless,
+ * no slot), STACKS (three scrolls of the same spell are three uses of it),
+ * CHANGES HANDS (a spell never leaves its owner's head; a scroll is an object
+ * you can pass across the table), and destroyed by casting.
+ *
+ * `quantity` is the count of copies and IS the ammunition: casting spends one,
+ * and the last one takes the row with it (magic.js `castScroll`). There is no
+ * `uses` counter, which is what the flagged version used and what made a stack
+ * of scrolls unrepresentable.
+ *
+ * PETTY is pinned in `CairnItem` (SCROLL_PINNED), not defaulted here, on the
+ * rule this file keeps everywhere: an `initial` is a value a Warden unticks,
+ * and "a scroll weighs nothing" is a statement about every write.
+ */
+class ScrollData extends CairnDataModel {
+  static defineSchema() {
+    return {
+      ...universal(),
+      // The language the scroll is WRITTEN IN — one name from the Warden's own
+      // list (`languages()` in content-packs.js), the same field and the same
+      // free-string reasoning as `BookData.language`: the sheet offers the
+      // configured list as a <select>, and a scroll authored under a list the
+      // Warden has since re-worded must still load rather than fail enum
+      // validation on a value nobody can now type.
+      //
+      // Empty means "no language decided", which reads to everyone — the same
+      // exemption `canReadItem` gives a book.
+      language: str(),
     };
   }
 }
@@ -979,4 +1022,5 @@ export const ITEM_DATA_MODELS = {
   background: BackgroundData,
   book: BookData,
   spell: SpellData,
+  scroll: ScrollData,
 };

@@ -221,8 +221,15 @@
                         <p class="question-line"><strong>{{this.question}}</strong>{{#if ../generationEnabled}}<a class="question-reroll" data-action="rerollQuestion"
                                 data-index="{{@index}}" data-filled="{{#if this.filled}}true{{else}}false{{/if}}" title="{{#if this.filled}}{{ localize 'CAIRN.RerollQuestion' }}{{else}}{{ localize 'CAIRN.RollQuestion' }}{{/if}}"><i
                                     class="fas fa-dice-d20"></i></a>{{/if}}</p>
+                        {{!-- The answer carries a hover listing everything it gave
+                              the character: the items, the connected beasts, the
+                              coins and the ability bonuses. Built in
+                              `questionGrantTip` from what the character ACTUALLY
+                              holds, so it cannot claim a dagger the Warden has
+                              since deleted. An unrolled slot has no tooltip —
+                              there is nothing yet to describe. --}}
                         {{#if this.filled}}
-                        <p class="question-answer">{{this.answer}}</p>
+                        <p class="question-answer has-grant-tip" data-tooltip="{{this.grantTip}}">{{this.answer}}</p>
                         {{else}}
                         <p class="question-answer unrolled">{{ localize 'CAIRN.NotRolledYet' }}</p>
                         {{/if}}

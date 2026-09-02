@@ -185,35 +185,42 @@ export const spellNameFromGrant = (name) => {
 export const isScrollGrant = (name) => /^scroll\s*\(.+\)$/i.test(String(name).trim());
 
 /**
- * A single-use petty scroll built from a resolved spell document: the SAME
- * `spell` type with `scroll` ticked, the spell's own text as its description, and
- * stored under the bare spell name — the inventory row adds the "Spellscroll — "
- * prefix at display time, exactly as it does for a book. THE one definition of
- * "what a scroll is", shared by named scroll grants (resolveGearItem) and the
- * random-scroll path (character-generator.js randomScrollItem) so the two cannot
- * drift.
+ * A petty Pergamino built from a resolved spell document: the `scroll` TYPE, the
+ * spell's own text as its description, stored under the bare spell name — the
+ * inventory row adds the "Pergamino — " prefix at display time. THE one
+ * definition of "what a scroll is", shared by named scroll grants
+ * (resolveGearItem) and the random-scroll path (character-generator.js
+ * `randomScrollItem`) so the two cannot drift.
  *
- * This used to emit `type: "item"` under the name "Spellscroll — X", which made a
- * generated scroll a THIRD representation no Warden could author or recognise: not
- * a spellbook, not flagged, identifiable only by a word in its name (which is what
- * `iconForItem` keys the scroll art off). `CairnItem._preUpdate` re-pins petty and
- * the use count on every write, so the values below are the initial state rather
- * than the only thing holding the invariant.
+ * TYPE `scroll` since 2026-09-02, where this emitted a `spell` with `scroll`
+ * ticked (and before that, a `type: "item"` named "Spellscroll — X", which made
+ * a generated scroll a third representation no Warden could author).
+ *
+ * `uses` is GONE with the flag: a scroll's count of copies is its QUANTITY now,
+ * so `spellScrollItem(spell, {quantity: 3})` is three castings and casting
+ * spends one. Callers that passed `uses: 0` to hand out a spent scroll should
+ * pass `quantity: 0`— or, better, hand out nothing.
+ *
+ * The `language` the source spell cannot have is simply absent, which reads to
+ * everyone; a Warden who wants a scroll nobody at the table can read sets it on
+ * the scroll's own sheet. `CairnItem._preCreate/_preUpdate` re-pin petty on
+ * every write, so the values below are the initial state rather than the only
+ * thing holding the invariant.
  */
-export const spellScrollItem = (book, { quantity = 1, uses } = {}) => ({
-  name: book.name,
-  type: "spell",
+export const spellScrollItem = (spell, { quantity = 1 } = {}) => ({
+  name: spell.name,
+  type: "scroll",
   img: SPELLSCROLL_ICON,
   system: {
     // toObject() rather than deepClone — see resolveGearItem. The spread saved
     // this one from mutating the pack, but it also copied prepared/derived
-    // fields off the live model into stored data.
-    ...book.system.toObject(),
-    scroll: true,
+    // fields off the live model into stored data. Keys the `scroll` schema does
+    // not declare (a spell's `uses`) are dropped by the strict model, which is
+    // the intent.
+    ...spell.system.toObject(),
     weightless: true,
     equipped: false,
     quantity,
-    uses: { value: uses ?? 1, max: 1 },
   },
 });
 
@@ -317,7 +324,7 @@ export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
   // Hechizo casts itself now, so turning every grant into one-use paper would
   // hand out magic that can never be kept and can never be filed anywhere.
   if (found.type === "spell" && isScrollGrant(name)) {
-    return spellScrollItem(found, { quantity, uses });
+    return spellScrollItem(found, { quantity });
   }
 
   const item = {

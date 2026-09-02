@@ -126,12 +126,31 @@
       </a>
       {{/if}}
 
-      {{!-- Cast this Hechizo. The hint is the one difference a Pergamino makes
-            on the row: reading it destroys it, and the tooltip says so before
-            the confirmation does. --}}
+      {{!-- Memorize one of THIS Grimorio's pages into the inventory as a
+            Hechizo. Same three conditions as the cast beside it, so the two
+            controls appear and disappear together; what differs is what happens
+            to the page. --}}
+      {{#if item.system.canMemorize}}
+      <a class="item-control grimoire-memorize" data-action="bookMemorize"
+        title="{{ localize 'CAIRN.MemorizeSpellHint' }}">
+        <i class="fas fa-brain"></i>
+      </a>
+      {{/if}}
+
+      {{!-- Cast this Hechizo. --}}
       {{#if item.system.canCastSpell}}
-      <a class="item-control scroll-cast" data-action="spellCast"
-        title="{{#if item.system.scroll}}{{ localize 'CAIRN.ScrollCastHint' }}{{else}}{{ localize 'CAIRN.SpellCastHint' }}{{/if}}">
+      <a class="item-control spell-cast" data-action="spellCast"
+        title="{{ localize 'CAIRN.SpellCastHint' }}">
+        <i class="fas fa-hand-sparkles"></i>
+      </a>
+      {{/if}}
+
+      {{!-- Cast this Pergamino. Its own control since the type split: reading
+            it destroys a copy, and the tooltip says so before the confirmation
+            does. --}}
+      {{#if item.system.canCastScroll}}
+      <a class="item-control scroll-cast" data-action="scrollCast"
+        title="{{ localize 'CAIRN.ScrollCastHint' }}">
         <i class="fas fa-hand-sparkles"></i>
       </a>
       {{/if}}

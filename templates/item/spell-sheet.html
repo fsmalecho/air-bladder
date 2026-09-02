@@ -11,19 +11,21 @@
             placeholder="{{ localize 'CAIRN.Name' }}" />
     </div>
 
-    <!-- Pergamino. A flag, not a type: a scroll IS this spell, written once on
-         paper. Ticking it pins petty + one use and swaps the art (CairnItem
-         _preUpdate), which is why there is no Petty box, no Bulky box and no Max
-         uses field here -- a Hechizo costs exactly one slot and a Pergamino none,
-         so neither is a question anyone is asked. -->
-    <div class="resource-counter long-counter">
-        <label class="large-resource-label" for="{{@root.idp}}-system.scroll"
-            data-tooltip="{{ localize 'CAIRN.ScrollTip' }}">{{ localize 'CAIRN.Scroll' }}</label>
-        <div class="resource-input-wrapper">
-            <input type="checkbox" {{checked system.scroll}} name="system.scroll" id="{{@root.idp}}-system.scroll"
-                value="{{system.scroll}}" data-dtype="Boolean" />
-        </div>
-    </div>
+    {{!-- THE PERGAMINO CHECKBOX stood here and is GONE (2026-09-02, user ruling:
+          "el pergamino se convierte en un tipo diferente de objeto y no en una
+          casilla de hechizo"). A Pergamino is the `scroll` type with its own
+          sheet: it is petty, it stacks, it changes hands and it is written in a
+          language — none of which a memorised spell is. The Uses row that only
+          appeared while the box was ticked went with it.
+
+          THE CANTIDAD FIELD went the same day, for a kindred reason: a spell is
+          in your head or it is not, so "×2" was never a quantity of anything.
+          `quantity` is pinned to 1 (SPELL_PINNED, module/item/item.js) and a
+          dropped spell no longer merges into a stack.
+
+          What is still absent, and was before: a Petty box, a Bulky box and a
+          Max uses field. A Hechizo costs exactly one slot, always, so none of
+          the three is a question anyone is asked. --}}
 
     <!-- Cost -->
     <div class="resource-counter long-counter">
@@ -33,29 +35,6 @@
                 data-dtype="Number" />
         </div>
     </div>
-
-    <!-- Quantity -->
-    <div class="resource-counter long-counter">
-        <label class="large-resource-label" for="{{@root.idp}}-system.quantity">{{ localize 'CAIRN.Quantity' }}</label>
-        <div class="resource-input-wrapper">
-            <input type="text" name="system.quantity" id="{{@root.idp}}-system.quantity" value="{{system.quantity}}"
-                data-dtype="Number" />
-        </div>
-    </div>
-
-    {{#if system.scroll}}
-    <!-- Used up? The one editable half of the counter: max is pinned at 1, and the
-         value drops to 0 when the scroll is read. A plain Hechizo never shows this.
-         Placed LAST, so ticking Pergamino appends a row instead of shuffling the
-         three counters a spell already has. -->
-    <div class="resource-counter long-counter">
-        <label class="large-resource-label" for="{{@root.idp}}-system.uses.value">{{ localize 'CAIRN.Uses' }}</label>
-        <div class="resource-input-wrapper">
-            <input type="text" name="system.uses.value" id="{{@root.idp}}-system.uses.value"
-                value="{{system.uses.value}}" data-dtype="Number" />
-        </div>
-    </div>
-    {{/if}}
 
     <div class="item-sheet-section-tabs">
         <nav class="tabs" data-group="primary">

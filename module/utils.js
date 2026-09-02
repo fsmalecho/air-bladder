@@ -554,6 +554,66 @@ export const grantSourceLabel = (source) => {
   return "";
 };
 
+/* -------------------------------------------------------------------------- */
+/*  Ammunition                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The ranged weapon behind a damage roll, or null.
+ *
+ * `usesAsNumbers` is the flag a ranged weapon carries: its `uses` counter is
+ * AMMUNITION rather than charges, so it is spent by firing. Every other row
+ * that can roll damage — a melee weapon, a monster's claws — answers null here
+ * and is untouched by both helpers below.
+ * @param {CairnItem|null} item
+ * @returns {CairnItem|null}
+ */
+export const ammoWeapon = (item) => (item?.system?.usesAsNumbers ? item : null);
+
+/**
+ * "This shot cannot happen." Warns and answers true when a ranged weapon's
+ * quiver is empty.
+ *
+ * An empty quiver REFUSES: no dialog, no roll, no card. Firing a bow with
+ * nothing to fire is not an impaired roll, it is not a roll, and the warning is
+ * what tells the player which of the two just happened.
+ * @param {CairnItem|null} weapon  already through `ammoWeapon`
+ * @returns {Boolean} true = refuse
+ */
+export const outOfAmmo = (weapon) => {
+  if (!weapon || (weapon.system.uses?.value ?? 0) > 0) return false;
+  ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
+  return true;
+};
+
+/**
+ * Spend one round. Answers false when the quiver emptied while the caller was
+ * awaiting something (a dialog), in which case it has already warned and the
+ * caller must roll nothing.
+ *
+ * Re-reads off the DOCUMENT rather than trusting a value read before the await:
+ * a second client, or the +/- controls on the same row, can empty the quiver in
+ * between. Clamped at 0 so a racing pair of rolls cannot drive it negative.
+ *
+ * SHARED by the sheet's damage control and the hotbar macro since 2026-09-02
+ * (user report: "cuando se arrastra un arma a distancia a la barra de macros …
+ * no consume munición"). The macro was written before ammunition existed and
+ * never learned about it; one helper is what stops the two paths disagreeing
+ * about whether a shot costs an arrow.
+ * @param {CairnItem|null} weapon  already through `ammoWeapon`
+ * @returns {Promise<Boolean>} false = do not roll
+ */
+export const spendAmmo = async (weapon) => {
+  if (!weapon) return true;
+  const left = weapon.system.uses?.value ?? 0;
+  if (left <= 0) {
+    ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
+    return false;
+  }
+  await weapon.update({ "system.uses.value": left - 1 });
+  return true;
+};
+
 /**
  * Format a counted noun, choosing the locale's plural form.
  *

@@ -1429,10 +1429,11 @@ const flattenConnections = async () => {
 
 /* `abSpellscrollTypeOption` stood here and is GONE. It injected a second
    "Spellscroll" <option> into the Create Item dialog, keyed on
-   `option[value="spellbook"]`, and rode a hidden `system.scroll` input into the
+   `option[value="spellbook"]`, and rode a hidden `system.scroll` flag into the
    create so the new document arrived flagged. There is no `spellbook` value to
-   key on any more: a scroll is a `spell` whose own sheet carries the Pergamino
-   box, and the type list offers Hechizo outright. */
+   key on any more, and no flag either: since 2026-09-02 Pergamino is a
+   registered TYPE, so the Create Item dialog offers it outright beside
+   Hechizo — which is what the hook was faking. */
 
 /* `abHideHirelingType` stood here and is GONE (2026-08-02). It removed the
    retired `hireling` TYPE from core's Create Actor dialog by surgery on the
@@ -2162,26 +2163,23 @@ const configureHandleBar = () => {
   // site: the template then needs no `{{#if}}` around it, so a new type that
   // should carry a prefix is added HERE and both surfaces get it at once.
   //
-  // FOUR kinds since 2026-09-02: a Libro that is a Grimorio says so. `flag` is
-  // whichever boolean the type in hand splits on — `scroll` for a spell,
-  // `grimoire` for a book — one parameter rather than one per type, because
-  // every caller passes the item it is rendering and the helper knows which
-  // field that type splits on.
+  // FOUR kinds: Libro, Grimorio, Hechizo, Pergamino. Three are TYPES and one is
+  // a flag — a Libro with `grimoire` ticked — which is why the whole `system`
+  // object comes in rather than a pre-picked boolean: which field (if any) a
+  // type splits on is this helper's business, and a template that had to know
+  // is a template that gets it wrong on the next type. `?.` because the printed
+  // sheet builds its rows by hand and a row without a system object must still
+  // resolve.
   //
   // The de-duplication list carries ALL FOUR prefixes, which is what stops a
   // book renamed by a Warden while it was a plain Libro ("Libro — Cantos")
   // coming out as "Grimorio — Libro — Cantos" the moment the box is ticked.
   Handlebars.registerHelper("spellNamePrefix", function (name, type, system) {
     const n = String(name ?? "");
-    if (type !== "book" && type !== "spell") return "";
-    // The whole `system` object, not one pre-picked boolean: which flag splits
-    // the type is this helper's business, and a template that had to know
-    // ("pass `scroll` for a spell, `grimoire` for a book") is a template that
-    // gets it wrong on the next type. `?.` because the printed sheet builds its
-    // rows by hand and a row without a system object must still resolve.
-    const key = type === "book"
-      ? (system?.grimoire ? "CAIRN.GrimoirePrefix" : "CAIRN.BookPrefix")
-      : system?.scroll ? "CAIRN.SpellscrollPrefix" : "CAIRN.SpellPrefix";
+    if (!["book", "spell", "scroll"].includes(type)) return "";
+    const key = type === "scroll" ? "CAIRN.SpellscrollPrefix"
+      : type === "spell" ? "CAIRN.SpellPrefix"
+        : system?.grimoire ? "CAIRN.GrimoirePrefix" : "CAIRN.BookPrefix";
     const localized = game.i18n.localize(key);
     const localizedForms = [
       ...prefixForms(game.i18n.localize("CAIRN.BookPrefix")),

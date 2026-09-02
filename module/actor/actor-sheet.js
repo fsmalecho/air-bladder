@@ -1,11 +1,11 @@
-import { regenerateActor, canRegenerateContainers, withGrantSource, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula, optionAbilityBonuses, abilityBonusDelta, abilityDeltaUpdate } from "../character-generator.js";
+import { regenerateActor, canRegenerateContainers, withGrantSource, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, FLAG_SCOPE, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, rollNameFromTable, rollAge, effectiveAgeFormula, optionAbilityBonuses, abilityBonusDelta, abilityDeltaUpdate } from "../character-generator.js";
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
-import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
+import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, askDamageQuality, damageFormulaFor, damageQualityLabel, ammoWeapon, outOfAmmo, spendAmmo } from "../utils.js";
 import { resultText } from "../compendium.js";
 import { generatorTable, languages, TABLES } from "../content-packs.js";
 import { SETTINGS_NS } from "../settings.js";
 import { CONTAINER_ART_CHOICES, CONTAINER_CLASSES } from "../icons.js";
-import { NPC_ROLES, PERSON_ROLES, bgTableDie } from "../data-models.js";
+import { NPC_ROLES, PERSON_ROLES, BG_ABILITY_KEYS, bgTableDie } from "../data-models.js";
 
 /**
  * The roles with something to randomize: the two people and the monster.
@@ -39,7 +39,7 @@ const NPC_TRAIT_LABELS = {
 
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
 import { FATIGUE_NAME, bookPages } from "../item/item.js";
-import { castFromBook, castSpell, booksOn, canReadBook } from "../magic.js";
+import { castFromBook, castSpell, castScroll, memorizeFromBook, booksOn, canReadItem } from "../magic.js";
 import { pickArt } from "../art-picker.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -152,6 +152,73 @@ const initialTabId = (doc) => {
   if (doc?.type === "character") return ids[0];
   if (PERSON_ROLES.includes(doc?.npcRole)) return "items";
   return ids.includes("description") ? "description" : ids[0];
+};
+
+/** The four ability keys as the sheet names them. `hp` is Hit Protection, which
+ *  is a value/max pair like the three abilities but is not one of them. */
+const ABILITY_LABELS = { str: "STR", dex: "DEX", wil: "WIL", hp: "CAIRN.HitProtection" };
+
+/**
+ * "Everything this answer gave you", for the Trasfondo tab's hover (2026-09-02,
+ * user ask).
+ *
+ * Built from WHAT THE CHARACTER ACTUALLY HAS, not from the background's table
+ * row: the stored answer carries its own `gold` and `abilities` (they are
+ * stored precisely so a re-roll can give them back), and the items and
+ * connections it granted are found by the `question:<i>` tag they were minted
+ * with. So a Warden who deleted the granted dagger sees a tooltip that no
+ * longer claims one, and an answer rolled before the background was edited
+ * still describes the answer that was actually applied.
+ *
+ * Returns "" for an UNROLLED slot — there is nothing to describe yet, and a
+ * tooltip reading "nothing" on an empty question would say the wrong thing
+ * about it.
+ *
+ * HTML, because `data-tooltip` renders it; every interpolated name is a stored
+ * document field a player can write, so all of them are escaped.
+ * @param {CairnActor} actor @param {Object} q  the stored question record
+ * @param {Number} i  its index, which is what the grant tag carries
+ * @returns {String}
+ */
+const questionGrantTip = (actor, q, i) => {
+  if (!String(q?.answer ?? "").trim()) return "";
+  const esc = foundry.utils.escapeHTML;
+  const tag = `question:${i}`;
+  const L = (k, d) => (d ? game.i18n.format(k, d) : game.i18n.localize(k));
+  const lines = [];
+
+  const items = actor.items.filter((it) => String(it.getFlag(FLAG_SCOPE, "grantSource") ?? "") === tag);
+  if (items.length) {
+    lines.push(L("CAIRN.QuestionGrantsItems", {
+      list: items.map((it) => {
+        const n = (it.system.quantity ?? 1) > 1 ? ` ×${it.system.quantity}` : "";
+        return `${esc(it.name)}${n}`;
+      }).join(", "),
+    }));
+  }
+
+  // Connections are ACTORS, tagged the same way — a question that grants a
+  // horse grants it as a connected actor, not as an inventory row.
+  const beasts = (actor.connectedActors?.() ?? [])
+    .filter((c) => String(c.getFlag(FLAG_SCOPE, "grantSource") ?? "") === tag);
+  if (beasts.length) {
+    lines.push(L("CAIRN.QuestionGrantsLinks", { list: beasts.map((c) => esc(c.name)).join(", ") }));
+  }
+
+  const gold = Number(q.gold) || 0;
+  if (gold) lines.push(L("CAIRN.QuestionGrantsGold", { n: gold }));
+
+  const abilities = BG_ABILITY_KEYS
+    .filter((k) => (q.abilities?.[k] ?? 0) !== 0)
+    .map((k) => {
+      const v = q.abilities[k];
+      return `${game.i18n.localize(ABILITY_LABELS[k])} ${v > 0 ? `+${v}` : v}`;
+    });
+  if (abilities.length) {
+    lines.push(L("CAIRN.QuestionGrantsAbilities", { list: abilities.join(" · ") }));
+  }
+
+  return lines.length ? lines.join("<br>") : L("CAIRN.QuestionGrantsNothing");
 };
 
 /**
@@ -401,7 +468,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       itemAddUse: owned(CairnActorSheet.#onItemAddUse),
       itemRemoveUse: owned(CairnActorSheet.#onItemRemoveUse),
       bookCast: owned(CairnActorSheet.#onBookCast),
+      bookMemorize: owned(CairnActorSheet.#onBookMemorize),
       spellCast: owned(CairnActorSheet.#onSpellCast),
+      scrollCast: owned(CairnActorSheet.#onScrollCast),
       itemDescription: CairnActorSheet.#onItemDescription,
       addFatigue: owned(CairnActorSheet.#onAddFatigue),
       removeFatigue: owned(CairnActorSheet.#onRemoveFatigue),
@@ -1112,27 +1181,37 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
        gesture, because a Libro's three pages are its own fields, typed on its
        own sheet. */
     if (this.actor.type === "character") {
-      // EVERY Grimorio gets its own control, keyed on its own id — the `[0]`
+      // EVERY Grimorio gets its own controls, keyed on its own id — the `[0]`
       // guess that offered the cast on the first book only is gone, and with it
-      // the question of which book "the" control meant. THREE conditions now,
-      // all re-derived in castFromBook: the Libro is marked Grimorio
-      // (`booksOn` filters on the flag since 2026-09-02 — an unmarked book is a
-      // book, not a spell list), it has at least one written page, and the
-      // carrier can READ it (module/magic.js `canReadBook` — a book in a
-      // language this character does not know is a closed book).
-      const castable = new Map(booksOn(this.actor).map((b) =>
-        [b.id, canReadBook(b, this.actor) && bookPages(b).length > 0]));
+      // the question of which book "the" control meant. THREE conditions, all
+      // re-derived in castFromBook and memorizeFromBook: the Libro is marked
+      // Grimorio (`booksOn` filters on the flag since 2026-09-02 — an unmarked
+      // book is a book, not a spell list), it has at least one written page,
+      // and the carrier can READ it (module/magic.js `canReadItem` — a book in
+      // a language this character does not know is a closed book).
+      //
+      // CAST and MEMORIZE share all three, so they share the map. They differ
+      // only in what they then do with the page, which is why memorize is not a
+      // fourth condition here but its own refusal inside `memorizeFromBook`
+      // (every page already known is a real state, and the message for it names
+      // the book).
+      const usable = new Map(booksOn(this.actor).map((b) =>
+        [b.id, canReadItem(b, this.actor) && bookPages(b).length > 0]));
       context.items = context.items.map((i) => {
-        // A HECHIZO casts itself, with no book at all; a PERGAMINO is the same
-        // cast with a confirmation in front and the paper destroyed after. A
-        // scroll generated already-spent is excluded — there is nothing left on
-        // the page to read.
+        // A HECHIZO casts itself, with no book at all.
         if (i.type === "spell") {
-          const ok = !i.system.scroll || (i.system.uses?.value ?? 0) > 0;
-          return ok ? { ...i, system: { ...i.system, canCastSpell: true } } : i;
+          return { ...i, system: { ...i.system, canCastSpell: true } };
         }
-        if (i.type === "book" && castable.get(i._id)) {
-          return { ...i, system: { ...i.system, canCast: true } };
+        // A PERGAMINO is the same cast with a confirmation in front and one
+        // copy spent after — and it is WRITTEN, so the language gate applies to
+        // it exactly as it does to a book. An empty stack offers nothing.
+        if (i.type === "scroll") {
+          const item = this.actor.items.get(i._id);
+          const ok = (i.system.quantity ?? 0) > 0 && canReadItem(item, this.actor);
+          return ok ? { ...i, system: { ...i.system, canCastScroll: true } } : i;
+        }
+        if (i.type === "book" && usable.get(i._id)) {
+          return { ...i, system: { ...i.system, canCast: true, canMemorize: true } };
         }
         return i;
       });
@@ -1558,6 +1637,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       answer: q.answer ?? "",
       heading: String(bgTables[i]?.heading ?? q.heading ?? "").trim(),
       filled: !!String(q.answer ?? "").trim(),
+      // Everything this answer gave the character, for the hover — see
+      // `questionGrantTip`. "" on an unrolled slot, which is what keeps the
+      // template's `{{#if}}` from attaching an empty tooltip.
+      grantTip: questionGrantTip(this.actor, q, i),
     }));
     // Nothing to show at all. The tab still renders (it is in the character's
     // tab set unconditionally), so it says so rather than standing empty.
@@ -1997,18 +2080,28 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // belt-and-braces rather than the only wall — but this panel is the one
     // place a book's page names are rendered, and the rule here is that
     // nothing reaches innerHTML unwashed.
+    // A PERGAMINO's description IS the spell, so the same gate falls on it —
+    // and here it takes the DESCRIPTION rather than a list of pages, which is
+    // why it is a separate branch from the book's below. Same standard: the
+    // text is never built, so nothing reaches the DOM.
+    const scrollLocked = item.type === "scroll" && !canReadItem(item, this.actor);
+
     let pages = "";
     if (item.type === "book") {
-      pages = canReadBook(item, this.actor)
+      pages = canReadItem(item, this.actor)
         ? bookPages(item).map((p) =>
           `<div><i class="fa-regular fa-bookmark"></i> <i>${p.n}. `
           + `${cleanDescription(p.name)}: ${cleanDescription(p.text)}</i></div>`).join("")
         : `<div class="book-language-locked"><i class="fa-solid fa-lock"></i> `
           + `<i>${game.i18n.localize("CAIRN.BookLanguageLocked")}</i></div>`;
     }
+    if (scrollLocked) {
+      pages = `<div class="book-language-locked"><i class="fa-solid fa-lock"></i> `
+        + `<i>${game.i18n.localize("CAIRN.ScrollLanguageLocked")}</i></div>`;
+    }
     const div = document.createElement("div");
     div.className = "item-description";
-    const desc = item.system.description;
+    const desc = scrollLocked ? "" : item.system.description;
     div.innerHTML = `${cleanDescription(desc)}${crit}${recharge}${pages}`;
     return div;
   }
@@ -2164,7 +2257,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    */
   async _replaceGrantedItems(source, newItems) {
     const oldIds = this.actor.items
-      .filter((i) => i.getFlag("mondolme", "grantSource") === source)
+      .filter((i) => i.getFlag(FLAG_SCOPE, "grantSource") === source)
       .map((i) => i.id);
     if (oldIds.length) {
       // abNoStatusCard: grant machinery is not a player packing or shedding
@@ -2972,9 +3065,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
+   * The Memorize control on a GRIMORIO's row: copy one of its pages into the
+   * inventory as a Hechizo. Not a cast — see `memorizeFromBook`, which
+   * re-derives every guard this row's affordance was drawn from.
+   * @this {CairnActorSheet}
+   */
+  static async #onBookMemorize(event, target) {
+    event.preventDefault();
+    const row = CairnActorSheet.#row(target);
+    const item = this.actor.getOwnedItem(row?.dataset.itemId);
+    if (item) await memorizeFromBook(this.actor, item);
+  }
+
+  /**
    * The Cast control on a HECHIZO's row — no book required, the spell is its
-   * own text. With Pergamino ticked it is the same cast, asked about first and
-   * destroyed after. All guards re-derive in module/magic.js.
+   * own text. All guards re-derive in module/magic.js.
    * @this {CairnActorSheet}
    */
   static async #onSpellCast(event, target) {
@@ -2982,6 +3087,19 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const row = CairnActorSheet.#row(target);
     const item = this.actor.getOwnedItem(row?.dataset.itemId);
     if (item) await castSpell(this.actor, item);
+  }
+
+  /**
+   * The Cast control on a PERGAMINO's row: the same cast asked about first,
+   * because reading the paper destroys one copy of it. `castScroll` re-derives
+   * the language gate and the count.
+   * @this {CairnActorSheet}
+   */
+  static async #onScrollCast(event, target) {
+    event.preventDefault();
+    const row = CairnActorSheet.#row(target);
+    const item = this.actor.getOwnedItem(row?.dataset.itemId);
+    if (item) await castScroll(this.actor, item);
   }
 
   /** Not exactly quantity, this is about uses. @this {CairnActorSheet} */
@@ -3093,26 +3211,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const dataset = target.dataset;
     if (!dataset.roll) return;
 
-    // AMMUNITION. The row's own item, resolved here because this handler has
-    // never needed the document before — everything else it uses rides on the
-    // control's dataset.
-    //
-    // An empty quiver REFUSES: no dialog, no roll, no card. Firing a bow with
-    // nothing to fire is not an impaired roll, it is not a roll, and the
-    // warning is what tells the player which of the two just happened.
-    //
-    // A non-ranged weapon, and every other row that can roll damage (a
-    // monster's claws), is untouched — `usesAsNumbers` is false for all of
-    // them, so neither the refusal nor the spend can reach them.
-    const rangedItem = (() => {
-      const row = CairnActorSheet.#row(target);
-      const item = this.actor.items.get(row?.dataset.itemId ?? "");
-      return item?.system?.usesAsNumbers ? item : null;
-    })();
-    if (rangedItem && (rangedItem.system.uses?.value ?? 0) <= 0) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
-      return;
-    }
+    // AMMUNITION (utils.js, shared with the hotbar macro since 2026-09-02).
+    // The row's own item, resolved here because this handler has never needed
+    // the document before — everything else it uses rides on the control's
+    // dataset. A non-ranged weapon answers null and is untouched by both calls.
+    const rangedItem = ammoWeapon(
+      this.actor.items.get(CairnActorSheet.#row(target)?.dataset.itemId ?? ""));
+    if (outOfAmmo(rangedItem)) return;
 
     const usePanic = game.settings.get(SETTINGS_NS, "use-panic");
     const panicked = usePanic && this.actor.system.panicked;
@@ -3143,20 +3248,9 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // dismissing it rolls nothing and must therefore cost nothing — the `return`
     // above is the only exit between the refusal and here. Before the roll
     // because the arrow leaves the bow whatever the die then says; a miss is
-    // still a shot.
-    //
-    // Re-read off the document rather than trusting the value the refusal saw:
-    // the dialog is an await, and a second client (or the +/- controls on the
-    // same row) can empty the quiver while it is open. Clamped at 0 so a racing
-    // pair of rolls cannot drive the counter negative.
-    if (rangedItem) {
-      const left = rangedItem.system.uses?.value ?? 0;
-      if (left <= 0) {
-        ui.notifications.warn(game.i18n.localize("CAIRN.Notify.NoAmmo"));
-        return;
-      }
-      await rangedItem.update({ "system.uses.value": left - 1 });
-    }
+    // still a shot. `spendAmmo` re-reads the document, since the dialog was an
+    // await; false means it emptied in between and it has already said so.
+    if (!(await spendAmmo(rangedItem))) return;
 
     const roll = await evaluateFormula(formula, this.actor.getRollData());
     // Two whole-sentence keys, not fragments glued with `+`: word order is not
@@ -3986,26 +4080,24 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // once that has actually succeeded. The old order created-then-decremented
     // unconditionally: a refused create (typically a permissions wall) threw AND
     // still decremented the source, so the item vanished.
-    // A LIBRO NEVER STACKS (2026-09-02): its quantity is pinned to 1
-    // (BOOK_PINNED), so bumping a found stack would write 1 over 1 while the
-    // source below still gave up a unit — the book would simply vanish. It is
-    // also the right answer on its own terms: two books of the same title hold
-    // different words on their three pages, so they are two rows, not a ×2.
-    const foundItem = originalItem.type === "book" ? null : this.actor.items.find(
+    // A LIBRO AND A HECHIZO NEVER STACK. Both have `quantity` pinned to 1
+    // (BOOK_PINNED / SPELL_PINNED), so bumping a found stack would write 1 over
+    // 1 while the source below still gave up a unit — the item would simply
+    // vanish. Both are also right on their own terms: two books of one title
+    // hold different words on their three pages, and a spell is in your head or
+    // it is not. A PERGAMINO is the opposite and stacks by design — three
+    // copies of one scroll are three castings.
+    //
+    // The `scroll`-flag discriminator that used to sit in this test is gone
+    // with the flag (2026-09-02). It existed because a Hechizo and its
+    // Pergamino shared name AND type, so the name+type test merged one into the
+    // other; they are different TYPES now, and `it.type === originalItem.type`
+    // says it. Any future flag-style splitter joins this test rather than
+    // growing a new merge — a stack that merges two different things is silent
+    // data loss.
+    const NEVER_STACKS = ["book", "spell"];
+    const foundItem = NEVER_STACKS.includes(originalItem.type) ? null : this.actor.items.find(
       (it) => it.name === originalItem.name && it.type === originalItem.type
-        // A stack is only a stack when the flag-shaped discriminators agree:
-        // a Hechizo and its Pergamino share name AND type (gear.js stores a
-        // scroll under the bare spell name), so the name+type test merged a
-        // dropped spell into a scroll stack — the spell was never created, and
-        // a cross-actor drop deleted the source scroll while bumping the
-        // target's spell (review #9). Any future flag-style splitter joins this
-        // test rather than growing a new merge.
-        //
-        // Unreachable for a spell today — the refusal above turns every
-        // cross-actor spell drop away before this — and kept because the test
-        // is about the FLAG, not about which type happens to carry it, and
-        // because a stack that merges two different things is silent data loss.
-        && !!it.system?.scroll === !!originalItem.system?.scroll
     );
     let created = foundItem ?? null;
     if (foundItem) {

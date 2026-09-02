@@ -107,6 +107,11 @@
         "htmlFields": [
           "description"
         ]
+      },
+      "scroll": {
+        "htmlFields": [
+          "description"
+        ]
       }
     }
   },
