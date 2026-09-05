@@ -244,6 +244,30 @@ export const isDaylight = (date) => {
   return h >= sunrise && h < sunset;
 };
 
+/** Twilight, in hours either side of sunrise and of sunset. */
+const TWILIGHT = 0.75;
+
+/**
+ * HOW MUCH DAY it is: 0 in the dead of night, 1 in broad daylight, sliding
+ * across an hour and a half around each of sunrise and sunset.
+ *
+ * `isDaylight` is a switch and this is a dimmer, and the orb needs the dimmer.
+ * It fades the sun out against the moon, and a switch would flip the whole sky
+ * in a single frame at exactly sunrise. Multiplying the two ramps instead of
+ * branching on where in the day we are keeps midday at exactly 1 and midnight
+ * at exactly 0, with no cases to get wrong at the ends.
+ *
+ * @returns {Number} 0…1
+ */
+export const dayness = (date) => {
+  const { sunrise, sunset } = daylightHours(date.dayOfYear);
+  const h = date.hour + date.minute / 60;
+  const clamp = (n) => Math.min(1, Math.max(0, n));
+  const rising = clamp((h - (sunrise - TWILIGHT)) / (2 * TWILIGHT));
+  const falling = clamp(((sunset + TWILIGHT) - h) / (2 * TWILIGHT));
+  return rising * falling;
+};
+
 /**
  * The moon on a given day: which of the eight phases, and how far through the
  * lunation it is.

@@ -673,10 +673,10 @@
     },
     "GroupCalendar": "Calendario",
     "GroupCalendarButton": "Configurar el calendario",
-    "GroupCalendarHint": "La barra de calendario sobre los macros, y las tablas que se tiran solas al adelantar el tiempo.",
+    "GroupCalendarHint": "La barra de calendario sobre los macros, las tablas que se tiran solas al adelantar el tiempo, y una tabla de tiempo atmosférico por estación.",
     "ShowCalendar": {
       "label": "Mostrar la barra de calendario",
-      "hint": "La barra que aparece encima de la barra de macros con la fecha, la estación, la luna y la hora. Los botones para adelantar el tiempo solo los ve el Guardián."
+      "hint": "El orbe en medio de la barra de macros con el sol y la luna, y la línea encima con la fecha, la estación, la luna y la hora. Los botones para adelantar el tiempo solo los ve el Guardián, y aparecen al pasar el ratón por encima."
     },
     "CalendarTableTurn": {
       "label": "Tabla al adelantar 10 minutos",
@@ -685,6 +685,13 @@
     "CalendarTableTravel": {
       "label": "Tabla al adelantar a Mañana / Mediodía / Tarde / Medianoche",
       "hint": "Nombre de la tabla que se tira sola con los cuatro botones de viaje. El resultado se susurra solo al Guardián. Déjalo vacío para no tirar nada."
+    },
+    "CalendarTableWeather": {
+      "spring": "Tabla de tiempo — Primavera",
+      "summer": "Tabla de tiempo — Verano",
+      "autumn": "Tabla de tiempo — Otoño",
+      "winter": "Tabla de tiempo — Invierno",
+      "hint": "Nombre de la tabla que se tira sola cuando el reloj entra en un día nuevo, para saber qué tiempo hace. Se usa la de la estación en la que cae el día nuevo. A diferencia de las otras dos, el resultado lo ve toda la mesa. Déjalo vacío para no tirar nada."
     }
   },
   "CAIRN.Slots": "Espacios",

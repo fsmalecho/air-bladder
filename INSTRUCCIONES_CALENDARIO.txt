@@ -1,13 +1,15 @@
 MONDOLME — El calendario, integrado en la barra de macros
 ==========================================================
 
-REVISIÓN del calendario que te pasé antes. Solo cambian DOS archivos:
+REVISIÓN del calendario. Cambian cinco archivos:
 
     css/cairn.css
+    lang/es.json
+    module/settings.js
+    module/calendar/calendar-core.js
     module/calendar/calendar-widget.js
 
-Nada más. Ni idiomas, ni ajustes, ni la aritmética del calendario: todo eso se
-queda exactamente como estaba.
+Ninguno nuevo, ninguno borrado.
 
 
 CÓMO APLICARLO
@@ -18,143 +20,246 @@ CÓMO APLICARLO
    todos.
 3. Commit y push:
 
-     El calendario, integrado en la barra de macros
+     El calendario: orbe en el hotbar, cielo de día y noche, tablas de tiempo
 
 4. Etiqueta 2.0.5 (o el siguiente número que te toque), push, espera a Actions y
    actualiza el sistema en Foundry. Recarga el mundo (F5).
 
 
-LOS TRES ARREGLOS QUE PEDISTE
------------------------------
+1. YA NO SALE EN CLARO
+----------------------
 
-1. YA NO SALE EN CLARO.
+El fallo tenía una causa concreta y merece la pena que la sepas, porque explica
+por qué no se veía NADA en lugar de verse regular. El widget llevaba la clase
+"cairn", que es la de la ficha, así que tomaba la paleta de la ficha. Y los
+tokens oscuros de esa paleta solo se activan cuando Foundry ha marcado el tema
+oscuro. Tú tienes Foundry en tema claro, así que el widget cogió la paleta de
+PERGAMINO —tinta negra sobre crema— y la puso encima del lienzo, que es negro
+siempre. Texto negro sobre negro.
 
-   El fallo tenía una causa concreta y merece la pena que la sepas, porque
-   explica por qué no se veía NADA en lugar de verse regular. El widget llevaba
-   la clase "cairn", que es la de la ficha, así que tomaba la paleta de la
-   ficha. Y los tokens oscuros de esta paleta solo se activan cuando Foundry ha
-   marcado el tema oscuro. Tú tienes Foundry en tema claro, así que el widget
-   cogió la paleta de PERGAMINO —tinta negra sobre crema— y la puso encima del
-   lienzo, que es negro siempre. Texto negro sobre negro.
+Ahora lleva la suya, fija y oscura, tomada de los tokens de la INTERFAZ de
+Foundry (los mismos que usan las casillas de macros), con valores literales de
+respaldo por si algún día Foundry les cambia el nombre. Cambies el tema que
+cambies, la barra sigue oscura, igual que la barra de macros de debajo. La
+tipografía sí es la de la ficha (Alegreya): es lo que la hace de Mondolme y no
+una pieza genérica.
 
-   Ahora el widget no toma la paleta de la ficha. Lleva la suya, fija y oscura,
-   tomada de los tokens de la INTERFAZ de Foundry (los mismos que usan las
-   casillas de macros: `--color-text-light-highlight`, `--color-border-light-
-   tertiary`), con valores literales de respaldo por si algún día Foundry les
-   cambia el nombre. Cambies el tema que cambies, la barra sigue siendo oscura,
-   igual que la barra de macros que tiene debajo. La tipografía sí sigue siendo
-   la de la ficha (Alegreya), que es lo que hace que parezca de Mondolme y no
-   una pieza genérica.
+La VISTA DE MES no cambia: es una ventana de Foundry y sigue el tema que tengas
+puesto, como el resto de fichas y diálogos del sistema.
 
-   La VISTA DE MES no cambia: esa es una ventana de Foundry y sigue el tema que
-   tengas puesto, como el resto de fichas y diálogos del sistema.
 
-2. EL ORBE ESTÁ DENTRO DE LA BARRA DE MACROS.
+2. EL ORBE ESTÁ DENTRO DE LA BARRA DE MACROS
+--------------------------------------------
 
-   No encima. Dentro. El orbe es un elemento más de la lista de macros,
-   insertado en el MEDIO de la fila, entre la casilla 5 y la 6:
+No encima. Dentro. El orbe es un elemento más de la lista de macros, insertado
+en el MEDIO de la fila, entre la casilla 5 y la 6:
 
      [1][2][3][4][5]  ( ☀ )  [6][7][8][9][0]
 
-   Que sea un hijo de verdad de la lista de macros —y no algo flotando encima
-   con coordenadas calculadas— es lo que hace todo lo demás gratis: el flexbox
-   de Foundry lo alinea, le da exactamente el tamaño de una casilla (lee la
-   medida de Foundry, así que si Foundry dibuja casillas más pequeñas el orbe
-   se encoge con ellas), y lo lleva consigo cuando plegás la barra lateral o
-   cambia el tamaño de la ventana. Ese era el trabajo que el widget de
-   Dolmenwood tenía que hacer a mano con tres manejadores de eventos.
+Que sea un hijo de verdad de la lista —y no algo flotando encima con
+coordenadas calculadas— es lo que hace todo lo demás gratis: el flexbox de
+Foundry lo alinea, le da exactamente el tamaño de una casilla (lee la medida de
+Foundry, así que si dibuja casillas más pequeñas el orbe se encoge con ellas), y
+lo lleva consigo cuando pliegas la barra lateral. Ese era el trabajo que el
+widget de Dolmenwood hacía a mano con tres manejadores de eventos.
 
-   EL ORBE NO ES UNA CASILLA DE MACRO. No tiene el atributo por el que Foundry
-   decide dónde ha caído un macro arrastrado, así que no se puede soltar nada
-   encima. Y no te quita una casilla: las diez siguen ahí, la barra es un poco
-   más ancha.
+EL ORBE NO ES UNA CASILLA DE MACRO. No tiene el atributo por el que Foundry
+decide dónde ha caído un macro arrastrado, así que no se puede soltar nada
+encima. Y no te quita una casilla: las diez siguen ahí, la barra es más ancha.
 
-   Pulsando el orbe se abre el calendario, igual que pulsando la fecha.
+Pulsando el orbe se abre el calendario, igual que pulsando la fecha.
 
-3. LOS BOTONES SON UN PANEL QUE APARECE AL PASAR EL RATÓN.
 
-   Ya no están siempre puestos. La barra en reposo es una línea:
+3. EL ORBE ES UN CIELO: A MEDIODÍA SOLO EL SOL, A MEDIANOCHE SOLO LA LUNA
+------------------------------------------------------------------------
 
-            24 de Diciembre de 1503 │ Invierno │ ☾ │ 14:30
+     00:00           07:00             12:00          18:00
+     luna sola,      los dos a medias  sol solo,      luna sola
+     cielo de noche  (amanecer)        cielo cálido
 
-   Al pasar el ratón por la barra O por el orbe, el panel aparece encima:
+Conviene que sepas por qué está hecho con luz y no con geometría, porque lo
+intenté primero por geometría y no se puede. El sol y la luna están en los dos
+extremos de un diámetro, y una ventana redonda centrada en ese diámetro es
+simétrica al dar media vuelta: lo que enseñe de uno, lo enseña del otro. No hay
+forma de colocarlos para que se vea uno solo.
 
-        ┌──────────────────────────────────────────────────┐
-        │ [10 min] [Mañana] [Mediodía] [Tarde] [Medianoche]│
-        └──────────────────────────────────────────────────┘
-            24 de Diciembre de 1503 │ Invierno │ ☾ │ 14:30
+Así que el cambio se hace con LUZ. Hay dos cielos, uno de noche y otro de día, y
+el de día se enciende encima del otro a medida que amanece; cada cuerpo se
+enciende con su cielo. A mediodía la luna y el cielo de noche están a cero y el
+disco es un sol en un cielo cálido; a medianoche, al revés. Y durante la hora y
+media alrededor del amanecer y del ocaso se ven los dos a media luz, bajos y en
+lados opuestos, que es lo que se ve al amanecer de verdad.
 
-   Son cinco botones que el Guardián pulsa unas cuantas veces por sesión;
-   puestos ahí de forma permanente son cinco botones de ruido encima de la
-   barra de macros el resto del tiempo. Los jugadores no los tienen en ningún
-   caso.
+El aro se pone azulado de noche y dorado de día. Arriba del todo hay una punta
+dorada que NO gira: es la marca contra la que se lee el disco. Sin ella el giro
+es un dibujo; con ella, es un reloj.
 
-   El orbe y la barra están en sitios distintos del documento, así que pasar de
-   uno a otro no puede resolverse solo con CSS. Hay un margen de 220
-   milisegundos al salir, para que el panel no se cierre en el hueco que hay
-   entre el orbe y los botones.
+No añade ningún archivo de imagen al sistema: siguen siendo las dos imágenes del
+núcleo de Foundry que me pasaste.
+
+UN DETALLE QUE NO SE VE PERO SE NOTA: el ángulo del disco no es solo la hora,
+lleva sumada una vuelta por cada día transcurrido. Si fuera solo la hora,
+pasaría de 540° a 180° al llegar la medianoche, y el navegador —al que le dices
+«ve de 540 a 180»— hace el camino corto: una vuelta entera HACIA ATRÁS, una vez
+por noche. Así el número solo sube, y el disco solo gira hacia donde va el
+tiempo. De regalo, adelantar un día entero es una revolución limpia.
+
+
+4. LOS BOTONES SON UN PANEL QUE APARECE AL PASAR EL RATÓN
+---------------------------------------------------------
+
+La barra en reposo es una línea:
+
+         24 de Diciembre de 1503 │ Invierno │ ☾ │ 15:40
+
+Al pasar el ratón por la barra O por el orbe, el panel aparece encima:
+
+     ┌──────────────────────────────────────────────────┐
+     │ [10 min] [Mañana] [Mediodía] [Tarde] [Medianoche]│
+     └──────────────────────────────────────────────────┘
+         24 de Diciembre de 1503 │ Invierno │ ☾ │ 15:40
+
+Son cinco botones que el Guardián pulsa unas cuantas veces por sesión; puestos
+de forma permanente son cinco botones de ruido encima de la barra de macros el
+resto del tiempo. Los jugadores no los tienen en ningún caso. Hay un margen de
+220 milisegundos al salir, para que el panel no se cierre en el hueco que hay
+entre el orbe y los botones.
+
+
+5. LA BARRA YA SIGUE AL HOTBAR SIEMPRE
+--------------------------------------
+
+Esto es lo que me contaste de la barra lateral, y el arreglo no es un parche:
+es cambiar cómo se coloca la barra.
+
+Antes la barra MEDÍA la fila de macros y se deslizaba hasta hacer coincidir los
+centros. Una medida es una fotografía: correcta cuando se toma y equivocada en
+cuanto algo se mueve. Foundry despliega la barra lateral con una animación de un
+cuarto de segundo, así que la medida que se tomaba al saltar el evento describía
+una distribución que todavía no había ocurrido — y nadie la volvía a medir
+cuando por fin ocurría. Ahí se quedaba atascada. Responder a eso con más
+manejadores de eventos es perseguir el síntoma.
+
+Ahora la barra CUELGA DEL ORBE: es un hijo de la casilla del orbe, clavada
+encima de ella por CSS. No tiene posición propia que pueda estar mal. Está
+centrada sobre el orbe, el orbe está centrado en la fila de macros, y el
+navegador recalcula las dos en cada fotograma de cualquier cambio de
+distribución que pueda existir — barra lateral, tamaño de ventana, pantalla
+completa, cambio de página del hotbar, casillas más grandes o más pequeñas. Ya
+no queda nada que mantener sincronizado, y por eso he podido BORRAR los tres
+manejadores que había puesto para esto.
+
+
+6. UNA TABLA DE TIEMPO ATMOSFÉRICO POR ESTACIÓN
+-----------------------------------------------
+
+Configuración → Mondolme → Configurar el calendario tiene ahora siete filas:
+
+  - Mostrar la barra de calendario.
+  - Tabla al adelantar 10 minutos       (encuentro de mazmorra)
+  - Tabla al adelantar a Mañana / …     (encuentro de viaje)
+  - Tabla de tiempo — Primavera
+  - Tabla de tiempo — Verano
+  - Tabla de tiempo — Otoño
+  - Tabla de tiempo — Invierno
+
+CUÁNDO SE TIRA: cuando el reloj entra en un día nuevo. Es decir, siempre que
+pulses «Medianoche», y también si un «10 min» o un salto a «Mañana» cruzan las
+doce de la noche. Se usa la tabla de la estación en la que cae el día NUEVO, no
+la del que acaba: la noche del 20 al 21 de marzo tira la de primavera.
+
+EL RESULTADO LO VE TODA LA MESA, al contrario que las otras dos. Un chequeo de
+encuentro que los jugadores ven no es un chequeo; el tiempo que hace es lo
+primero que notaría cualquiera al asomarse por la puerta. Si lo prefieres
+susurrado, dímelo y es una palabra.
+
+Como las otras, se escribe el NOMBRE de la tabla y se busca primero entre tus
+tablas del mundo y después en los compendios. Vacía significa que no se tira
+nada, que es una decisión y no un error.
+
+Cuatro tablas y no una con columna de estación, porque la estación ES el motivo
+de tener tabla; y con una sola acabarías manteniendo las estaciones en dos
+sitios: en el calendario y dentro de la tabla.
 
 
 LO QUE NO HA CAMBIADO
 ---------------------
 
-Todo lo demás del calendario sigue igual, así que lo de la vez pasada sigue
-valiendo. Un recordatorio de las tres cosas que más importan:
+  - SIEMPRE HACIA ADELANTE. Cada botón salta a la PRÓXIMA vez que el reloj marque
+    esa hora. A las 23:00, «Medianoche» adelanta una hora; a las 00:30, hasta la
+    noche siguiente; a las 12:00 en punto, «Mediodía» adelanta un día entero.
+    Deliberado: un botón de adelantar que no hace nada parece roto.
 
-  - SIEMPRE HACIA ADELANTE. Cada botón salta a la PRÓXIMA vez que el reloj
-    marque esa hora. A las 23:00, «Medianoche» adelanta una hora; a las 00:30,
-    adelanta hasta la noche siguiente; a las 12:00 en punto, «Mediodía»
-    adelanta un día entero. Deliberado: un botón de adelantar que no hace nada
-    parece roto.
-
-  - ESTABLECER LA FECHA NO MUEVE EL RELOJ. Cambia qué fecha corresponde a la
-    hora que ya marca el mundo. La hora del día se queda donde estaba.
+  - ESTABLECER LA FECHA NO MUEVE EL RELOJ. Cambia qué fecha corresponde a la hora
+    que ya marca el mundo. La hora del día se queda donde estaba.
 
   - LAS NOTAS SECRETAS son orden, no secreto: se guardan en el mismo ajuste de
     mundo que las demás, así que el navegador del jugador tiene el texto y
     simplemente no lo dibuja.
 
-Y las dos tablas siguen en Configuración → Mondolme → Configurar el calendario,
-buscadas por nombre, con el resultado susurrado solo a los Guardianes.
+  - LOS NOMBRES de meses, días, estaciones y fases se cambian en lang/es.json
+    bajo "CAIRN.Cal.*", sin tocar código.
 
 
 COMPROBACIONES HECHAS
 ---------------------
 
-Esta vez no me he fiado del papel. Monté una barra de macros falsa —diez
-casillas, controles de página a un lado, fondo oscuro— y cargué el calendario
-de verdad dentro de un navegador sin pantalla, para MEDIR en vez de suponer:
+Monté una barra de macros falsa —diez casillas, controles de página a un lado,
+una barra lateral que se pliega con la misma animación que la de Foundry— y
+cargué el calendario de verdad dentro de un navegador sin pantalla, para MEDIR:
 
-  - El orbe entra en la posición 6 de la lista, entre la casilla 5 y la 6.
-  - Sale cuadrado, 52 × 52, exactamente el tamaño de una casilla de macro.
-  - Los tres centros coinciden en el mismo píxel: el de la lista de macros, el
-    del orbe y el de la barra de texto. Es lo que hace que se lea como una
-    pieza y no como dos cosas apiladas.
-  - El panel de botones está oculto en reposo (no solo transparente: también
-    invisible al ratón, que si no se tragaría los clics) y aparece tanto al
-    pasar por la barra como al pasar por el orbe. Sale centrado sobre ella.
-  - Colores reales medidos: fondo casi negro al 86 %, texto #f0f0e0, borde gris
-    de la interfaz. Es decir, la paleta de la barra de macros, no la del
-    pergamino.
-  - Cuando Foundry repinta el hotbar y borra a sus hijos, el orbe vuelve a
-    entrar en su sitio, y llamando dos veces seguidas NO aparecen dos orbes.
-  - Al apagar el ajuste desaparecen las dos piezas, sin dejar el orbe huérfano
-    dentro de la barra de macros.
-  - En un Foundry sin lista de macros que reconozca, la barra se pone el orbe
-    ella misma y no se rompe nada. Ninguna de estas pruebas soltó un error.
+  - QUE LA BARRA SIGUE AL HOTBAR. Medí la distancia entre el centro de la fila de
+    macros y el centro de la barra en siete situaciones: barra lateral abierta,
+    A MITAD DE LA ANIMACIÓN, plegada, desplegada otra vez, ventana estrechada a
+    900 px, casillas de macro más pequeñas, y un repintado del hotbar seguido de
+    un plegado. Desvío en las siete: 0 píxeles. La de mitad de animación es la
+    que importa — es exactamente donde el código anterior se quedaba atascado.
+  - El orbe entra en la posición 6 de la lista, entre la casilla 5 y la 6, y sale
+    cuadrado del tamaño de una casilla.
+  - EL CIELO, leyendo la opacidad que el navegador pinta de verdad a once horas
+    del día: a las 00:00 sol 0,00 y luna 1,00; a las 12:00 sol 1,00 y luna 0,00;
+    y a las 07:00 y las 17:00 los dos a 0,50.
+  - EL GIRO: a las 00:00 el sol queda abajo, a las 06:00 a la izquierda, a las
+    12:00 arriba y a las 18:00 a la derecha. Y de las 23:30 a las 00:30 del día
+    siguiente el ángulo SUBE, que es la comprobación de que no da la vuelta hacia
+    atrás al cambiar de día.
+  - Un clic en un botón del panel no abre además la vista de mes por detrás. (La
+    barra cuelga de la casilla del orbe, así que sus clics pasan por el mismo
+    sitio; hay una línea para eso.)
+  - Cuando Foundry repinta el hotbar, el orbe y la barra vuelven a su sitio, y
+    llamando dos veces seguidas no aparecen dos. Al apagar el ajuste desaparecen
+    los dos. En un Foundry sin lista de macros reconocible la barra se pone el
+    orbe ella misma y no se rompe nada.
 
-Además, lo de siempre: los 28 archivos de código pasan la comprobación de
-sintaxis, ningún import apunta a algo que no exista, el CSS cierra sus 515
-llaves, no hay ninguna clave de idioma del calendario huérfana ni sin traducir,
-y es.json y system.json son JSON válido.
+Y en pruebas fuera del navegador:
+
+  - EL TIEMPO ATMOSFÉRICO, 11 casos: que «Medianoche» a las 23:50 tire viaje +
+    invierno; que «Mediodía» a las 10:00 tire solo viaje; que un «10 min» a las
+    23:55 cruce y tire mazmorra + invierno; que «Mediodía» a las 12:00 en punto
+    salte el día y tire las dos; que cada estación saque su tabla; que la noche
+    del 20 al 21 de marzo saque la de PRIMAVERA; y que una estación sin tabla no
+    tire nada. También que el susurro es susurro y lo público es público.
+  - EL AMANECER, 26 casos en tres épocas del año (día largo, día corto,
+    equinoccio): mediodía exactamente 1, medianoche exactamente 0, el instante
+    del amanecer y el del ocaso exactamente 0,5, y la curva sube sin baches y sin
+    pasarse de 1.
+
+Y lo de siempre: los 28 archivos de código pasan la comprobación de sintaxis,
+ningún import apunta a algo que no exista, el CSS cierra sus 524 llaves, las
+cuatro claves de ajuste nuevas están declaradas y registradas, no queda ninguna
+clave de idioma del calendario huérfana ni sin traducir, y es.json y system.json
+son JSON válido.
 
 
 QUÉ MIRAR PRIMERO
 -----------------
 
-  1. Abre el mundo. El orbe debe estar EN la fila de macros, en el medio, y la
-     fecha en una línea oscura justo encima, centrada sobre él.
-  2. Pasa el ratón por encima: deben salir los cinco botones.
-  3. Pliega la barra lateral. Las tres cosas deben moverse juntas y seguir
-     alineadas.
-  4. Arrastra un macro a la casilla 6: debe caer en la casilla, no en el orbe.
+  1. Abre el mundo. El orbe debe estar EN la fila de macros, en el medio, con la
+     fecha en una línea oscura justo encima.
+  2. Pliega y despliega la barra lateral MIRANDO LA BARRA. Debe ir pegada al
+     hotbar durante toda la animación, no dar un salto al final.
+  3. Pasa el ratón por encima: deben salir los cinco botones.
+  4. Pulsa «Mediodía»: el sol debe quedarse solo en un cielo cálido. Pulsa
+     «Medianoche»: solo la luna en un cielo de noche, y debe llegar la tirada de
+     la tabla de la estación si la has configurado.
+  5. Arrastra un macro a la casilla 6: debe caer en la casilla, no en el orbe.

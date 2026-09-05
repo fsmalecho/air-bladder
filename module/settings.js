@@ -66,6 +66,8 @@ export const SETTING_KEYS = [
   "use-gold-threshold",
   // Calendar
   "show-calendar", "calendar-table-turn", "calendar-table-travel",
+  "calendar-table-spring", "calendar-table-summer",
+  "calendar-table-autumn", "calendar-table-winter",
   // …and its two internal ones. `calendar-epoch` is CONFIGURATION — the
   // campaign's start date — and must ride the namespace migration like
   // `custom-portrait-list` does; `calendar-notes` is the Warden's own writing,
@@ -212,16 +214,21 @@ export const SETTING_GROUPS = [
     ],
   },
   {
-    // The calendar (2026-09-02). Three rows: whether the bar is shown at all,
-    // and the two tables the advance buttons draw from. Everything else about
-    // the calendar — the date, the notes — is set in the calendar itself,
+    // The calendar (2026-09-02, weather added 2026-09-05). Whether the bar is
+    // shown at all, the two tables the advance buttons draw from, and one
+    // weather table per season, drawn when a new day begins. Everything else
+    // about the calendar — the date, the notes — is set in the calendar itself,
     // where a Warden is already looking at the day they mean.
     id: "calendar",
     title: "CAIRN.Settings.GroupCalendar",
     button: "CAIRN.Settings.GroupCalendarButton",
     hint: "CAIRN.Settings.GroupCalendarHint",
     icon: "fa-solid fa-calendar-days",
-    keys: ["show-calendar", "calendar-table-turn", "calendar-table-travel"],
+    keys: [
+      "show-calendar", "calendar-table-turn", "calendar-table-travel",
+      "calendar-table-spring", "calendar-table-summer",
+      "calendar-table-autumn", "calendar-table-winter",
+    ],
   },
   /* The "Hacks" group stood here and is GONE (2026-09-02). Its last member was
      the Knave-style failed career, which only ever applied to Barebones
@@ -822,6 +829,24 @@ export const registerSettings = () => {
     default: "",
     requiresReload: false,
   });
+
+  // ONE WEATHER TABLE PER SEASON, drawn when the clock crosses into a new day.
+  // Four settings rather than one because that IS the request — the weather a
+  // season brings is the whole reason to have a table at all — and because a
+  // single table with a season column would make the Warden maintain the
+  // seasons in two places. Registered in a loop: four identical registrations
+  // written out four times is four chances to paste the wrong key.
+  for (const season of ["spring", "summer", "autumn", "winter"]) {
+    game.settings.register(SETTINGS_NS, `calendar-table-${season}`, {
+      name: `CAIRN.Settings.CalendarTableWeather.${season}`,
+      hint: "CAIRN.Settings.CalendarTableWeather.hint",
+      scope: "world",
+      config: false,
+      type: String,
+      default: "",
+      requiresReload: false,
+    });
+  }
 
   // THE CAMPAIGN'S START DATE, stored as the civil day number that world time
   // zero lands on — an OFFSET, not a date. Writing it moves the calendar and

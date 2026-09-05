@@ -5,10 +5,14 @@
  * TWO PIECES, IN TWO PLACES, and that is what makes it look built in rather
  * than dropped on top:
  *
- *   - THE ORB is an `<li>` inserted into the MIDDLE of `#action-bar`. It is a
- *     real child of the macro list, so core's own flexbox sizes it to the slot
- *     height, sets it between slots five and six, and carries it along when the
- *     sidebar collapses or the window resizes. It is not a `.slot` and has no
+ *   - THE ORB is a day-and-night dial: one disc turning once every twenty-four
+ *     hours, showing core's sun by day and its moon by night, with the two
+ *     crossfading through dawn and dusk. It is an `<li>` inserted into the MIDDLE of
+ *     `#action-bar` — a real child of the macro list, so core's own flexbox
+ *     sizes it to the slot height, sets it between slots five and six, and
+ *     carries it along when the sidebar collapses or the window resizes.
+ *     Neither half is a shipped image: both are core's art on their own
+ *     grounds. It is not a `.slot` and has no
  *     `data-slot`, which is how core decides where a dragged macro landed — so
  *     nothing can be dropped on it.
  *   - THE BAR is a sibling of `#hotbar` inside `#ui-bottom`, nudged sideways
@@ -41,7 +45,7 @@ import { findTableByName } from "../compendium.js";
 import {
   TURN_SECONDS, DAY_MARKS,
   worldToDate, epochForDate, secondsUntilHour,
-  seasonOf, seasonName, moonPhase, moonName, isDaylight,
+  seasonOf, seasonName, moonPhase, moonName, isDaylight, dayness,
   daysInMonth, daysFromCivil, weekdayIndex, weekdayName, weekdayShort, monthName,
   formatDate, formatTime, parseDate, noteKey,
 } from "./calendar-core.js";
@@ -111,17 +115,27 @@ const deleteNote = (key, id) => writeNotes((notes) => {
 /*  Advancing time                                                              */
 /* -------------------------------------------------------------------------- */
 
+/** The weather table for each season, by the season key `seasonOf` returns. */
+const WEATHER_TABLES = {
+  spring: "calendar-table-spring",
+  summer: "calendar-table-summer",
+  autumn: "calendar-table-autumn",
+  winter: "calendar-table-winter",
+};
+
 /**
- * Draw from one of the two configured tables and whisper it to the Wardens.
+ * Draw from one of the configured tables and post the result.
  *
  * Quiet on every miss: no table named, no table found, an empty table. The
  * buttons exist to move time, and a Warden who has not set a table up is not
  * making a mistake — they simply do not want one. `findTableByName` is
  * world-first, so a Warden's own copy of a table beats the compendium's.
  *
- * @param {String} settingKey  `calendar-table-turn` or `calendar-table-travel`
+ * @param {String} settingKey  which of the six table settings to read
+ * @param {String} rollMode    `gmroll` whispers to the Wardens; `publicroll`
+ *                             puts it in front of the table
  */
-const rollCalendarTable = async (settingKey) => {
+const rollCalendarTable = async (settingKey, rollMode = "gmroll") => {
   if (!game.user.isGM) return;
   const name = String(game.settings.get(NS(), settingKey) ?? "").trim();
   if (!name) return;
@@ -133,33 +147,55 @@ const rollCalendarTable = async (settingKey) => {
   try {
     const draw = await table.draw({ displayChat: false });
     if (!draw.results?.length) return;
-    // `gmroll` whispers to every GM. The user's ruling: only the Warden sees
-    // what the passing time turned up.
     await table.toMessage(draw.results, {
       roll: draw.roll,
-      messageOptions: { rollMode: "gmroll" },
+      messageOptions: { rollMode },
     });
   } catch (err) {
     console.error(`Mondolme | the "${name}" calendar draw failed:`, err);
   }
 };
 
-/** Ten minutes: one dungeon turn, and the dungeon table if there is one. */
-const advanceTurn = async () => {
+/**
+ * Move the clock, then draw what the passing time turned up.
+ *
+ * THE NEW DAY IS WORKED OUT BEFORE THE CLOCK MOVES, from the seconds about to
+ * be added, rather than read back afterwards. `game.time.advance` is a round
+ * trip to the server, and whether `game.time.worldTime` has caught up by the
+ * time the await returns is not something to build on.
+ *
+ * THE WEATHER IS PUBLIC, unlike the other two. An encounter check the table can
+ * see is not a check; weather is the first thing anyone in the fiction would
+ * notice on stepping outside, and a Warden who wants to sit on it can always
+ * roll it on the table sheet instead. Say the word and it becomes a whisper.
+ *
+ * @param {Number} seconds   how far to push the clock
+ * @param {String} tableKey  the table for the period just travelled
+ */
+const advanceTime = async (seconds, tableKey) => {
   if (!game.user.isGM) return;
-  await game.time.advance(TURN_SECONDS);
-  await rollCalendarTable("calendar-table-turn");
+  const now = Number(game.time.worldTime) || 0;
+  const before = worldToDate(now);
+  const after = worldToDate(now + seconds);
+
+  await game.time.advance(seconds);
+  await rollCalendarTable(tableKey);
+
+  // A new day began somewhere in there: what is the weather like?
+  if (after.dayNumber !== before.dayNumber) {
+    await rollCalendarTable(WEATHER_TABLES[seasonOf(after.month, after.day)], "publicroll");
+  }
 };
+
+/** Ten minutes: one dungeon turn, and the dungeon table if there is one. */
+const advanceTurn = () => advanceTime(TURN_SECONDS, "calendar-table-turn");
 
 /**
  * Jump to the next Mañana / Mediodía / Tarde / Medianoche, and roll the travel
  * table. ALWAYS FORWARD — see `secondsUntilHour`, which is where that rule lives.
  */
-const advanceToMark = async (hour) => {
-  if (!game.user.isGM) return;
-  await game.time.advance(secondsUntilHour(hour));
-  await rollCalendarTable("calendar-table-travel");
-};
+const advanceToMark = (hour) =>
+  advanceTime(secondsUntilHour(hour), "calendar-table-travel");
 
 /* -------------------------------------------------------------------------- */
 /*  The orb, and the bar                                                        */
@@ -188,21 +224,50 @@ const moonSvg = (phase) => {
 };
 
 /**
- * The orb itself. A full rotation per twenty-four hours, so midnight and noon
- * point opposite ways — the one moving thing here, and the reason anyone at the
- * table glances down at the macro bar at all.
+ * The orb: ONE disc, showing the sun by day and the moon by night, turning once
+ * every twenty-four hours.
+ *
+ * ONE BODY AT A TIME, which is a thing the geometry cannot give on its own. Sun
+ * and moon sit at opposite ends of a diameter, and a circular window centred on
+ * that diameter's midpoint is symmetric under half a turn: whatever it shows of
+ * the one, it shows of the other. So the swap is done with LIGHT rather than
+ * position — the day sky and the sun fade up over the night sky and the moon,
+ * on `dayness`, which is 1 at midday and 0 at midnight. At midday the moon and
+ * the night sky are at zero and the disc is a sun in a warm sky; at midnight it
+ * is the reverse; and for the hour and a half around sunrise and sunset both
+ * are part-lit low on opposite sides, which is what dawn actually looks like.
+ *
+ * WHICH WAY IT TURNS. The sun is drawn at the top of the wheel, so noon must be
+ * the wheel's zero — hence the +180, which puts the moon on top at midnight.
+ * Between them the sun climbs from the left at dawn and sets to the right.
+ *
+ * WHY THE DAY NUMBER IS IN THE ANGLE. If the angle were only the hour, it would
+ * run 180°…540° and then snap back to 180° at midnight — and CSS, told to move
+ * from 540 to 180, animates the short way round: a full backwards spin, once a
+ * night. Adding a turn per elapsed day makes the number monotonic, so the disc
+ * only ever turns the way time is going. Advancing a whole day is then a single
+ * clean revolution, which is a nicer thing to watch than a jump.
+ *
+ * No images are shipped for this: both bodies are core's own art.
  *
  * @param {String} extra  a class for the fallback copy that lives in the bar
  */
 const orbHtml = (extra = "") => {
   const date = worldToDate();
-  const day = isDaylight(date);
-  const angle = ((date.hour + date.minute / 60) / 24) * 360;
+  const lit = dayness(date);
+  const day = lit.toFixed(3);
+  const night = (1 - lit).toFixed(3);
+  const angle = (date.dayNumber + (date.hour + date.minute / 60) / 24) * 360 + 180;
   return `
-    <div class="cal-orb ${day ? "is-day" : "is-night"} ${extra}"
-      data-tooltip="${esc(day ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
-      <img src="${day ? SUN_ICON : MOON_ICON}" alt=""
-        style="transform: rotate(${angle.toFixed(1)}deg)">
+    <div class="cal-orb ${lit >= 0.5 ? "is-day" : "is-night"} ${extra}"
+      data-tooltip="${esc(isDaylight(date) ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
+      <div class="cal-orb-sky is-night-sky"></div>
+      <div class="cal-orb-sky is-day-sky" style="opacity: ${day}"></div>
+      <div class="cal-orb-wheel" style="transform: rotate(${angle.toFixed(2)}deg)">
+        <div class="cal-orb-body is-sun" style="opacity: ${day}"><img src="${SUN_ICON}" alt=""></div>
+        <div class="cal-orb-body is-moon" style="opacity: ${night}"><img src="${MOON_ICON}" alt=""></div>
+      </div>
+      <span class="cal-orb-pip" aria-hidden="true"></span>
     </div>`;
 };
 
@@ -259,7 +324,8 @@ const findActionBar = () => {
 };
 
 /**
- * Put the orb IN the macro bar, as one more item in the middle of the row.
+ * Put the orb IN the macro bar, as one more item in the middle of the row, and
+ * hand the item back so the bar can hang off it.
  *
  * This is the whole of "integrado en el hotbar". Because the orb is a real
  * child of the macro list, the hotbar's own flexbox sizes it to the slot
@@ -268,13 +334,16 @@ const findActionBar = () => {
  * item is deliberately NOT `.slot` and carries no `data-slot`, which is how
  * core decides where a dragged macro landed: it cannot be dropped on.
  *
- * @returns {Boolean}  false if there was no macro list to put it in
+ * The orb goes in a MOUNT rather than straight into the item, because the bar
+ * lives in the item too and repainting the orb must not wipe it.
+ *
+ * @returns {HTMLElement|null}  null if there was no macro list to put it in
  */
 const injectOrb = () => {
   const bar = findActionBar();
-  if (!bar) return false;
+  if (!bar) return null;
   const slots = [...bar.children].filter((el) => el.tagName === "LI" && el.id !== ORB_ID);
-  if (!slots.length) return false;
+  if (!slots.length) return null;
 
   let li = document.getElementById(ORB_ID);
   // A hotbar re-render wipes our item with the rest of its children, so the
@@ -283,42 +352,21 @@ const injectOrb = () => {
     li?.remove();
     li = document.createElement("li");
     li.id = ORB_ID;
+    li.innerHTML = `<div class="cal-orb-mount"></div>`;
     li.addEventListener("click", (event) => {
+      // The bar hangs off this item, so ITS clicks bubble through here too.
+      // Without this line every press of "Mañana" would also open the month
+      // view behind it.
+      if (event.target.closest(`#${WIDGET_ID}`)) return;
       event.preventDefault();
       openCalendarDialog();
     });
-    // The orb and the bar are in different parts of the DOM, so CSS :hover on
-    // one cannot reach the other. These two keep the controls open while the
-    // pointer is on either.
     li.addEventListener("mouseenter", () => setToolsOpen(true));
     li.addEventListener("mouseleave", () => setToolsOpen(false));
     bar.insertBefore(li, slots[Math.floor(slots.length / 2)]);
   }
-  li.innerHTML = orbHtml();
-  return true;
-};
-
-/**
- * Slide the bar sideways until its centre is the MACRO LIST's centre.
- *
- * Centring on #ui-bottom is not the same thing: the hotbar's page controls sit
- * on one side only, so a bar centred on the container sits off-centre from the
- * slots, and the orb — which is in the slots — would not line up under it.
- *
- * The shift ACCUMULATES because the measurement already includes whatever shift
- * is on the element; the alternative is to zero the transform, force a reflow
- * and measure again, which is a layout thrash for the same answer.
- */
-const centreBar = (el) => {
-  const bar = findActionBar();
-  if (!bar || !el) return;
-  const target = bar.getBoundingClientRect();
-  const mine = el.getBoundingClientRect();
-  if (!target.width || !mine.width) return;
-  const shift = Number(el.dataset.shift ?? 0)
-    + (target.left + target.width / 2) - (mine.left + mine.width / 2);
-  el.dataset.shift = String(shift);
-  el.style.transform = `translateX(${shift.toFixed(1)}px)`;
+  li.querySelector(".cal-orb-mount").innerHTML = orbHtml();
+  return li;
 };
 
 /** Hold the pop-up open while the pointer moves between the orb and the bar. */
@@ -328,36 +376,58 @@ const setToolsOpen = (open) => {
   if (!el) return;
   if (toolsTimer) { clearTimeout(toolsTimer); toolsTimer = null; }
   if (open) return void el.classList.add("is-open");
-  // A grace period, not a whim: the orb sits in the macro row and the controls
-  // pop above the bar, so the pointer crosses a gap to get from one to the other.
+  // A grace period, not a whim: the pointer crosses a gap on its way from the
+  // orb up to the buttons.
   toolsTimer = setTimeout(() => el.classList.remove("is-open"), 220);
 };
 
-/** Make or repaint both pieces. Idempotent: nothing tracks whether they exist. */
+/**
+ * Make or repaint both pieces. Idempotent: nothing tracks whether they exist.
+ *
+ * THE BAR HANGS OFF THE ORB, as a child of the orb's list item, pinned above it
+ * by `left: 50%` and half its own width back.
+ *
+ * That is the fix for a bar that drifted out of line whenever the sidebar
+ * opened. The first cut MEASURED the macro list and slid the bar to match, and
+ * a measurement is a photograph: right when it is taken and wrong the moment
+ * anything moves. Foundry animates the sidebar over a quarter of a second, so
+ * the measurement taken when the hook fired described a layout that had not
+ * happened yet — and nothing measured it again once it had. Answering that with
+ * more listeners is chasing the symptom.
+ *
+ * Hung off the orb, the bar has no position of its own to be wrong: it is
+ * centred on the orb, the orb is centred in the macro row, and the browser
+ * recomputes both on every frame of every layout change there will ever be —
+ * sidebar, resize, fullscreen, a hotbar page, a different slot size. There is
+ * nothing left here to keep in sync.
+ *
+ * The old flow position under #ui-bottom survives as the fallback for a Foundry
+ * with no macro list to hang off, and that one needs no measuring either: it is
+ * a block with `margin: 0 auto`.
+ */
 const injectBar = () => {
-  const hasOrb = injectOrb();
+  const li = injectOrb();
+  const bottom = document.getElementById("ui-bottom");
+  const hotbar = document.getElementById("hotbar");
+  const host = li ?? (bottom && hotbar?.parentElement === bottom ? bottom : document.body);
 
   let el = document.getElementById(WIDGET_ID);
+  // The macro list came or went (a hotbar that had not rendered yet, a Foundry
+  // that renamed it): move the bar rather than leave it orphaned in the old place.
+  if (el && el.parentElement !== host) { el.remove(); el = null; }
+
   if (!el) {
     el = document.createElement("div");
     el.id = WIDGET_ID;
-    const bottom = document.getElementById("ui-bottom");
-    const hotbar = document.getElementById("hotbar");
-    if (bottom && hotbar?.parentElement === bottom) {
-      bottom.insertBefore(el, hotbar);
-    } else {
-      // A Foundry that moved or renamed those ids: float it rather than lose
-      // it. Everything else about the bar is identical.
-      el.classList.add("is-floating");
-      document.body.appendChild(el);
-    }
+    if (host === li) el.classList.add("is-anchored");
+    else if (host === document.body) el.classList.add("is-floating");
     el.addEventListener("click", onBarClick);
     el.addEventListener("mouseenter", () => setToolsOpen(true));
     el.addEventListener("mouseleave", () => setToolsOpen(false));
+    if (host === bottom) bottom.insertBefore(el, hotbar);
+    else host.appendChild(el);
   }
-  el.innerHTML = renderBar(!hasOrb);
-  // After the paint, or the width measured is last frame's width.
-  requestAnimationFrame(() => centreBar(el));
+  el.innerHTML = renderBar(!li);
 };
 
 /** ONE delegated listener, bound when the element is made and never rebound —
@@ -598,17 +668,9 @@ export const initCalendar = () => {
   // children, and the orb is one of them.
   Hooks.on("renderHotbar", () => { if (on()) injectBar(); });
 
-  // The macro list MOVED without re-rendering: the sidebar collapsed, the
-  // window resized, the player list grew a row. The orb rides along on its own
-  // — it is inside the thing that moved — but the bar's sideways nudge was
-  // measured against the old position, so it is measured again.
-  const recentre = () => {
-    const el = document.getElementById(WIDGET_ID);
-    if (el) requestAnimationFrame(() => centreBar(el));
-  };
-  Hooks.on("collapseSidebar", recentre);
-  Hooks.on("renderPlayers", recentre);
-  window.addEventListener("resize", recentre);
+  // Nothing here listens for the sidebar, a resize or a fullscreen toggle. The
+  // bar hangs off the orb and the orb is in the macro row, so the browser's own
+  // layout carries both — see `injectBar`.
 
   // The Warden set a date or wrote a note. `createSetting` as well as
   // `updateSetting`: the FIRST write to a setting in a new world creates it,

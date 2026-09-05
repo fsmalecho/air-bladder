@@ -3686,10 +3686,13 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
 }
 
-/* The controls pop UPWARD out of the bar, and #ui-bottom is their nearest
-   scroll-and-clip candidate. Scoped to the presence of the widget so a world
-   without the calendar is untouched. */
-body:has(#mondolme-calendar) #ui-bottom {
+/* The bar hangs ABOVE the macro row and the controls pop above the bar, so
+   nothing between here and the canvas may clip. Scoped to the presence of the
+   calendar, so a world with it switched off is untouched. Foundry does not
+   normally clip any of these — this is insurance, not a fight. */
+body:has(#mondolme-calendar) #ui-bottom,
+body:has(#mondolme-calendar-orb) #hotbar,
+body:has(#mondolme-calendar-orb) #action-bar {
     overflow: visible;
 }
 
@@ -3699,6 +3702,8 @@ body:has(#mondolme-calendar) #ui-bottom {
    pixel height here, so a hotbar at any of core's sizes gets an orb that
    matches its slots. */
 #mondolme-calendar-orb {
+    /* The containing block for the bar, which hangs off this item. */
+    position: relative;
     flex: 0 0 auto;
     align-self: stretch;
     /* Core's own slot size, which is what the macro squares beside it are drawn
@@ -3717,50 +3722,125 @@ body:has(#mondolme-calendar) #ui-bottom {
     cursor: pointer;
 }
 
+#mondolme-calendar-orb .cal-orb-mount {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Square, and never taller than the row it sits in. */
 #mondolme-calendar-orb .cal-orb {
+    position: relative;
     width: 100%;
     aspect-ratio: 1;
     max-height: 100%;
     border-radius: 50%;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
+    overflow: visible;
+    background: #0b0c10;
     border: 1px solid var(--cal-edge);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65), 0 0 10px rgba(0, 0, 0, 0.55);
-    transition: box-shadow 150ms ease;
+    transition: box-shadow 150ms ease, border-color 400ms ease;
 }
 
-/* A quiet ground behind core's own art, not a second sun: the icons are already
-   coloured discs, and a loud gradient under them fights the drawing. Day and
-   night differ in the tint and in the icon, which is plenty at a glance. */
-#mondolme-calendar-orb .cal-orb.is-day {
-    background: radial-gradient(circle at 50% 45%, rgba(255, 214, 138, 0.22), rgba(0, 0, 0, 0.62));
-}
-
-#mondolme-calendar-orb .cal-orb.is-night {
-    background: radial-gradient(circle at 50% 45%, rgba(126, 156, 224, 0.2), rgba(0, 0, 0, 0.75));
-    border-color: #4b5570;
-}
+/* The rim, cool at night and plain by day. The dial already says which half is
+   up; this is the same fact at a glance, without reading the disc. */
+#mondolme-calendar-orb .cal-orb.is-night { border-color: #4b5570; }
+#mondolme-calendar-orb .cal-orb.is-day { border-color: #8a6a3a; }
 
 #mondolme-calendar-orb:hover .cal-orb {
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65), 0 0 12px 2px rgba(201, 162, 39, 0.55);
 }
 
-/* The turn: one full rotation per twenty-four hours, so midnight and noon point
-   opposite ways. The transition is on the transform only. */
-#mondolme-calendar-orb .cal-orb img,
-#mondolme-calendar .cal-orb img {
-    width: 84%;
-    height: 84%;
-    object-fit: contain;
-    border: none;
+/* THE DIAL. One disc turning once a day, showing the sun by day and the moon
+   by night. Sun and moon sit at opposite ends of a diameter, so a window
+   centred between them can never show one without the other by geometry alone
+   — the swap is done with LIGHT. Two skies stacked, the day one fading up over
+   the night one, and each body fading with its own sky. At noon: a sun in a
+   warm sky, the moon at zero. At midnight: the reverse. Around sunrise and
+   sunset: both part-lit, low, on opposite sides. */
+#mondolme-calendar-orb .cal-orb-sky,
+#mondolme-calendar .cal-orb-sky {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transition: opacity 400ms ease-out;
+}
+
+#mondolme-calendar-orb .cal-orb-sky.is-night-sky,
+#mondolme-calendar .cal-orb-sky.is-night-sky {
+    background: radial-gradient(circle at 50% 30%, #26314f 0%, #131a2e 55%, #080b16 100%);
+}
+
+#mondolme-calendar-orb .cal-orb-sky.is-day-sky,
+#mondolme-calendar .cal-orb-sky.is-day-sky {
+    background: radial-gradient(circle at 50% 30%, #ffd9a0 0%, #d59a4a 55%, #7d4f1c 100%);
+}
+
+#mondolme-calendar-orb .cal-orb-wheel,
+#mondolme-calendar .cal-orb-wheel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    /* The transform only. The angle grows without bound (a turn per elapsed
+       day), so this always animates forwards. */
     transition: transform 400ms ease-out;
 }
 
+/* The two bodies, at opposite ends of a diameter. They sit a fifth of the disc
+   off centre, not out at the rim: near enough that the lit one reads as the
+   whole picture of the orb, far enough that the turn is plain to see. */
+#mondolme-calendar-orb .cal-orb-body,
+#mondolme-calendar .cal-orb-body {
+    position: absolute;
+    left: 19%;
+    width: 62%;
+    height: 62%;
+    display: grid;
+    place-items: center;
+    transition: opacity 400ms ease-out;
+}
+
+#mondolme-calendar-orb .cal-orb-body.is-sun,
+#mondolme-calendar .cal-orb-body.is-sun { top: 0; }
+
+#mondolme-calendar-orb .cal-orb-body.is-moon,
+#mondolme-calendar .cal-orb-body.is-moon { bottom: 0; }
+
+#mondolme-calendar-orb .cal-orb-body img,
+#mondolme-calendar .cal-orb-body img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+
+/* THE PIP does not turn: it is the fixed mark the disc is read against, at the
+   top of the rim. Without it a slow turn is a picture; with it, it is a clock. */
+#mondolme-calendar-orb .cal-orb-pip,
+#mondolme-calendar .cal-orb-pip {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    margin-left: -4px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--cal-gold);
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
 @media (prefers-reduced-motion: reduce) {
-    #mondolme-calendar-orb .cal-orb img,
-    #mondolme-calendar .cal-orb img { transition: none; }
+    #mondolme-calendar-orb .cal-orb-wheel,
+    #mondolme-calendar .cal-orb-wheel,
+    #mondolme-calendar-orb .cal-orb-sky,
+    #mondolme-calendar .cal-orb-sky,
+    #mondolme-calendar-orb .cal-orb-body,
+    #mondolme-calendar .cal-orb-body { transition: none; }
 }
 
 /* ---- the bar ------------------------------------------------------------- */
@@ -3776,6 +3856,18 @@ body:has(#mondolme-calendar) #ui-bottom {
     margin: 0 auto 4px;
     color: var(--cal-text);
     pointer-events: auto;
+}
+
+/* WHERE IT NORMALLY LIVES: pinned above the orb, inside the orb's own list
+   item. Half its width back from the item's centre line, which is the macro
+   row's centre line. No script measures anything — that is the point. */
+#mondolme-calendar.is-anchored {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    z-index: 5;
 }
 
 /* Only for a Foundry that renamed #ui-bottom or #hotbar. */
@@ -3853,20 +3945,13 @@ body:has(#mondolme-calendar) #ui-bottom {
 
 /* The fallback orb, for the case where the macro list could not take one. */
 #mondolme-calendar .cal-orb.is-inline {
+    position: relative;
     flex: 0 0 auto;
     width: 34px;
     height: 34px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
     border-radius: 50%;
     border: 1px solid var(--cal-edge);
-    background: radial-gradient(circle at 50% 45%, rgba(255, 214, 138, 0.2), rgba(0, 0, 0, 0.62));
-}
-
-#mondolme-calendar .cal-orb.is-inline.is-night {
-    background: radial-gradient(circle at 50% 45%, rgba(126, 156, 224, 0.2), rgba(0, 0, 0, 0.75));
-    border-color: #4b5570;
+    background: #0b0c10;
 }
 
 /* ---- the controls, which pop above the bar on hover ---------------------- */
