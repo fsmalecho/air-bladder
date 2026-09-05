@@ -20,7 +20,7 @@ CÓMO APLICARLO
    todos.
 3. Commit y push:
 
-     El calendario: orbe en el hotbar, cielo de día y noche, tablas de tiempo
+     El calendario: cúpula en el hotbar, fecha debajo, tablas de tiempo
 
 4. Etiqueta 2.0.5 (o el siguiente número que te toque), push, espera a Actions y
    actualiza el sistema en Foundry. Recarga el mundo (F5).
@@ -48,82 +48,104 @@ La VISTA DE MES no cambia: es una ventana de Foundry y sigue el tema que tengas
 puesto, como el resto de fichas y diálogos del sistema.
 
 
-2. EL ORBE ESTÁ DENTRO DE LA BARRA DE MACROS
---------------------------------------------
+2. LA CÚPULA ESTÁ DENTRO DE LA BARRA DE MACROS
+----------------------------------------------
 
-No encima. Dentro. El orbe es un elemento más de la lista de macros, insertado
-en el MEDIO de la fila, entre la casilla 5 y la 6:
+No encima. Dentro. Es un elemento más de la lista de macros, insertado en el
+MEDIO de la fila, entre la casilla 5 y la 6, y ocupa el ancho de dos casillas
+—que es lo que hace que la abertura sea un medio círculo exacto:
 
-     [1][2][3][4][5]  ( ☀ )  [6][7][8][9][0]
+     [1][2][3][4][5]  ◗◖  [6][7][8][9][0]
 
 Que sea un hijo de verdad de la lista —y no algo flotando encima con
 coordenadas calculadas— es lo que hace todo lo demás gratis: el flexbox de
-Foundry lo alinea, le da exactamente el tamaño de una casilla (lee la medida de
-Foundry, así que si dibuja casillas más pequeñas el orbe se encoge con ellas), y
-lo lleva consigo cuando pliegas la barra lateral. Ese era el trabajo que el
+Foundry la alinea, le da exactamente dos casillas de ancho y una de alto (lee la
+medida de Foundry, así que si dibuja casillas más pequeñas la cúpula se encoge
+con ellas), y la lleva consigo cuando pliegas la barra lateral. Ese era el trabajo que el
 widget de Dolmenwood hacía a mano con tres manejadores de eventos.
 
-EL ORBE NO ES UNA CASILLA DE MACRO. No tiene el atributo por el que Foundry
-decide dónde ha caído un macro arrastrado, así que no se puede soltar nada
-encima. Y no te quita una casilla: las diez siguen ahí, la barra es más ancha.
+NO ES UNA CASILLA DE MACRO. No tiene el atributo por el que Foundry decide
+dónde ha caído un macro arrastrado, así que no se puede soltar nada encima. Y no
+te quita ninguna: las diez siguen ahí, la barra es más ancha.
 
-Pulsando el orbe se abre el calendario, igual que pulsando la fecha.
+Pulsando la cúpula se abre el calendario, igual que pulsando la fecha.
 
 
-3. EL ORBE ES UN CIELO: A MEDIODÍA SOLO EL SOL, A MEDIANOCHE SOLO LA LUNA
-------------------------------------------------------------------------
+3. LA CÚPULA: UN CIELO CON HORIZONTE, Y LOS DOS CUERPOS CRUZÁNDOLO
+------------------------------------------------------------------
 
-     00:00           07:00             12:00          18:00
-     luna sola,      los dos a medias  sol solo,      luna sola
-     cielo de noche  (amanecer)        cielo cálido
+Ya no es un círculo. Es medio círculo —una cúpula sobre una línea de horizonte—
+y el sol y la luna la cruzan en arco, como cuerpos celestes de verdad.
 
-Conviene que sepas por qué está hecho con luz y no con geometría, porque lo
-intenté primero por geometría y no se puede. El sol y la luna están en los dos
-extremos de un diámetro, y una ventana redonda centrada en ese diámetro es
-simétrica al dar media vuelta: lo que enseñe de uno, lo enseña del otro. No hay
-forma de colocarlos para que se vea uno solo.
+     06:00              12:00            18:00              00:00
+     el sol saliendo    el sol arriba,   el sol poniéndose  la luna arriba,
+     por la izquierda,  cielo de día     por la derecha,    cielo de noche
+     la luna metiéndose                  la luna saliendo
+     por la derecha                      por la izquierda
 
-Así que el cambio se hace con LUZ. Hay dos cielos, uno de noche y otro de día, y
-el de día se enciende encima del otro a medida que amanece; cada cuerpo se
-enciende con su cielo. A mediodía la luna y el cielo de noche están a cero y el
-disco es un sol en un cielo cálido; a medianoche, al revés. Y durante la hora y
-media alrededor del amanecer y del ocaso se ven los dos a media luz, bajos y en
-lados opuestos, que es lo que se ve al amanecer de verdad.
+MEDIO CÍRCULO ARREGLA LO QUE UN CÍRCULO ENTERO NO PODÍA. Te contaba la vez
+pasada que una ventana redonda centrada entre dos cuerpos opuestos es simétrica
+al dar media vuelta —lo que enseña de uno lo enseña del otro— y que por eso hubo
+que apagar y encender los cuerpos con opacidad. Recorta la ventana a la mitad de
+ARRIBA del horizonte y la simetría se rompe sola: el otro cuerpo simplemente
+está bajo tierra. Sin desvanecidos, sin curva de luz, sin nada que ajustar.
+Geometría en vez de trucos, y ha permitido borrar todo el cálculo de amanecer
+que llevaba dentro.
 
-El aro se pone azulado de noche y dorado de día. Arriba del todo hay una punta
-dorada que NO gira: es la marca contra la que se lee el disco. Sin ella el giro
-es un dibujo; con ella, es un reloj.
+CÓMO ESTÁ HECHO: detrás de la cúpula hay una rueda entera, el doble de alta, que
+gira sobre el centro del horizonte. Lleva dos medios cielos —uno de día y otro
+de noche— y los dos cuerpos, cada uno en el centro de su mitad. Solo se dibuja lo
+que queda por encima del horizonte. Los cuerpos van CONTRA-ROTADOS, así que se
+mantienen derechos mientras la rueda gira debajo de ellos; lo que queda es un
+centro recorriendo el círculo de la rueda: sube desde el horizonte izquierdo,
+pasa por arriba y baja al derecho. Eso es el arco, y cuesta una transformación
+más.
+
+EL AMANECER ES A LAS 6 Y EL OCASO A LAS 18, siempre, y eso es una decisión.
+Había aquí un amanecer estacional —de diez horas de luz en diciembre a catorce
+en junio— y lo he QUITADO. La cúpula gira a ritmo constante y entrega el cielo a
+las 6 y a las 18, que es justo donde caen dos de tus cuatro botones. Con el
+amanecer estacional los dos relatos se contradecían: pulsar «Mañana» en
+diciembre movía el mundo a las seis y dejaba la cúpula insistiendo en que aún
+era de noche. Una regla que obedecen el ojo y los botones vale más que dos que
+discrepan en invierno.
+
+El aro se pone azulado de noche y dorado de día. La punta dorada ya no está: en
+una cúpula el horizonte es la referencia y la forma dice sola dónde está arriba.
 
 No añade ningún archivo de imagen al sistema: siguen siendo las dos imágenes del
 núcleo de Foundry que me pasaste.
 
-UN DETALLE QUE NO SE VE PERO SE NOTA: el ángulo del disco no es solo la hora,
+UN DETALLE QUE NO SE VE PERO SE NOTA: el ángulo de la rueda no es solo la hora,
 lleva sumada una vuelta por cada día transcurrido. Si fuera solo la hora,
-pasaría de 540° a 180° al llegar la medianoche, y el navegador —al que le dices
-«ve de 540 a 180»— hace el camino corto: una vuelta entera HACIA ATRÁS, una vez
-por noche. Así el número solo sube, y el disco solo gira hacia donde va el
-tiempo. De regalo, adelantar un día entero es una revolución limpia.
+saltaría de 180° a −180° cada medianoche, y el navegador —al que le dices «ve de
+180 a −180»— hace el camino corto: una vuelta entera HACIA ATRÁS, una vez por
+noche. Así el número solo sube, y la cúpula solo gira hacia donde va el tiempo.
+De regalo, adelantar un día entero es una revolución limpia.
 
 
-4. LOS BOTONES SON UN PANEL QUE APARECE AL PASAR EL RATÓN
----------------------------------------------------------
+4. LA FECHA DEBAJO DEL HOTBAR, LOS BOTONES ENCIMA
+-------------------------------------------------
 
-La barra en reposo es una línea:
-
-         24 de Diciembre de 1503 │ Invierno │ ☾ │ 15:40
-
-Al pasar el ratón por la barra O por el orbe, el panel aparece encima:
+Las tres piezas están apiladas y todas centradas en la cúpula:
 
      ┌──────────────────────────────────────────────────┐
-     │ [10 min] [Mañana] [Mediodía] [Tarde] [Medianoche]│
+     │ [10 min] [Mañana] [Mediodía] [Tarde] [Medianoche]│  ← al pasar el ratón
      └──────────────────────────────────────────────────┘
-         24 de Diciembre de 1503 │ Invierno │ ☾ │ 15:40
+     [1][2][3][4][5]  ◗◖  [6][7][8][9][0]                 ← la fila de macros
+              24 de Diciembre de 1503 │ Invierno │ ☾ │ 15:40
 
-Son cinco botones que el Guardián pulsa unas cuantas veces por sesión; puestos
-de forma permanente son cinco botones de ruido encima de la barra de macros el
-resto del tiempo. Los jugadores no los tienen en ningún caso. Hay un margen de
-220 milisegundos al salir, para que el panel no se cierre en el hueco que hay
-entre el orbe y los botones.
+La fecha va DEBAJO del hotbar, como pediste. Para que quepa, el hotbar sube 34
+píxeles — con un margen en CSS, no midiendo nada: como la zona inferior de
+Foundry está anclada al borde de la pantalla, hacer más alta la caja del hotbar
+levanta la fila justo esa cantidad y la línea cae en el hueco que se abre.
+
+Los botones van arriba porque abajo ya no hay sitio: son cinco botones que el
+Guardián pulsa unas cuantas veces por sesión, y puestos de forma permanente son
+cinco botones de ruido el resto del tiempo. Aparecen al pasar el ratón por la
+cúpula o por la fecha, y hay un margen de 220 milisegundos al salir para que el
+panel no se cierre en el hueco que hay entre una cosa y otra. Los jugadores no
+los ven en ningún caso.
 
 
 5. LA BARRA YA SIGUE AL HOTBAR SIEMPRE
@@ -140,10 +162,10 @@ una distribución que todavía no había ocurrido — y nadie la volvía a medir
 cuando por fin ocurría. Ahí se quedaba atascada. Responder a eso con más
 manejadores de eventos es perseguir el síntoma.
 
-Ahora la barra CUELGA DEL ORBE: es un hijo de la casilla del orbe, clavada
-encima de ella por CSS. No tiene posición propia que pueda estar mal. Está
-centrada sobre el orbe, el orbe está centrado en la fila de macros, y el
-navegador recalcula las dos en cada fotograma de cualquier cambio de
+Ahora la fecha y los botones CUELGAN DE LA CÚPULA: son hijos de su casilla,
+clavados por CSS a su línea central. No tienen posición propia que pueda estar
+mal. Están centrados en la cúpula, la cúpula está centrada en la fila de macros,
+y el navegador recalcula todo en cada fotograma de cualquier cambio de
 distribución que pueda existir — barra lateral, tamaño de ventana, pantalla
 completa, cambio de página del hotbar, casillas más grandes o más pequeñas. Ya
 no queda nada que mantener sincronizado, y por eso he podido BORRAR los tres
@@ -214,22 +236,27 @@ cargué el calendario de verdad dentro de un navegador sin pantalla, para MEDIR:
     900 px, casillas de macro más pequeñas, y un repintado del hotbar seguido de
     un plegado. Desvío en las siete: 0 píxeles. La de mitad de animación es la
     que importa — es exactamente donde el código anterior se quedaba atascado.
-  - El orbe entra en la posición 6 de la lista, entre la casilla 5 y la 6, y sale
-    cuadrado del tamaño de una casilla.
-  - EL CIELO, leyendo la opacidad que el navegador pinta de verdad a once horas
-    del día: a las 00:00 sol 0,00 y luna 1,00; a las 12:00 sol 1,00 y luna 0,00;
-    y a las 07:00 y las 17:00 los dos a 0,50.
-  - EL GIRO: a las 00:00 el sol queda abajo, a las 06:00 a la izquierda, a las
-    12:00 arriba y a las 18:00 a la derecha. Y de las 23:30 a las 00:30 del día
-    siguiente el ángulo SUBE, que es la comprobación de que no da la vuelta hacia
-    atrás al cambiar de día.
+  - La cúpula entra en la posición 6 de la lista, entre la casilla 5 y la 6.
+  - LA POSICIÓN VERTICAL: los botones arriba (587–622), la fila de macros
+    (628–680), la cúpula asomando por ella (627–682) y la fecha debajo (685–711)
+    en una ventana de 720. Es decir: la fecha cabe debajo del hotbar sin salirse
+    de la pantalla, que es lo que había que comprobar del margen de 34 píxeles.
+  - EL ARCO, midiendo dónde cae de verdad el centro de cada cuerpo respecto al
+    horizonte, a ocho horas del día: a las 00:00 la luna arriba y el sol bajo
+    tierra; a las 06:00 los DOS en el horizonte, el sol a la izquierda y la luna
+    a la derecha; a las 09:00 el sol a media altura por la izquierda; a las 12:00
+    arriba en el centro; a las 15:00 bajando por la derecha; a las 18:00 los dos
+    en el horizonte otra vez, cambiados de lado. Y los cuerpos salen a 0° de
+    inclinación a todas las horas: la contra-rotación los mantiene derechos.
+  - Que de las 23:30 a las 00:30 del día siguiente el ángulo SUBE, que es la
+    comprobación de que la cúpula no da la vuelta hacia atrás al cambiar de día.
   - Un clic en un botón del panel no abre además la vista de mes por detrás. (La
-    barra cuelga de la casilla del orbe, así que sus clics pasan por el mismo
-    sitio; hay una línea para eso.)
-  - Cuando Foundry repinta el hotbar, el orbe y la barra vuelven a su sitio, y
+    fecha cuelga de la casilla de la cúpula, así que sus clics pasan por el
+    mismo sitio; hay una línea para eso.)
+  - Cuando Foundry repinta el hotbar, la cúpula y la fecha vuelven a su sitio, y
     llamando dos veces seguidas no aparecen dos. Al apagar el ajuste desaparecen
-    los dos. En un Foundry sin lista de macros reconocible la barra se pone el
-    orbe ella misma y no se rompe nada.
+    las dos. En un Foundry sin lista de macros reconocible la barra se pone una
+    cúpula pequeña ella misma y no se rompe nada.
 
 Y en pruebas fuera del navegador:
 
@@ -239,13 +266,9 @@ Y en pruebas fuera del navegador:
     salte el día y tire las dos; que cada estación saque su tabla; que la noche
     del 20 al 21 de marzo saque la de PRIMAVERA; y que una estación sin tabla no
     tire nada. También que el susurro es susurro y lo público es público.
-  - EL AMANECER, 26 casos en tres épocas del año (día largo, día corto,
-    equinoccio): mediodía exactamente 1, medianoche exactamente 0, el instante
-    del amanecer y el del ocaso exactamente 0,5, y la curva sube sin baches y sin
-    pasarse de 1.
 
 Y lo de siempre: los 28 archivos de código pasan la comprobación de sintaxis,
-ningún import apunta a algo que no exista, el CSS cierra sus 524 llaves, las
+ningún import apunta a algo que no exista, el CSS cierra sus 526 llaves, las
 cuatro claves de ajuste nuevas están declaradas y registradas, no queda ninguna
 clave de idioma del calendario huérfana ni sin traducir, y es.json y system.json
 son JSON válido.
@@ -254,12 +277,13 @@ son JSON válido.
 QUÉ MIRAR PRIMERO
 -----------------
 
-  1. Abre el mundo. El orbe debe estar EN la fila de macros, en el medio, con la
-     fecha en una línea oscura justo encima.
-  2. Pliega y despliega la barra lateral MIRANDO LA BARRA. Debe ir pegada al
+  1. Abre el mundo. La cúpula debe estar EN la fila de macros, en el medio, con
+     la fecha en una línea oscura justo DEBAJO del hotbar.
+  2. Pliega y despliega la barra lateral MIRANDO LA FECHA. Debe ir pegada al
      hotbar durante toda la animación, no dar un salto al final.
-  3. Pasa el ratón por encima: deben salir los cinco botones.
-  4. Pulsa «Mediodía»: el sol debe quedarse solo en un cielo cálido. Pulsa
-     «Medianoche»: solo la luna en un cielo de noche, y debe llegar la tirada de
-     la tabla de la estación si la has configurado.
-  5. Arrastra un macro a la casilla 6: debe caer en la casilla, no en el orbe.
+  3. Pasa el ratón por la cúpula: deben salir los cinco botones encima.
+  4. Pulsa «Mañana»: el sol debe estar saliendo por la izquierda y la luna
+     metiéndose por la derecha. «Mediodía»: el sol arriba y la cúpula entera de
+     día. «Tarde»: el cambio al revés. «Medianoche»: la luna arriba, cielo de
+     noche, y la tirada de la tabla de la estación si la has configurado.
+  5. Arrastra un macro a la casilla 6: debe caer en la casilla, no en la cúpula.

@@ -223,49 +223,23 @@ export const seasonOf = (month, day) => {
 };
 
 /**
- * Sunrise and sunset, as decimal hours.
+ * Is the sun up? SIX TO SIX, and deliberately not an astronomical sunrise.
  *
- * A sinusoid rather than a table: daylight runs from about ten hours at the
- * winter solstice to about fourteen at the summer one, crossing twelve at the
- * equinoxes. It exists to decide ONE thing — whether the orb shows the sun or
- * the moon — so a temperate-latitude curve is the whole of the accuracy needed.
- * Day 80 is 21 March, which is where the sine is zero.
- * @returns {{sunrise: Number, sunset: Number}}
+ * There was a seasonal sunrise here — a sinusoid running from ten hours of
+ * daylight at the winter solstice to fourteen at the summer one — and it is
+ * gone, because the dome made it a liability rather than a nicety. The dome
+ * turns at a constant rate and hands the sky over at 06:00 and 18:00, which is
+ * also where two of the four advance buttons land. A seasonal sunrise would
+ * have put the picture and the clock at odds: "Mañana" in December would move
+ * the world to six in the morning and leave the dome insisting it was still
+ * night. One rule the eye and the buttons both obey beats two rules that
+ * disagree in winter.
+ *
+ * It decides the tooltip and the rim's colour. Nothing else reads it.
  */
-export const daylightHours = (doy) => {
-  const length = 12 + 2 * Math.sin((2 * Math.PI * (doy - 80)) / 365.25);
-  return { sunrise: 12 - length / 2, sunset: 12 + length / 2 };
-};
-
-/** Is the sun up at this moment? */
 export const isDaylight = (date) => {
-  const { sunrise, sunset } = daylightHours(date.dayOfYear);
   const h = date.hour + date.minute / 60;
-  return h >= sunrise && h < sunset;
-};
-
-/** Twilight, in hours either side of sunrise and of sunset. */
-const TWILIGHT = 0.75;
-
-/**
- * HOW MUCH DAY it is: 0 in the dead of night, 1 in broad daylight, sliding
- * across an hour and a half around each of sunrise and sunset.
- *
- * `isDaylight` is a switch and this is a dimmer, and the orb needs the dimmer.
- * It fades the sun out against the moon, and a switch would flip the whole sky
- * in a single frame at exactly sunrise. Multiplying the two ramps instead of
- * branching on where in the day we are keeps midday at exactly 1 and midnight
- * at exactly 0, with no cases to get wrong at the ends.
- *
- * @returns {Number} 0…1
- */
-export const dayness = (date) => {
-  const { sunrise, sunset } = daylightHours(date.dayOfYear);
-  const h = date.hour + date.minute / 60;
-  const clamp = (n) => Math.min(1, Math.max(0, n));
-  const rising = clamp((h - (sunrise - TWILIGHT)) / (2 * TWILIGHT));
-  const falling = clamp(((sunset + TWILIGHT) - h) / (2 * TWILIGHT));
-  return rising * falling;
+  return h >= 6 && h < 18;
 };
 
 /**

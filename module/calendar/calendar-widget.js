@@ -5,9 +5,9 @@
  * TWO PIECES, IN TWO PLACES, and that is what makes it look built in rather
  * than dropped on top:
  *
- *   - THE ORB is a day-and-night dial: one disc turning once every twenty-four
- *     hours, showing core's sun by day and its moon by night, with the two
- *     crossfading through dawn and dusk. It is an `<li>` inserted into the MIDDLE of
+ *   - THE DOME is a half-circle of sky over a horizon, with core's sun and moon
+ *     crossing it in an arc, one turn every twenty-four hours. It is an `<li>`
+ *     inserted into the MIDDLE of
  *     `#action-bar` — a real child of the macro list, so core's own flexbox
  *     sizes it to the slot height, sets it between slots five and six, and
  *     carries it along when the sidebar collapses or the window resizes.
@@ -15,9 +15,9 @@
  *     grounds. It is not a `.slot` and has no
  *     `data-slot`, which is how core decides where a dragged macro landed — so
  *     nothing can be dropped on it.
- *   - THE BAR is a sibling of `#hotbar` inside `#ui-bottom`, nudged sideways
- *     until its centre is the macro list's centre. Those are two different
- *     points: the page controls sit on one side of the hotbar only.
+ *   - THE BAR hangs BELOW the macro row, off that same list item, so it is
+ *     centred on the dome without anything measuring anything. The Warden's
+ *     controls hang above the dome, on the other side.
  *
  * ITS PALETTE IS NOT THE SHEET'S. Everything else in this system follows the
  * character sheet's scheme; this does not, because it sits on the canvas over
@@ -45,7 +45,7 @@ import { findTableByName } from "../compendium.js";
 import {
   TURN_SECONDS, DAY_MARKS,
   worldToDate, epochForDate, secondsUntilHour,
-  seasonOf, seasonName, moonPhase, moonName, isDaylight, dayness,
+  seasonOf, seasonName, moonPhase, moonName, isDaylight,
   daysInMonth, daysFromCivil, weekdayIndex, weekdayName, weekdayShort, monthName,
   formatDate, formatTime, parseDate, noteKey,
 } from "./calendar-core.js";
@@ -224,50 +224,63 @@ const moonSvg = (phase) => {
 };
 
 /**
- * The orb: ONE disc, showing the sun by day and the moon by night, turning once
- * every twenty-four hours.
+ * THE DOME: a half-circle of sky over a horizon, with the sun and the moon
+ * crossing it the way a body actually crosses a sky.
  *
- * ONE BODY AT A TIME, which is a thing the geometry cannot give on its own. Sun
- * and moon sit at opposite ends of a diameter, and a circular window centred on
- * that diameter's midpoint is symmetric under half a turn: whatever it shows of
- * the one, it shows of the other. So the swap is done with LIGHT rather than
- * position — the day sky and the sun fade up over the night sky and the moon,
- * on `dayness`, which is 1 at midday and 0 at midnight. At midday the moon and
- * the night sky are at zero and the disc is a sun in a warm sky; at midnight it
- * is the reverse; and for the hour and a half around sunrise and sunset both
- * are part-lit low on opposite sides, which is what dawn actually looks like.
+ * WHY A HALF-CIRCLE FIXES WHAT A FULL ONE COULD NOT. A round window centred
+ * between two bodies at opposite ends of a diameter is symmetric under half a
+ * turn: whatever it shows of one, it shows of the other, so the previous
+ * version had to fade them in and out with opacity. Cut the window down to the
+ * half ABOVE the horizon and the symmetry is broken for free — the other body
+ * is simply below ground. No fading, no dimmer curve, no `dayness`. Geometry.
  *
- * WHICH WAY IT TURNS. The sun is drawn at the top of the wheel, so noon must be
- * the wheel's zero — hence the +180, which puts the moon on top at midnight.
- * Between them the sun climbs from the left at dawn and sets to the right.
+ * HOW IT IS BUILT. Behind a half-circle aperture sits a full wheel, twice as
+ * tall as the aperture, turning about the middle of the horizon line. It
+ * carries two half-skies — a day one and a night one — and the two bodies, each
+ * in the middle of its own half. Only what is above the horizon is drawn.
  *
- * WHY THE DAY NUMBER IS IN THE ANGLE. If the angle were only the hour, it would
- * run 180°…540° and then snap back to 180° at midnight — and CSS, told to move
- * from 540 to 180, animates the short way round: a full backwards spin, once a
- * night. Adding a turn per elapsed day makes the number monotonic, so the disc
- * only ever turns the way time is going. Advancing a whole day is then a single
- * clean revolution, which is a nicer thing to watch than a jump.
+ * THE BODIES ARE COUNTER-ROTATED so they stay upright while the wheel turns
+ * under them. What that leaves is a body whose CENTRE travels the wheel's
+ * circle: up from the left horizon, over the top, down to the right. That is
+ * the arc, and it costs one extra transform.
+ *
+ * THE FOUR MOMENTS, which are also four of the buttons:
+ *   06:00  the sun on the left horizon, the moon on the right — the handover
+ *   12:00  the sun at the top, the dome all day sky
+ *   18:00  the sun on the right horizon, the moon rising left — the handover back
+ *   00:00  the moon at the top, the dome all night sky
+ *
+ * THE ANGLE. Noon is the wheel's zero, so the hour maps straight on: −180 at
+ * midnight, −90 at six, 0 at noon, +90 at six in the evening. The day number is
+ * in there too, and that is not decoration: without it the angle would snap
+ * from 180° back to −180° every midnight, and CSS asked to move between those
+ * two takes the short way — a full backwards spin, once a night. Monotonic, the
+ * dome only ever turns the way time is going, and advancing a whole day is one
+ * clean revolution.
  *
  * No images are shipped for this: both bodies are core's own art.
  *
  * @param {String} extra  a class for the fallback copy that lives in the bar
  */
-const orbHtml = (extra = "") => {
+const domeHtml = (extra = "") => {
   const date = worldToDate();
-  const lit = dayness(date);
-  const day = lit.toFixed(3);
-  const night = (1 - lit).toFixed(3);
-  const angle = (date.dayNumber + (date.hour + date.minute / 60) / 24) * 360 + 180;
+  const day = isDaylight(date);
+  const angle = (date.dayNumber + (date.hour + date.minute / 60) / 24) * 360 - 180;
+  const spin = angle.toFixed(2);
+  const upright = (-angle).toFixed(2);
   return `
-    <div class="cal-orb ${lit >= 0.5 ? "is-day" : "is-night"} ${extra}"
-      data-tooltip="${esc(isDaylight(date) ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
-      <div class="cal-orb-sky is-night-sky"></div>
-      <div class="cal-orb-sky is-day-sky" style="opacity: ${day}"></div>
-      <div class="cal-orb-wheel" style="transform: rotate(${angle.toFixed(2)}deg)">
-        <div class="cal-orb-body is-sun" style="opacity: ${day}"><img src="${SUN_ICON}" alt=""></div>
-        <div class="cal-orb-body is-moon" style="opacity: ${night}"><img src="${MOON_ICON}" alt=""></div>
+    <div class="cal-dome ${day ? "is-day" : "is-night"} ${extra}"
+      data-tooltip="${esc(day ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
+      <div class="cal-dome-wheel" style="transform: rotate(${spin}deg)">
+        <div class="cal-dome-sky is-day-sky"></div>
+        <div class="cal-dome-sky is-night-sky"></div>
+        <div class="cal-dome-body is-sun">
+          <img src="${SUN_ICON}" alt="" style="transform: rotate(${upright}deg)">
+        </div>
+        <div class="cal-dome-body is-moon">
+          <img src="${MOON_ICON}" alt="" style="transform: rotate(${upright}deg)">
+        </div>
       </div>
-      <span class="cal-orb-pip" aria-hidden="true"></span>
     </div>`;
 };
 
@@ -298,7 +311,7 @@ const renderBar = (inlineOrb = false) => {
 
   return `
     ${tools}
-    ${inlineOrb ? orbHtml("is-inline") : ""}
+    ${inlineOrb ? domeHtml("is-inline") : ""}
     <button type="button" class="cal-face" data-open="1"
       data-tooltip="${esc(L("CAIRN.Cal.OpenHint"))}">
       <span class="cal-date">${esc(formatDate(date))}</span>
@@ -352,7 +365,7 @@ const injectOrb = () => {
     li?.remove();
     li = document.createElement("li");
     li.id = ORB_ID;
-    li.innerHTML = `<div class="cal-orb-mount"></div>`;
+    li.innerHTML = `<div class="cal-dome-mount"></div>`;
     li.addEventListener("click", (event) => {
       // The bar hangs off this item, so ITS clicks bubble through here too.
       // Without this line every press of "Mañana" would also open the month
@@ -365,7 +378,7 @@ const injectOrb = () => {
     li.addEventListener("mouseleave", () => setToolsOpen(false));
     bar.insertBefore(li, slots[Math.floor(slots.length / 2)]);
   }
-  li.querySelector(".cal-orb-mount").innerHTML = orbHtml();
+  li.querySelector(".cal-dome-mount").innerHTML = domeHtml();
   return li;
 };
 
