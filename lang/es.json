@@ -670,6 +670,21 @@
     "UseWardenTitle": {
       "hint": "Cambia el nombre del rol de Game Master por «Guardián» allí donde Foundry lo muestre, y renombra la cuenta de Game Master predeterminada para que coincida. Al desactivarlo se restaura el nombre original de la cuenta. Surte efecto tras recargar.",
       "label": "Llamar al GM \"Guardián\""
+    },
+    "GroupCalendar": "Calendario",
+    "GroupCalendarButton": "Configurar el calendario",
+    "GroupCalendarHint": "La barra de calendario sobre los macros, y las tablas que se tiran solas al adelantar el tiempo.",
+    "ShowCalendar": {
+      "label": "Mostrar la barra de calendario",
+      "hint": "La barra que aparece encima de la barra de macros con la fecha, la estación, la luna y la hora. Los botones para adelantar el tiempo solo los ve el Guardián."
+    },
+    "CalendarTableTurn": {
+      "label": "Tabla al adelantar 10 minutos",
+      "hint": "Nombre de la tabla que se tira sola cada vez que pulsas «10 min» — el chequeo de encuentro de mazmorra. El resultado se susurra solo al Guardián. Déjalo vacío para no tirar nada."
+    },
+    "CalendarTableTravel": {
+      "label": "Tabla al adelantar a Mañana / Mediodía / Tarde / Medianoche",
+      "hint": "Nombre de la tabla que se tira sola con los cuatro botones de viaje. El resultado se susurra solo al Guardián. Déjalo vacío para no tirar nada."
     }
   },
   "CAIRN.Slots": "Espacios",
@@ -743,5 +758,87 @@
   "TYPES.Item.scroll": "Pergamino",
   "TYPES.Item.spell": "Hechizo",
   "TYPES.Item.weapon": "Arma",
-  "WIL": "VOL"
+  "WIL": "VOL",
+  "CAIRN.Cal.Months": {
+    "1": "Enero",
+    "2": "Febrero",
+    "3": "Marzo",
+    "4": "Abril",
+    "5": "Mayo",
+    "6": "Junio",
+    "7": "Julio",
+    "8": "Agosto",
+    "9": "Septiembre",
+    "10": "Octubre",
+    "11": "Noviembre",
+    "12": "Diciembre"
+  },
+  "CAIRN.Cal.Weekdays": {
+    "0": "Lunes",
+    "1": "Martes",
+    "2": "Miércoles",
+    "3": "Jueves",
+    "4": "Viernes",
+    "5": "Sábado",
+    "6": "Domingo"
+  },
+  "CAIRN.Cal.Seasons": {
+    "spring": "Primavera",
+    "summer": "Verano",
+    "autumn": "Otoño",
+    "winter": "Invierno"
+  },
+  "CAIRN.Cal.Moons": {
+    "new": "Luna nueva",
+    "waxingCrescent": "Creciente",
+    "firstQuarter": "Cuarto creciente",
+    "waxingGibbous": "Gibosa creciente",
+    "full": "Luna llena",
+    "waningGibbous": "Gibosa menguante",
+    "lastQuarter": "Cuarto menguante",
+    "waningCrescent": "Menguante"
+  },
+  "CAIRN.Cal.Marks": {
+    "morning": "Mañana",
+    "morningHint": "Adelanta hasta las 6:00 de la mañana",
+    "midday": "Mediodía",
+    "middayHint": "Adelanta hasta las 12:00 del mediodía",
+    "evening": "Tarde",
+    "eveningHint": "Adelanta hasta las 18:00 de la tarde",
+    "midnight": "Medianoche",
+    "midnightHint": "Adelanta hasta la medianoche, ya en el día siguiente"
+  },
+  "CAIRN.Cal.Notify": {
+    "NoTable": "No se ha encontrado ninguna tabla llamada «{name}». Revisa el nombre en la configuración del calendario.",
+    "BadDate": "No entiendo «{text}». Escribe la fecha así: 24 de Diciembre de 1503.",
+    "DateSet": "La fecha del mundo es ahora {date}."
+  },
+  "CAIRN.Cal.DateFormat": "{day} de {month} de {year}",
+  "CAIRN.Cal.Title": "Calendario",
+  "CAIRN.Cal.OpenHint": "Abrir el calendario y las notas",
+  "CAIRN.Cal.Daytime": "Es de día",
+  "CAIRN.Cal.Nighttime": "Es de noche",
+  "CAIRN.Cal.AdvanceTurn": "10 min",
+  "CAIRN.Cal.AdvanceTurnHint": "Un turno de exploración: adelanta diez minutos",
+  "CAIRN.Cal.PrevMonth": "Mes anterior",
+  "CAIRN.Cal.NextMonth": "Mes siguiente",
+  "CAIRN.Cal.Today": "Hoy",
+  "CAIRN.Cal.NoNotes": "No hay notas en este día.",
+  "CAIRN.Cal.AddNote": "Añadir nota",
+  "CAIRN.Cal.DeleteNote": "Borrar la nota",
+  "CAIRN.Cal.NotePlaceholder": "Qué pasa este día…",
+  "CAIRN.Cal.SecretNote": "Solo para el Guardián",
+  "CAIRN.Cal.SetDate": "Fecha del mundo",
+  "CAIRN.Cal.SetDatePlaceholder": "24 de Diciembre de 1503",
+  "CAIRN.Cal.Apply": "Establecer",
+  "CAIRN.Cal.SetDateHint": "Cambia qué fecha muestra el calendario sin tocar el reloj del mundo: la hora se queda donde está. Escríbela como «24 de Diciembre de 1503».",
+  "CAIRN.Cal.WeekdaysShort": {
+    "0": "L",
+    "1": "M",
+    "2": "X",
+    "3": "J",
+    "4": "V",
+    "5": "S",
+    "6": "D"
+  }
 }

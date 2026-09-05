@@ -3654,3 +3654,289 @@ ol.combat-tracker li.combatant.cairn-drop-below {
 }
 
 
+
+/******************************************************************************
+ * THE CALENDAR BAR, and its month view.
+ *
+ * The bar is a SIBLING of #hotbar inside #ui-bottom, not a fixed-positioned
+ * overlay — so it centres itself, follows a collapsing sidebar and survives a
+ * resize because the layout that already moves the hotbar moves it too. Only
+ * the `.is-floating` fallback (a Foundry that renamed those ids) positions
+ * itself, and it is the exception rather than the rule.
+ ******************************************************************************/
+
+#mondolme-calendar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 6px;
+    padding: 4px 10px;
+    border: 2px solid var(--ab-line);
+    border-radius: 4px;
+    background: var(--ab-surface);
+    color: var(--ab-ink);
+    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#mondolme-calendar.is-floating {
+    position: fixed;
+    left: 50%;
+    bottom: 200px;
+    transform: translateX(-50%);
+    z-index: 60;
+}
+
+/* The orb. It TURNS with the day — a full rotation per twenty-four hours, so
+   midnight and noon point opposite ways — which is the one animated thing on
+   the bar and the reason a player glances at it at all. The transition is on
+   the transform only, and it is skipped for a reduced-motion reader. */
+#mondolme-calendar .cal-orb {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--ab-rule-strong);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+/* A quiet ground behind core's own art, not a second sun: the icons are
+   already coloured discs, and a gradient under them fights the drawing. Day
+   and night differ only in how dark the ground is, which is enough to read
+   at a glance beside the swap of the icon itself. */
+#mondolme-calendar .cal-orb.is-day { background: var(--ab-wash); }
+#mondolme-calendar .cal-orb.is-night { background: #1b2233; border-color: #47516b; }
+
+#mondolme-calendar .cal-orb img {
+    width: 26px;
+    height: 26px;
+    border: none;
+    transition: transform 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #mondolme-calendar .cal-orb img { transition: none; }
+}
+
+/* The date block is a button: it opens the month view. Styled as text, because
+   it is the label of the bar and not a control the eye should hunt for. */
+#mondolme-calendar .cal-date {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 2px 4px;
+    border: none;
+    border-radius: 3px;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    line-height: 1.15;
+    cursor: pointer;
+    text-align: left;
+    width: auto;
+}
+
+#mondolme-calendar .cal-date:hover { background: var(--ab-wash); }
+
+#mondolme-calendar .cal-date-main {
+    font-size: 15px;
+    font-variant: small-caps;
+    white-space: nowrap;
+}
+
+#mondolme-calendar .cal-date-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--ab-muted);
+    white-space: nowrap;
+}
+
+#mondolme-calendar .cal-moon-wrap { display: inline-flex; align-items: center; gap: 3px; }
+
+/* The moon, two circles and no image file: the lit disc, and a shadow disc slid
+   across it by the phase. Both take theme tokens, so it reads on parchment and
+   on the dark scheme without a second drawing. */
+#mondolme-calendar .cal-moon { width: 11px; height: 11px; overflow: hidden; border-radius: 50%; }
+#mondolme-calendar .cal-moon-lit { fill: var(--ab-ink); }
+#mondolme-calendar .cal-moon-dark { fill: var(--ab-surface); }
+
+#mondolme-calendar .cal-clock { font-variant-numeric: tabular-nums; }
+
+#mondolme-calendar .cal-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-left: 1px solid var(--ab-rule);
+    padding-left: 8px;
+}
+
+#mondolme-calendar .cal-btn {
+    padding: 2px 8px;
+    border: 1px solid var(--ab-rule-strong);
+    border-radius: 3px;
+    background: var(--ab-wash);
+    color: var(--ab-ink);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    width: auto;
+}
+
+#mondolme-calendar .cal-btn:hover {
+    background: var(--ab-wash-strong);
+    border-color: var(--ab-line);
+}
+
+/* ---- the month view ------------------------------------------------------ */
+
+.cal-dialog { display: flex; flex-direction: column; gap: 10px; }
+
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cal-nav button {
+    width: auto;
+    padding: 2px 8px;
+    line-height: 1.4;
+}
+
+.cal-nav-label {
+    flex: 1;
+    text-align: center;
+    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
+    font-size: 17px;
+    font-variant: small-caps;
+}
+
+/* Seven equal columns, Monday first — one grid template for the weekday strip
+   and the day cells, so a letter always sits over its own column. */
+.cal-weekdays,
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.cal-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    font-variant: small-caps;
+    color: var(--ab-muted);
+}
+
+.cal-cell {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--ab-hairline);
+    border-radius: 2px;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    width: auto;
+}
+
+.cal-cell:hover { background: var(--ab-wash); }
+.cal-cell.is-blank { border-color: transparent; cursor: default; }
+
+/* TODAY is a ring; the SELECTED day is a fill. Two different facts, so two
+   different marks — a day can be both, and then it reads as both. */
+.cal-cell.is-today { border-color: var(--ab-accent); border-width: 2px; }
+.cal-cell.is-selected { background: var(--ab-accent-wash); border-color: var(--ab-accent); }
+
+.cal-cell-dot {
+    position: absolute;
+    bottom: 3px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ab-accent);
+}
+
+.cal-selected {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border-top: 1px solid var(--ab-rule);
+    padding-top: 8px;
+}
+
+.cal-selected h4 {
+    margin: 0;
+    border: none;
+    font-family: "Alegreya", Times, "Times New Roman", Georgia, serif;
+    font-size: 16px;
+    font-variant: small-caps;
+}
+
+.cal-selected-sub { font-size: 11px; color: var(--ab-muted); }
+
+.cal-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.cal-note {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 6px;
+    border-left: 2px solid var(--ab-rule-strong);
+    background: var(--ab-wash);
+    font-size: 13px;
+}
+
+.cal-note span { flex: 1; }
+.cal-note.is-secret { border-left-color: var(--ab-accent); }
+.cal-note.is-empty { border-left-color: transparent; background: none; color: var(--ab-muted); font-style: italic; }
+
+.cal-note-del {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 4px;
+    border: none;
+    background: none;
+    color: var(--ab-muted);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.cal-note-del:hover { color: var(--ab-peril); }
+
+.cal-note-add { display: flex; flex-direction: column; gap: 4px; }
+.cal-note-add textarea { width: 100%; font-family: inherit; resize: vertical; }
+.cal-note-add-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cal-note-add-row button { width: auto; padding: 2px 10px; line-height: 1.4; }
+
+.cal-secret { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ab-muted); }
+.cal-secret input { margin: 0; }
+
+.cal-setdate {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid var(--ab-rule);
+    padding-top: 8px;
+}
+
+.cal-setdate label { font-size: 12px; font-variant: small-caps; color: var(--ab-muted); }
+.cal-setdate-row { display: flex; gap: 6px; }
+.cal-setdate-row input { flex: 1; font-family: inherit; }
+.cal-setdate-row button { width: auto; padding: 2px 10px; line-height: 1.4; white-space: nowrap; }
+
+.cal-hint { margin: 0; font-size: 11px; color: var(--ab-muted); line-height: 1.4; }

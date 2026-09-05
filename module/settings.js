@@ -1,5 +1,7 @@
 import { registerSettingMenus } from "./settings-menus.js";
 import { clearPackWarnings } from "./content-packs.js";
+import { toggleCalendar } from "./calendar/calendar-widget.js";
+import { daysFromCivil } from "./calendar/calendar-core.js";
 
 /**
  * The namespace every game setting is registered under.
@@ -62,6 +64,13 @@ export const SETTING_KEYS = [
   // Inventory & Encumbrance
   "max-equip-slots", "character-inventory-limit", "allow-player-marketplace",
   "use-gold-threshold",
+  // Calendar
+  "show-calendar", "calendar-table-turn", "calendar-table-travel",
+  // …and its two internal ones. `calendar-epoch` is CONFIGURATION — the
+  // campaign's start date — and must ride the namespace migration like
+  // `custom-portrait-list` does; `calendar-notes` is the Warden's own writing,
+  // which would be worse to lose than any setting here.
+  "calendar-epoch", "calendar-notes",
 ];
 
 /**
@@ -127,6 +136,10 @@ const rerenderActorSheets = () => {
  */
 export const INTERNAL_SETTING_KEYS = [
   "custom-portrait-list", "disabled-backgrounds", "connections-ui-enabled",
+  // The calendar's state, not its configuration: the epoch is written by the
+  // «Fecha del mundo» field in the calendar itself, and the notes by writing a
+  // note. Neither belongs in a settings window.
+  "calendar-epoch", "calendar-notes",
 ];
 
 /**
@@ -197,6 +210,18 @@ export const SETTING_GROUPS = [
       "max-equip-slots", "character-inventory-limit", "allow-player-marketplace",
       "use-gold-threshold",
     ],
+  },
+  {
+    // The calendar (2026-09-02). Three rows: whether the bar is shown at all,
+    // and the two tables the advance buttons draw from. Everything else about
+    // the calendar — the date, the notes — is set in the calendar itself,
+    // where a Warden is already looking at the day they mean.
+    id: "calendar",
+    title: "CAIRN.Settings.GroupCalendar",
+    button: "CAIRN.Settings.GroupCalendarButton",
+    hint: "CAIRN.Settings.GroupCalendarHint",
+    icon: "fa-solid fa-calendar-days",
+    keys: ["show-calendar", "calendar-table-turn", "calendar-table-travel"],
   },
   /* The "Hacks" group stood here and is GONE (2026-09-02). Its last member was
      the Knave-style failed career, which only ever applied to Barebones
@@ -758,6 +783,73 @@ export const registerSettings = () => {
      invisible. Both paths are unconditional now. A stored value may sit unread
      in old worlds — harmless, like the other retired keys. `dev:ui-parity`
      asserts it is not registered, so re-adding it fails a gate. */
+
+  // ---- Calendar ------------------------------------------------------------
+  game.settings.register(SETTINGS_NS, "show-calendar", {
+    name: "CAIRN.Settings.ShowCalendar.label",
+    hint: "CAIRN.Settings.ShowCalendar.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true,
+    requiresReload: false,
+    // Not `rerenderActorSheets`: the calendar is not on a sheet. Its own
+    // toggle puts the bar up or takes it down on every client at once.
+    onChange: toggleCalendar,
+  });
+
+  // The two tables the advance buttons draw from, BY NAME — the same
+  // by-name-not-by-uuid rule every other table address in this system follows
+  // (see content-packs.js): a uuid into one world's pack dies the moment the
+  // content is shared. Empty means "no table", which is a legitimate choice
+  // and not a misconfiguration, so a blank one is silently skipped.
+  game.settings.register(SETTINGS_NS, "calendar-table-turn", {
+    name: "CAIRN.Settings.CalendarTableTurn.label",
+    hint: "CAIRN.Settings.CalendarTableTurn.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+    requiresReload: false,
+  });
+
+  game.settings.register(SETTINGS_NS, "calendar-table-travel", {
+    name: "CAIRN.Settings.CalendarTableTravel.label",
+    hint: "CAIRN.Settings.CalendarTableTravel.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+    requiresReload: false,
+  });
+
+  // THE CAMPAIGN'S START DATE, stored as the civil day number that world time
+  // zero lands on — an OFFSET, not a date. Writing it moves the calendar and
+  // leaves `game.time.worldTime` exactly where it is, which is the whole point:
+  // the world clock is what every other time-aware thing counts from, and
+  // "my campaign starts in 1503" must not shunt it by half a millennium.
+  //
+  // The default puts a brand-new world on 1 January 1500 at midnight. A round
+  // number a Warden can recognise as "nobody has set this yet".
+  game.settings.register(SETTINGS_NS, "calendar-epoch", {
+    scope: "world",
+    config: false,
+    type: Number,
+    default: daysFromCivil(1500, 1, 1),
+    requiresReload: false,
+  });
+
+  // The Warden's notes, keyed "YYYY-MM-DD". One setting rather than a Journal
+  // entry per day: a campaign's worth is a few kilobytes, and the alternative
+  // is a folder nobody asked for. Written only by a GM (world scope makes that
+  // Foundry's rule, not ours), read by everyone except the secret ones.
+  game.settings.register(SETTINGS_NS, "calendar-notes", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+    requiresReload: false,
+  });
 
   // The submenu buttons, in group order — registered after every
   // setting so each app finds its keys registered when it opens. These are

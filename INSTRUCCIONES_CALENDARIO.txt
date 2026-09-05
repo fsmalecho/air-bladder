@@ -1,0 +1,204 @@
+MONDOLME — El calendario
+=========================
+
+Sobre los Ajustes 3 ya aplicados.
+4 archivos modificados, 2 nuevos (module/calendar/). Ninguno eliminado.
+
+
+CÓMO APLICARLO
+--------------
+
+No hay que borrar nada.
+
+1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
+2. Descomprime este ZIP dentro de la carpeta del repositorio. "Reemplazar" para
+   todos. Se creará una carpeta nueva: module/calendar.
+3. Commit y push:
+
+     El calendario: barra sobre los macros, vista de mes y notas
+
+4. Etiqueta 2.0.4 (o el siguiente número que te toque), push, espera a Actions y
+   actualiza el sistema en Foundry. Recarga el mundo (F5).
+
+
+LO QUE VAS A VER
+----------------
+
+Una barra encima de la barra de macros:
+
+     ( ☀ )   24 de Diciembre de 1503        [10 min] [Mañana] [Mediodía]
+             Invierno · Menguante · 14:30            [Tarde] [Medianoche]
+
+  - EL ORBE gira con la hora: una vuelta entera cada veinticuatro horas, así que
+    medianoche y mediodía apuntan a lados opuestos. Es el sol de día y la luna de
+    noche, con los dos iconos del núcleo de Foundry que me pasaste.
+  - LA LUNA pequeña de la segunda línea no es una imagen: son dos círculos, uno
+    tapando al otro según la fase. Así se ve igual de bien en pergamino que en el
+    tema oscuro, y no hay ocho archivos que mantener.
+  - LOS BOTONES solo los ve el Guardián. Los jugadores ven la fecha, la estación,
+    la luna y la hora, y pueden abrir el calendario para leer tus notas.
+
+
+LOS CINCO BOTONES
+-----------------
+
+  10 min      Un turno de exploración. Adelanta 600 segundos.
+  Mañana      Adelanta hasta las 6:00.
+  Mediodía    Adelanta hasta las 12:00.
+  Tarde       Adelanta hasta las 18:00.
+  Medianoche  Adelanta hasta las 00:00 — ya en el día siguiente.
+
+SIEMPRE HACIA ADELANTE, y conviene que sepas exactamente qué significa. Cada
+botón salta a la PRÓXIMA vez que el reloj marque esa hora:
+
+  - A las 23:00, «Medianoche» adelanta una hora.
+  - A las 00:30, «Medianoche» adelanta hasta la noche siguiente.
+  - A las 12:00 en punto, «Mediodía» adelanta un día entero.
+
+Ese último caso es deliberado: son botones de adelantar, y un botón que no hace
+nada al pulsarlo parece roto.
+
+
+EL CALENDARIO
+-------------
+
+Pulsa la fecha en la barra y se abre la vista de mes.
+
+  - Rejilla de lunes a domingo. El día de hoy lleva un borde de color; el día
+    que has seleccionado va relleno. Un punto debajo del número significa que
+    ese día tiene notas.
+  - Las flechas cambian de mes; «Hoy» vuelve al día del mundo.
+  - Debajo, las notas del día elegido. Escribes una y pulsas «Añadir». Si marcas
+    «Solo para el Guardián», los jugadores no la verán.
+  - Solo tú escribes notas; todos las leen. Eso fue lo que elegiste, y es lo que
+    ha permitido quitar de en medio el relé por socket que haría falta para que
+    escribiera un jugador.
+
+    Aviso honesto sobre las notas secretas: se guardan en el mismo ajuste de
+    mundo que las demás, así que el navegador de un jugador TIENE el texto y
+    simplemente no lo dibuja. Es orden, no secreto a prueba de curiosos. Lo que
+    no quieras que se pueda leer nunca, no lo escribas ahí.
+
+
+LA FECHA DEL MUNDO
+------------------
+
+En el pie del calendario, un campo donde escribes la fecha tal y como pediste:
+
+     24 de Diciembre de 1503
+
+También acepta 24/12/1503 y 24-12-1503, y da igual si escribes «diciembre» en
+minúscula o con acento. Si escribes algo que no es una fecha —o el 31 de
+febrero— te lo dice y no toca nada.
+
+DETALLE IMPORTANTE: establecer la fecha NO mueve el reloj del mundo. Cambia
+únicamente qué fecha corresponde a la hora que ya marca. Lo hice así a
+propósito: `game.time.worldTime` es de donde cuenta todo lo demás que sepa de
+tiempo en un mundo de Foundry, y «mi campaña empieza en 1503» no debería
+desplazarlo medio milenio. La hora del día se queda donde estaba.
+
+Un mundo recién creado empieza el 1 de enero de 1500 a medianoche.
+
+
+LAS DOS TABLAS
+--------------
+
+Configuración → Mondolme → Configurar el calendario. Tres filas:
+
+  - Mostrar la barra de calendario.
+  - Tabla al adelantar 10 minutos — el chequeo de encuentro de mazmorra.
+  - Tabla al adelantar a Mañana / Mediodía / Tarde / Medianoche — el de viaje.
+
+Escribes el NOMBRE de la tabla, no la arrastras: el sistema la busca primero
+entre tus tablas del mundo y después en los compendios, que es la misma regla
+por la que los generadores encuentran las suyas. Déjalo vacío y no se tira nada
+— no tener tabla es una decisión, no un error, así que no te avisa de nada.
+
+El resultado se SUSURRA solo a los Guardianes, como elegiste. Un chequeo de
+encuentro que la mesa ve no es un chequeo.
+
+
+EL CALENDARIO ES GREGORIANO
+---------------------------
+
+Doce meses, años bisiestos incluidos (1503 no lo es; 1504 sí). Semana de lunes a
+domingo. Estaciones por las fechas astronómicas: primavera el 21 de marzo,
+verano el 21 de junio, otoño el 23 de septiembre, invierno el 21 de diciembre.
+
+Las lunas se cuentan desde una luna nueva real con el mes sinódico (29,53 días),
+que es la misma aproximación que usa cualquier almanaque.
+
+El amanecer y el ocaso varían con la estación —de unas diez horas de luz en
+diciembre a unas catorce en junio— y sirven para una sola cosa: decidir si el
+orbe muestra el sol o la luna.
+
+CAMBIAR LOS NOMBRES MÁS ADELANTE, como querías, no toca código: los meses, los
+días de la semana, las estaciones y las fases están todos en lang/es.json bajo
+"CAIRN.Cal.Months", "CAIRN.Cal.Weekdays", "CAIRN.Cal.Seasons" y
+"CAIRN.Cal.Moons". Reescribes ahí «Diciembre» como «Yelmo» y el mes se llama
+Yelmo en toda la partida. Lo que no cambia editando el idioma es cuántos meses
+hay ni cuántos días tiene cada uno; eso sí sería código, y lo hacemos cuando lo
+tengas decidido.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+- Los 28 archivos de código del sistema pasan la comprobación de sintaxis.
+- Las dos comprobaciones que ejecuta GitHub al publicar: ambas pasan.
+- Ningún import apunta a algo que no exista.
+- LA ARITMÉTICA, probada aquí con 24 casos: la ida y vuelta entre fecha y número
+  de día (incluido el 24/12/1503), los bisiestos de 1600, 1700 y 2024, febrero de
+  29 días, el 366 de un año bisiesto, los cuatro límites de estación, las cuatro
+  reglas de «siempre hacia adelante», y dos fechas lunares reales — el 6 de enero
+  de 2000 sale luna nueva y el 21 de enero de 2000 sale llena.
+- EL LECTOR DE FECHAS, probado con nueve entradas: las tres formas que acepta,
+  mayúsculas y minúsculas, y los cuatro rechazos (31 de febrero, un mes que no
+  existe, texto suelto, vacío).
+- LA BARRA Y LA VISTA DE MES, renderizadas aquí con Foundry simulado, como
+  Guardián y como jugador: las etiquetas HTML cuadran, no queda ninguna clave de
+  idioma sin traducir, diciembre de 1503 sale con su hueco inicial y sus 31
+  casillas, el punto aparece en los dos días con notas, y en la vista del jugador
+  no hay ni botones, ni caja de escribir, ni campo de fecha, ni la nota secreta.
+- El texto de una nota se escapa: escribí una con «<ellos>» dentro y sale como
+  texto, no como etiqueta.
+- Las claves de ajustes cuadran: las cinco nuevas están declaradas y registradas,
+  las tres visibles en el grupo «Calendario» y las dos internas fuera de él.
+- El CSS cierra sus 507 llaves.
+
+
+DOS COSAS QUE ARREGLÉ ANTES DE ENSEÑÁRTELO
+------------------------------------------
+
+- La luna salía AL REVÉS. El círculo de sombra se desplazaba con el complemento
+  de la iluminación, así que la luna llena se pintaba entera negra y la nueva
+  entera blanca. Se ve en cuanto se dibujan las ocho fases seguidas, que es lo
+  que hice.
+- La comprobación de «ya hay un calendario abierto» miraba `ui.windows`, que es
+  el registro de las ventanas viejas de Foundry: un diálogo moderno no aparece
+  ahí, así que cada clic habría abierto otro calendario encima del anterior.
+
+
+LO QUE NO LLEVA, Y POR QUÉ
+--------------------------
+
+- NO hay contador de turnos de mazmorra. El botón de 10 minutos adelanta el
+  reloj y tira la tabla, que es la mitad útil; la tira de ocho casillas con las
+  antorchas quemándose es la otra fase.
+- NO hay clima. Son tablas de ambientación y decisiones tuyas.
+- NO se puede pulsar la hora para fijarla a mano. Los cinco botones cubren lo
+  que pediste; si echas de menos «poner las 3 de la madrugada», dímelo.
+
+
+QUÉ MIRAR PRIMERO
+-----------------
+
+  1. Abre el mundo. La barra debe estar sobre los macros con la fecha del 1 de
+     enero de 1500.
+  2. Pulsa la fecha, escribe «24 de Diciembre de 1503» abajo y dale a Establecer.
+     La barra debe decir esa fecha y «Invierno», y la hora no debe moverse.
+  3. Pulsa «10 min» seis veces y mira el orbe girar.
+  4. Pulsa «Medianoche»: debe saltar al día siguiente a las 00:00.
+  5. Escribe una nota en un día y mira que le sale el punto en la rejilla.
+  6. Crea una tabla cualquiera, ponle el nombre en el ajuste de la tabla de
+     mazmorra, y pulsa «10 min»: debe llegarte el resultado susurrado.

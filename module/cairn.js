@@ -17,6 +17,7 @@ import { ACTOR_DATA_MODELS, ITEM_DATA_MODELS, deriveNpcRole } from "./data-model
 import { connectionHeadroom, connectedOwnershipShape, syncPendingOwnership, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { injectEncounterButton } from "./encounters.js";
 import { bindGrimoireFatigueButton } from "./magic.js";
+import { initCalendar } from "./calendar/calendar-widget.js";
 import { nameableTokens } from "./utils.js";
 
 Hooks.once("init", async function () {
@@ -97,6 +98,12 @@ Hooks.once("ready", () => {
   // AT READY on purpose: this hook must register AFTER every module's
   // init-time hooks so it runs after them — see registerCombatOrderGuard.
   registerCombatOrderGuard();
+
+  // The calendar bar. AT READY because it reads a setting and inserts itself
+  // beside `#hotbar`, and neither the settings nor the bottom UI exist before
+  // this. Every user runs it — the bar is the whole table's clock — and it
+  // decides for itself which half of it a player may touch.
+  initCalendar();
   Hooks.on("hotbarDrop", (bar, data, slot) => {
     // A LOCKED bar must not be written to, and this hook is the only thing
     // standing in front of that. Core tests the hook's return value BEFORE its
