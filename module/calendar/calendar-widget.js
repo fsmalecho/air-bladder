@@ -1,14 +1,25 @@
 /**
- * THE CALENDAR BAR: a strip above the macro hotbar showing the date, the season,
- * the moon and the hour, with the Warden's controls for pushing time along.
+ * THE CALENDAR, in the macro bar: the date, the season, the moon and the hour,
+ * with the Warden's controls for pushing time along.
  *
- * WHERE IT LIVES. It is inserted into `#ui-bottom` immediately before `#hotbar`,
- * not fixed-positioned over the screen. That one decision removes a whole class
- * of work the widget this is modelled on had to do by hand: it sits above the
- * macro bar because it is above it in the DOM, it re-centres itself when the
- * sidebar collapses, and it follows a window resize or a fullscreen toggle —
- * all because the layout that already moves the hotbar moves this too. The
- * floating fallback exists only for a future Foundry that renames those two ids.
+ * TWO PIECES, IN TWO PLACES, and that is what makes it look built in rather
+ * than dropped on top:
+ *
+ *   - THE ORB is an `<li>` inserted into the MIDDLE of `#action-bar`. It is a
+ *     real child of the macro list, so core's own flexbox sizes it to the slot
+ *     height, sets it between slots five and six, and carries it along when the
+ *     sidebar collapses or the window resizes. It is not a `.slot` and has no
+ *     `data-slot`, which is how core decides where a dragged macro landed — so
+ *     nothing can be dropped on it.
+ *   - THE BAR is a sibling of `#hotbar` inside `#ui-bottom`, nudged sideways
+ *     until its centre is the macro list's centre. Those are two different
+ *     points: the page controls sit on one side of the hotbar only.
+ *
+ * ITS PALETTE IS NOT THE SHEET'S. Everything else in this system follows the
+ * character sheet's scheme; this does not, because it sits on the canvas over
+ * Foundry's own dark chrome whatever the sheets are wearing. Taking the
+ * parchment tokens is exactly how the first cut rendered pale on black and
+ * could not be read at all.
  *
  * WHAT IT IS NOT. There is no ApplicationV2 here. The bar is one small block of
  * HTML rebuilt whole on every clock change; a sheet framework buys nothing at
@@ -39,6 +50,7 @@ const { DialogV2 } = foundry.applications.api;
 
 const NS = () => game.system?.id ?? "mondolme";
 const WIDGET_ID = "mondolme-calendar";
+const ORB_ID = "mondolme-calendar-orb";
 
 /** Core's own art, so the bar ships no images of its own. */
 const SUN_ICON = "icons/magic/nature/symbol-sun-yellow.webp";
@@ -150,14 +162,13 @@ const advanceToMark = async (hour) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*  The bar                                                                     */
+/*  The orb, and the bar                                                        */
 /* -------------------------------------------------------------------------- */
 
 /**
  * The moon, drawn rather than fetched: two circles, the top one shifted across
  * the bottom one by the phase. Eight images would be eight files to ship and to
- * theme; this is six lines of SVG that take their colours from the sheet's own
- * tokens and read on either theme.
+ * theme; this is six lines of SVG.
  */
 const moonSvg = (phase) => {
   // WAXING is lit on the RIGHT, so its shadow slides off to the left; waning is
@@ -176,19 +187,43 @@ const moonSvg = (phase) => {
     </svg>`;
 };
 
-/** The bar's inner HTML for the clock as it stands now. */
-const renderBar = () => {
+/**
+ * The orb itself. A full rotation per twenty-four hours, so midnight and noon
+ * point opposite ways — the one moving thing here, and the reason anyone at the
+ * table glances down at the macro bar at all.
+ *
+ * @param {String} extra  a class for the fallback copy that lives in the bar
+ */
+const orbHtml = (extra = "") => {
+  const date = worldToDate();
+  const day = isDaylight(date);
+  const angle = ((date.hour + date.minute / 60) / 24) * 360;
+  return `
+    <div class="cal-orb ${day ? "is-day" : "is-night"} ${extra}"
+      data-tooltip="${esc(day ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
+      <img src="${day ? SUN_ICON : MOON_ICON}" alt=""
+        style="transform: rotate(${angle.toFixed(1)}deg)">
+    </div>`;
+};
+
+/**
+ * The bar: one line of text and, for a Warden, the controls that pop above it.
+ *
+ * The controls are HIDDEN until the pointer is on the widget or the orb. They
+ * are five buttons a Warden presses a few times an evening, and a strip of them
+ * parked permanently over the macro bar is five buttons of clutter for everyone
+ * else the rest of the time.
+ *
+ * @param {Boolean} inlineOrb  true when the hotbar could not take the orb, so
+ *                             the bar carries it instead
+ */
+const renderBar = (inlineOrb = false) => {
   const date = worldToDate();
   const season = seasonOf(date.month, date.day);
   const phase = moonPhase(date);
-  const day = isDaylight(date);
 
-  // A full day is a full turn. Midnight points the orb up; noon points it down,
-  // which is the whole of "gira con el paso del tiempo".
-  const angle = ((date.hour + date.minute / 60) / 24) * 360;
-
-  const controls = game.user.isGM ? `
-    <div class="cal-controls">
+  const tools = game.user.isGM ? `
+    <div class="cal-tools">
       <button type="button" class="cal-btn" data-turn="1"
         data-tooltip="${esc(L("CAIRN.Cal.AdvanceTurnHint"))}">${esc(L("CAIRN.Cal.AdvanceTurn"))}</button>
       ${DAY_MARKS.map((m) => `
@@ -197,42 +232,132 @@ const renderBar = () => {
     </div>` : "";
 
   return `
-    <div class="cal-orb ${day ? "is-day" : "is-night"}"
-      data-tooltip="${esc(day ? L("CAIRN.Cal.Daytime") : L("CAIRN.Cal.Nighttime"))}">
-      <img src="${day ? SUN_ICON : MOON_ICON}" alt="" style="transform: rotate(${angle.toFixed(1)}deg)">
-    </div>
-    <button type="button" class="cal-date" data-open="1"
+    ${tools}
+    ${inlineOrb ? orbHtml("is-inline") : ""}
+    <button type="button" class="cal-face" data-open="1"
       data-tooltip="${esc(L("CAIRN.Cal.OpenHint"))}">
-      <span class="cal-date-main">${esc(formatDate(date))}</span>
-      <span class="cal-date-sub">
-        <span>${esc(seasonName(season))}</span>
-        <span class="cal-moon-wrap">${moonSvg(phase)}${esc(moonName(phase.key))}</span>
-        <span class="cal-clock">${formatTime(date)}</span>
-      </span>
-    </button>
-    ${controls}`;
+      <span class="cal-date">${esc(formatDate(date))}</span>
+      <span class="cal-sep" aria-hidden="true"></span>
+      <span class="cal-season">${esc(seasonName(season))}</span>
+      <span class="cal-sep" aria-hidden="true"></span>
+      <span class="cal-moon-wrap" data-tooltip="${esc(moonName(phase.key))}">${moonSvg(phase)}</span>
+      <span class="cal-sep" aria-hidden="true"></span>
+      <span class="cal-clock">${formatTime(date)}</span>
+    </button>`;
 };
 
-/** Put the bar where it belongs, or make it if it is not there yet. */
+/* ---- putting the two pieces where they belong ---------------------------- */
+
+/**
+ * The macro bar's own list. Named defensively: this is core's DOM and not ours,
+ * and every caller treats "not found" as an ordinary answer rather than a fault.
+ */
+const findActionBar = () => {
+  const hotbar = document.getElementById("hotbar");
+  if (!hotbar) return null;
+  return hotbar.querySelector("#action-bar") ?? hotbar.querySelector("ol, menu") ?? null;
+};
+
+/**
+ * Put the orb IN the macro bar, as one more item in the middle of the row.
+ *
+ * This is the whole of "integrado en el hotbar". Because the orb is a real
+ * child of the macro list, the hotbar's own flexbox sizes it to the slot
+ * height, spaces it between slots five and six, and carries it along when the
+ * sidebar collapses or the window resizes — none of which is code here. The
+ * item is deliberately NOT `.slot` and carries no `data-slot`, which is how
+ * core decides where a dragged macro landed: it cannot be dropped on.
+ *
+ * @returns {Boolean}  false if there was no macro list to put it in
+ */
+const injectOrb = () => {
+  const bar = findActionBar();
+  if (!bar) return false;
+  const slots = [...bar.children].filter((el) => el.tagName === "LI" && el.id !== ORB_ID);
+  if (!slots.length) return false;
+
+  let li = document.getElementById(ORB_ID);
+  // A hotbar re-render wipes our item with the rest of its children, so the
+  // parent check matters as much as the existence one.
+  if (!li || li.parentElement !== bar) {
+    li?.remove();
+    li = document.createElement("li");
+    li.id = ORB_ID;
+    li.addEventListener("click", (event) => {
+      event.preventDefault();
+      openCalendarDialog();
+    });
+    // The orb and the bar are in different parts of the DOM, so CSS :hover on
+    // one cannot reach the other. These two keep the controls open while the
+    // pointer is on either.
+    li.addEventListener("mouseenter", () => setToolsOpen(true));
+    li.addEventListener("mouseleave", () => setToolsOpen(false));
+    bar.insertBefore(li, slots[Math.floor(slots.length / 2)]);
+  }
+  li.innerHTML = orbHtml();
+  return true;
+};
+
+/**
+ * Slide the bar sideways until its centre is the MACRO LIST's centre.
+ *
+ * Centring on #ui-bottom is not the same thing: the hotbar's page controls sit
+ * on one side only, so a bar centred on the container sits off-centre from the
+ * slots, and the orb — which is in the slots — would not line up under it.
+ *
+ * The shift ACCUMULATES because the measurement already includes whatever shift
+ * is on the element; the alternative is to zero the transform, force a reflow
+ * and measure again, which is a layout thrash for the same answer.
+ */
+const centreBar = (el) => {
+  const bar = findActionBar();
+  if (!bar || !el) return;
+  const target = bar.getBoundingClientRect();
+  const mine = el.getBoundingClientRect();
+  if (!target.width || !mine.width) return;
+  const shift = Number(el.dataset.shift ?? 0)
+    + (target.left + target.width / 2) - (mine.left + mine.width / 2);
+  el.dataset.shift = String(shift);
+  el.style.transform = `translateX(${shift.toFixed(1)}px)`;
+};
+
+/** Hold the pop-up open while the pointer moves between the orb and the bar. */
+let toolsTimer = null;
+const setToolsOpen = (open) => {
+  const el = document.getElementById(WIDGET_ID);
+  if (!el) return;
+  if (toolsTimer) { clearTimeout(toolsTimer); toolsTimer = null; }
+  if (open) return void el.classList.add("is-open");
+  // A grace period, not a whim: the orb sits in the macro row and the controls
+  // pop above the bar, so the pointer crosses a gap to get from one to the other.
+  toolsTimer = setTimeout(() => el.classList.remove("is-open"), 220);
+};
+
+/** Make or repaint both pieces. Idempotent: nothing tracks whether they exist. */
 const injectBar = () => {
+  const hasOrb = injectOrb();
+
   let el = document.getElementById(WIDGET_ID);
   if (!el) {
     el = document.createElement("div");
     el.id = WIDGET_ID;
-    el.classList.add("cairn");            // the system's own CSS scope
     const bottom = document.getElementById("ui-bottom");
     const hotbar = document.getElementById("hotbar");
     if (bottom && hotbar?.parentElement === bottom) {
       bottom.insertBefore(el, hotbar);
     } else {
-      // A Foundry that moved or renamed those two: float it instead of losing
+      // A Foundry that moved or renamed those ids: float it rather than lose
       // it. Everything else about the bar is identical.
       el.classList.add("is-floating");
       document.body.appendChild(el);
     }
     el.addEventListener("click", onBarClick);
+    el.addEventListener("mouseenter", () => setToolsOpen(true));
+    el.addEventListener("mouseleave", () => setToolsOpen(false));
   }
-  el.innerHTML = renderBar();
+  el.innerHTML = renderBar(!hasOrb);
+  // After the paint, or the width measured is last frame's width.
+  requestAnimationFrame(() => centreBar(el));
 };
 
 /** ONE delegated listener, bound when the element is made and never rebound —
@@ -247,7 +372,10 @@ const onBarClick = (event) => {
   if (btn.dataset.hour !== undefined) return void advanceToMark(Number(btn.dataset.hour));
 };
 
-const removeBar = () => document.getElementById(WIDGET_ID)?.remove();
+const removeBar = () => {
+  document.getElementById(WIDGET_ID)?.remove();
+  document.getElementById(ORB_ID)?.remove();
+};
 
 /** The setting's onChange, and the ready-time switch. */
 export const toggleCalendar = (visible) => {
@@ -465,9 +593,22 @@ export const initCalendar = () => {
   // The clock moved: whoever moved it, on every client.
   Hooks.on("updateWorldTime", () => { if (on()) injectBar(); });
 
-  // The hotbar re-rendered (a macro added, the bar unlocked). Cheap to re-run,
-  // and it puts the bar back if that render replaced its neighbours.
+  // The hotbar re-rendered (a macro added, a page turned, the bar unlocked).
+  // This one is not optional any more: that render replaces the macro list's
+  // children, and the orb is one of them.
   Hooks.on("renderHotbar", () => { if (on()) injectBar(); });
+
+  // The macro list MOVED without re-rendering: the sidebar collapsed, the
+  // window resized, the player list grew a row. The orb rides along on its own
+  // — it is inside the thing that moved — but the bar's sideways nudge was
+  // measured against the old position, so it is measured again.
+  const recentre = () => {
+    const el = document.getElementById(WIDGET_ID);
+    if (el) requestAnimationFrame(() => centreBar(el));
+  };
+  Hooks.on("collapseSidebar", recentre);
+  Hooks.on("renderPlayers", recentre);
+  window.addEventListener("resize", recentre);
 
   // The Warden set a date or wrote a note. `createSetting` as well as
   // `updateSetting`: the FIRST write to a setting in a new world creates it,

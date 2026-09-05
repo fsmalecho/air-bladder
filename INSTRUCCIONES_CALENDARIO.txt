@@ -1,204 +1,160 @@
-MONDOLME — El calendario
-=========================
+MONDOLME — El calendario, integrado en la barra de macros
+==========================================================
 
-Sobre los Ajustes 3 ya aplicados.
-4 archivos modificados, 2 nuevos (module/calendar/). Ninguno eliminado.
+REVISIÓN del calendario que te pasé antes. Solo cambian DOS archivos:
+
+    css/cairn.css
+    module/calendar/calendar-widget.js
+
+Nada más. Ni idiomas, ni ajustes, ni la aritmética del calendario: todo eso se
+queda exactamente como estaba.
 
 
 CÓMO APLICARLO
 --------------
 
-No hay que borrar nada.
-
 1. En GitHub Desktop, comprueba que estás en la rama "mondolme".
 2. Descomprime este ZIP dentro de la carpeta del repositorio. "Reemplazar" para
-   todos. Se creará una carpeta nueva: module/calendar.
+   todos.
 3. Commit y push:
 
-     El calendario: barra sobre los macros, vista de mes y notas
+     El calendario, integrado en la barra de macros
 
-4. Etiqueta 2.0.4 (o el siguiente número que te toque), push, espera a Actions y
+4. Etiqueta 2.0.5 (o el siguiente número que te toque), push, espera a Actions y
    actualiza el sistema en Foundry. Recarga el mundo (F5).
 
 
-LO QUE VAS A VER
-----------------
+LOS TRES ARREGLOS QUE PEDISTE
+-----------------------------
 
-Una barra encima de la barra de macros:
+1. YA NO SALE EN CLARO.
 
-     ( ☀ )   24 de Diciembre de 1503        [10 min] [Mañana] [Mediodía]
-             Invierno · Menguante · 14:30            [Tarde] [Medianoche]
+   El fallo tenía una causa concreta y merece la pena que la sepas, porque
+   explica por qué no se veía NADA en lugar de verse regular. El widget llevaba
+   la clase "cairn", que es la de la ficha, así que tomaba la paleta de la
+   ficha. Y los tokens oscuros de esta paleta solo se activan cuando Foundry ha
+   marcado el tema oscuro. Tú tienes Foundry en tema claro, así que el widget
+   cogió la paleta de PERGAMINO —tinta negra sobre crema— y la puso encima del
+   lienzo, que es negro siempre. Texto negro sobre negro.
 
-  - EL ORBE gira con la hora: una vuelta entera cada veinticuatro horas, así que
-    medianoche y mediodía apuntan a lados opuestos. Es el sol de día y la luna de
-    noche, con los dos iconos del núcleo de Foundry que me pasaste.
-  - LA LUNA pequeña de la segunda línea no es una imagen: son dos círculos, uno
-    tapando al otro según la fase. Así se ve igual de bien en pergamino que en el
-    tema oscuro, y no hay ocho archivos que mantener.
-  - LOS BOTONES solo los ve el Guardián. Los jugadores ven la fecha, la estación,
-    la luna y la hora, y pueden abrir el calendario para leer tus notas.
+   Ahora el widget no toma la paleta de la ficha. Lleva la suya, fija y oscura,
+   tomada de los tokens de la INTERFAZ de Foundry (los mismos que usan las
+   casillas de macros: `--color-text-light-highlight`, `--color-border-light-
+   tertiary`), con valores literales de respaldo por si algún día Foundry les
+   cambia el nombre. Cambies el tema que cambies, la barra sigue siendo oscura,
+   igual que la barra de macros que tiene debajo. La tipografía sí sigue siendo
+   la de la ficha (Alegreya), que es lo que hace que parezca de Mondolme y no
+   una pieza genérica.
 
+   La VISTA DE MES no cambia: esa es una ventana de Foundry y sigue el tema que
+   tengas puesto, como el resto de fichas y diálogos del sistema.
 
-LOS CINCO BOTONES
------------------
+2. EL ORBE ESTÁ DENTRO DE LA BARRA DE MACROS.
 
-  10 min      Un turno de exploración. Adelanta 600 segundos.
-  Mañana      Adelanta hasta las 6:00.
-  Mediodía    Adelanta hasta las 12:00.
-  Tarde       Adelanta hasta las 18:00.
-  Medianoche  Adelanta hasta las 00:00 — ya en el día siguiente.
+   No encima. Dentro. El orbe es un elemento más de la lista de macros,
+   insertado en el MEDIO de la fila, entre la casilla 5 y la 6:
 
-SIEMPRE HACIA ADELANTE, y conviene que sepas exactamente qué significa. Cada
-botón salta a la PRÓXIMA vez que el reloj marque esa hora:
+     [1][2][3][4][5]  ( ☀ )  [6][7][8][9][0]
 
-  - A las 23:00, «Medianoche» adelanta una hora.
-  - A las 00:30, «Medianoche» adelanta hasta la noche siguiente.
-  - A las 12:00 en punto, «Mediodía» adelanta un día entero.
+   Que sea un hijo de verdad de la lista de macros —y no algo flotando encima
+   con coordenadas calculadas— es lo que hace todo lo demás gratis: el flexbox
+   de Foundry lo alinea, le da exactamente el tamaño de una casilla (lee la
+   medida de Foundry, así que si Foundry dibuja casillas más pequeñas el orbe
+   se encoge con ellas), y lo lleva consigo cuando plegás la barra lateral o
+   cambia el tamaño de la ventana. Ese era el trabajo que el widget de
+   Dolmenwood tenía que hacer a mano con tres manejadores de eventos.
 
-Ese último caso es deliberado: son botones de adelantar, y un botón que no hace
-nada al pulsarlo parece roto.
+   EL ORBE NO ES UNA CASILLA DE MACRO. No tiene el atributo por el que Foundry
+   decide dónde ha caído un macro arrastrado, así que no se puede soltar nada
+   encima. Y no te quita una casilla: las diez siguen ahí, la barra es un poco
+   más ancha.
 
+   Pulsando el orbe se abre el calendario, igual que pulsando la fecha.
 
-EL CALENDARIO
--------------
+3. LOS BOTONES SON UN PANEL QUE APARECE AL PASAR EL RATÓN.
 
-Pulsa la fecha en la barra y se abre la vista de mes.
+   Ya no están siempre puestos. La barra en reposo es una línea:
 
-  - Rejilla de lunes a domingo. El día de hoy lleva un borde de color; el día
-    que has seleccionado va relleno. Un punto debajo del número significa que
-    ese día tiene notas.
-  - Las flechas cambian de mes; «Hoy» vuelve al día del mundo.
-  - Debajo, las notas del día elegido. Escribes una y pulsas «Añadir». Si marcas
-    «Solo para el Guardián», los jugadores no la verán.
-  - Solo tú escribes notas; todos las leen. Eso fue lo que elegiste, y es lo que
-    ha permitido quitar de en medio el relé por socket que haría falta para que
-    escribiera un jugador.
+            24 de Diciembre de 1503 │ Invierno │ ☾ │ 14:30
 
-    Aviso honesto sobre las notas secretas: se guardan en el mismo ajuste de
-    mundo que las demás, así que el navegador de un jugador TIENE el texto y
-    simplemente no lo dibuja. Es orden, no secreto a prueba de curiosos. Lo que
-    no quieras que se pueda leer nunca, no lo escribas ahí.
+   Al pasar el ratón por la barra O por el orbe, el panel aparece encima:
 
+        ┌──────────────────────────────────────────────────┐
+        │ [10 min] [Mañana] [Mediodía] [Tarde] [Medianoche]│
+        └──────────────────────────────────────────────────┘
+            24 de Diciembre de 1503 │ Invierno │ ☾ │ 14:30
 
-LA FECHA DEL MUNDO
-------------------
+   Son cinco botones que el Guardián pulsa unas cuantas veces por sesión;
+   puestos ahí de forma permanente son cinco botones de ruido encima de la
+   barra de macros el resto del tiempo. Los jugadores no los tienen en ningún
+   caso.
 
-En el pie del calendario, un campo donde escribes la fecha tal y como pediste:
-
-     24 de Diciembre de 1503
-
-También acepta 24/12/1503 y 24-12-1503, y da igual si escribes «diciembre» en
-minúscula o con acento. Si escribes algo que no es una fecha —o el 31 de
-febrero— te lo dice y no toca nada.
-
-DETALLE IMPORTANTE: establecer la fecha NO mueve el reloj del mundo. Cambia
-únicamente qué fecha corresponde a la hora que ya marca. Lo hice así a
-propósito: `game.time.worldTime` es de donde cuenta todo lo demás que sepa de
-tiempo en un mundo de Foundry, y «mi campaña empieza en 1503» no debería
-desplazarlo medio milenio. La hora del día se queda donde estaba.
-
-Un mundo recién creado empieza el 1 de enero de 1500 a medianoche.
+   El orbe y la barra están en sitios distintos del documento, así que pasar de
+   uno a otro no puede resolverse solo con CSS. Hay un margen de 220
+   milisegundos al salir, para que el panel no se cierre en el hueco que hay
+   entre el orbe y los botones.
 
 
-LAS DOS TABLAS
---------------
+LO QUE NO HA CAMBIADO
+---------------------
 
-Configuración → Mondolme → Configurar el calendario. Tres filas:
+Todo lo demás del calendario sigue igual, así que lo de la vez pasada sigue
+valiendo. Un recordatorio de las tres cosas que más importan:
 
-  - Mostrar la barra de calendario.
-  - Tabla al adelantar 10 minutos — el chequeo de encuentro de mazmorra.
-  - Tabla al adelantar a Mañana / Mediodía / Tarde / Medianoche — el de viaje.
+  - SIEMPRE HACIA ADELANTE. Cada botón salta a la PRÓXIMA vez que el reloj
+    marque esa hora. A las 23:00, «Medianoche» adelanta una hora; a las 00:30,
+    adelanta hasta la noche siguiente; a las 12:00 en punto, «Mediodía»
+    adelanta un día entero. Deliberado: un botón de adelantar que no hace nada
+    parece roto.
 
-Escribes el NOMBRE de la tabla, no la arrastras: el sistema la busca primero
-entre tus tablas del mundo y después en los compendios, que es la misma regla
-por la que los generadores encuentran las suyas. Déjalo vacío y no se tira nada
-— no tener tabla es una decisión, no un error, así que no te avisa de nada.
+  - ESTABLECER LA FECHA NO MUEVE EL RELOJ. Cambia qué fecha corresponde a la
+    hora que ya marca el mundo. La hora del día se queda donde estaba.
 
-El resultado se SUSURRA solo a los Guardianes, como elegiste. Un chequeo de
-encuentro que la mesa ve no es un chequeo.
+  - LAS NOTAS SECRETAS son orden, no secreto: se guardan en el mismo ajuste de
+    mundo que las demás, así que el navegador del jugador tiene el texto y
+    simplemente no lo dibuja.
 
-
-EL CALENDARIO ES GREGORIANO
----------------------------
-
-Doce meses, años bisiestos incluidos (1503 no lo es; 1504 sí). Semana de lunes a
-domingo. Estaciones por las fechas astronómicas: primavera el 21 de marzo,
-verano el 21 de junio, otoño el 23 de septiembre, invierno el 21 de diciembre.
-
-Las lunas se cuentan desde una luna nueva real con el mes sinódico (29,53 días),
-que es la misma aproximación que usa cualquier almanaque.
-
-El amanecer y el ocaso varían con la estación —de unas diez horas de luz en
-diciembre a unas catorce en junio— y sirven para una sola cosa: decidir si el
-orbe muestra el sol o la luna.
-
-CAMBIAR LOS NOMBRES MÁS ADELANTE, como querías, no toca código: los meses, los
-días de la semana, las estaciones y las fases están todos en lang/es.json bajo
-"CAIRN.Cal.Months", "CAIRN.Cal.Weekdays", "CAIRN.Cal.Seasons" y
-"CAIRN.Cal.Moons". Reescribes ahí «Diciembre» como «Yelmo» y el mes se llama
-Yelmo en toda la partida. Lo que no cambia editando el idioma es cuántos meses
-hay ni cuántos días tiene cada uno; eso sí sería código, y lo hacemos cuando lo
-tengas decidido.
+Y las dos tablas siguen en Configuración → Mondolme → Configurar el calendario,
+buscadas por nombre, con el resultado susurrado solo a los Guardianes.
 
 
 COMPROBACIONES HECHAS
 ---------------------
 
-- Los 28 archivos de código del sistema pasan la comprobación de sintaxis.
-- Las dos comprobaciones que ejecuta GitHub al publicar: ambas pasan.
-- Ningún import apunta a algo que no exista.
-- LA ARITMÉTICA, probada aquí con 24 casos: la ida y vuelta entre fecha y número
-  de día (incluido el 24/12/1503), los bisiestos de 1600, 1700 y 2024, febrero de
-  29 días, el 366 de un año bisiesto, los cuatro límites de estación, las cuatro
-  reglas de «siempre hacia adelante», y dos fechas lunares reales — el 6 de enero
-  de 2000 sale luna nueva y el 21 de enero de 2000 sale llena.
-- EL LECTOR DE FECHAS, probado con nueve entradas: las tres formas que acepta,
-  mayúsculas y minúsculas, y los cuatro rechazos (31 de febrero, un mes que no
-  existe, texto suelto, vacío).
-- LA BARRA Y LA VISTA DE MES, renderizadas aquí con Foundry simulado, como
-  Guardián y como jugador: las etiquetas HTML cuadran, no queda ninguna clave de
-  idioma sin traducir, diciembre de 1503 sale con su hueco inicial y sus 31
-  casillas, el punto aparece en los dos días con notas, y en la vista del jugador
-  no hay ni botones, ni caja de escribir, ni campo de fecha, ni la nota secreta.
-- El texto de una nota se escapa: escribí una con «<ellos>» dentro y sale como
-  texto, no como etiqueta.
-- Las claves de ajustes cuadran: las cinco nuevas están declaradas y registradas,
-  las tres visibles en el grupo «Calendario» y las dos internas fuera de él.
-- El CSS cierra sus 507 llaves.
+Esta vez no me he fiado del papel. Monté una barra de macros falsa —diez
+casillas, controles de página a un lado, fondo oscuro— y cargué el calendario
+de verdad dentro de un navegador sin pantalla, para MEDIR en vez de suponer:
 
+  - El orbe entra en la posición 6 de la lista, entre la casilla 5 y la 6.
+  - Sale cuadrado, 52 × 52, exactamente el tamaño de una casilla de macro.
+  - Los tres centros coinciden en el mismo píxel: el de la lista de macros, el
+    del orbe y el de la barra de texto. Es lo que hace que se lea como una
+    pieza y no como dos cosas apiladas.
+  - El panel de botones está oculto en reposo (no solo transparente: también
+    invisible al ratón, que si no se tragaría los clics) y aparece tanto al
+    pasar por la barra como al pasar por el orbe. Sale centrado sobre ella.
+  - Colores reales medidos: fondo casi negro al 86 %, texto #f0f0e0, borde gris
+    de la interfaz. Es decir, la paleta de la barra de macros, no la del
+    pergamino.
+  - Cuando Foundry repinta el hotbar y borra a sus hijos, el orbe vuelve a
+    entrar en su sitio, y llamando dos veces seguidas NO aparecen dos orbes.
+  - Al apagar el ajuste desaparecen las dos piezas, sin dejar el orbe huérfano
+    dentro de la barra de macros.
+  - En un Foundry sin lista de macros que reconozca, la barra se pone el orbe
+    ella misma y no se rompe nada. Ninguna de estas pruebas soltó un error.
 
-DOS COSAS QUE ARREGLÉ ANTES DE ENSEÑÁRTELO
-------------------------------------------
-
-- La luna salía AL REVÉS. El círculo de sombra se desplazaba con el complemento
-  de la iluminación, así que la luna llena se pintaba entera negra y la nueva
-  entera blanca. Se ve en cuanto se dibujan las ocho fases seguidas, que es lo
-  que hice.
-- La comprobación de «ya hay un calendario abierto» miraba `ui.windows`, que es
-  el registro de las ventanas viejas de Foundry: un diálogo moderno no aparece
-  ahí, así que cada clic habría abierto otro calendario encima del anterior.
-
-
-LO QUE NO LLEVA, Y POR QUÉ
---------------------------
-
-- NO hay contador de turnos de mazmorra. El botón de 10 minutos adelanta el
-  reloj y tira la tabla, que es la mitad útil; la tira de ocho casillas con las
-  antorchas quemándose es la otra fase.
-- NO hay clima. Son tablas de ambientación y decisiones tuyas.
-- NO se puede pulsar la hora para fijarla a mano. Los cinco botones cubren lo
-  que pediste; si echas de menos «poner las 3 de la madrugada», dímelo.
+Además, lo de siempre: los 28 archivos de código pasan la comprobación de
+sintaxis, ningún import apunta a algo que no exista, el CSS cierra sus 515
+llaves, no hay ninguna clave de idioma del calendario huérfana ni sin traducir,
+y es.json y system.json son JSON válido.
 
 
 QUÉ MIRAR PRIMERO
 -----------------
 
-  1. Abre el mundo. La barra debe estar sobre los macros con la fecha del 1 de
-     enero de 1500.
-  2. Pulsa la fecha, escribe «24 de Diciembre de 1503» abajo y dale a Establecer.
-     La barra debe decir esa fecha y «Invierno», y la hora no debe moverse.
-  3. Pulsa «10 min» seis veces y mira el orbe girar.
-  4. Pulsa «Medianoche»: debe saltar al día siguiente a las 00:00.
-  5. Escribe una nota en un día y mira que le sale el punto en la rejilla.
-  6. Crea una tabla cualquiera, ponle el nombre en el ajuste de la tabla de
-     mazmorra, y pulsa «10 min»: debe llegarte el resultado susurrado.
+  1. Abre el mundo. El orbe debe estar EN la fila de macros, en el medio, y la
+     fecha en una línea oscura justo encima, centrada sobre él.
+  2. Pasa el ratón por encima: deben salir los cinco botones.
+  3. Pliega la barra lateral. Las tres cosas deben moverse juntas y seguir
+     alineadas.
+  4. Arrastra un macro a la casilla 6: debe caer en la casilla, no en el orbe.
