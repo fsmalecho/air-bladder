@@ -193,15 +193,15 @@ const chips = (item) => {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 /** One shop row. `metaHtml` is the slot column. */
-const rowHtml = ({ idx, cost, currency, name, tagsHtml, metaHtml, descHtml }) =>
-  `<div class="mkt-row" data-idx="${idx}" data-copper="${priceInCopper(cost, currency)}" data-name="${esc(String(name).toLowerCase())}">
+const rowHtml = ({ idx, cost, name, tagsHtml, metaHtml, descHtml }) =>
+  `<div class="mkt-row" data-idx="${idx}" data-copper="${priceInCopper(cost)}" data-name="${esc(String(name).toLowerCase())}">
     <div class="mkt-line">
       <div class="mkt-row-main" title="${game.i18n.localize("CAIRN.Description")}">
         <span class="mkt-name">${esc(name)}</span>
         <span class="mkt-tags">${tagsHtml}</span>
       </div>
       ${metaHtml}
-      <span class="mkt-cost mkt-cost-${esc(currency)}"><i class="fas fa-coins"></i> ${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}</span>
+      <span class="mkt-cost"><i class="fas fa-coins"></i> ${cost} ${game.i18n.localize("CAIRN.CoinShort.silver")}</span>
       <span class="mkt-actions">
         <button type="button" class="mkt-buy" data-idx="${idx}">${game.i18n.localize("CAIRN.Buy")}</button>
         <button type="button" class="mkt-take" data-idx="${idx}" title="${game.i18n.localize("CAIRN.TakeHint")}">${game.i18n.localize("CAIRN.Take")}</button>
@@ -223,10 +223,9 @@ const acquire = async (actor, data, pay) => {
     return false;
   }
   const cost = data.system.cost ?? 0;
-  const currency = data.system.costCurrency ?? "silver";
-  const price = priceInCopper(cost, currency);
+  const price = priceInCopper(cost);
   const shown = data.name;
-  const priceText = `${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}`;
+  const priceText = `${cost} ${game.i18n.localize("CAIRN.CoinShort.silver")}`;
   if (pay && !canAfford(actor.system.coins, price)) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughCoin", { name: shown, cost: priceText }));
     return false;
@@ -303,10 +302,9 @@ export const acquireTransport = async (actor, doc, pay) => {
     return false;
   }
   const cost = doc.system.cost ?? 0;
-  const currency = doc.system.costCurrency ?? "silver";
-  const price = priceInCopper(cost, currency);
+  const price = priceInCopper(cost);
   const shown = doc.name;
-  const priceText = `${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}`;
+  const priceText = `${cost} ${game.i18n.localize("CAIRN.CoinShort.silver")}`;
   if (pay && !canAfford(actor.system.coins, price)) {
     ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughCoin", { name: shown, cost: priceText }));
     return false;
@@ -463,13 +461,13 @@ export const openMarketplace = async (actor, opts = {}) => {
         const idx = built.push(data) - 1;
         const cap = data.system.slots ?? 0;
         const metaHtml = `<span class="mkt-slots mkt-capacity" title="${game.i18n.localize("CAIRN.TransportCapacity")}">+${esc(formatCount("CAIRN.NSlot", cap))}</span>`;
-        return rowHtml({ idx, cost: data.system.cost ?? 0, currency: data.system.costCurrency ?? "silver", name: d.name, tagsHtml: "", metaHtml, descHtml: descHtmlOf(d.system.description) });
+        return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: "", metaHtml, descHtml: descHtmlOf(d.system.description) });
       }
       const idx = built.push(data) - 1;
       const slots = slotCost(data.system);
       const tags = chips(data).map((c) => `<span class="mkt-chip">${esc(c)}</span>`).join("");
       const metaHtml = `<span class="mkt-slots">${esc(formatCount("CAIRN.NSlot", slots))}</span>`;
-      return rowHtml({ idx, cost: data.system.cost ?? 0, currency: data.system.costCurrency ?? "silver", name: d.name, tagsHtml: tags, metaHtml, descHtml: descHtmlOf(d.system.description) });
+      return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: tags, metaHtml, descHtml: descHtmlOf(d.system.description) });
     }).join("");
     return `<div class="mkt-cat"><div class="mkt-cat-name">${esc(cat.label ?? cat.name)}</div>${rows}</div>`;
   }).join("");

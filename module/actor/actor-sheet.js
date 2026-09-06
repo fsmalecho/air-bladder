@@ -37,10 +37,11 @@ const NPC_TRAIT_LABELS = {
   vice: "CAIRN.Trait.Vice",
 };
 
-import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
+/* El import de connections.js se ha ido con la interfaz de custodia
+   (2026-09-06). El módulo sigue existiendo y sigue haciendo su trabajo — el
+   grafo, el tope, los permisos — pero esta ficha ya no le pregunta nada. */
 import { bondsFor, canEditBonds, deleteBond, isBondable } from "../bonds.js";
 import { openBondEditor } from "../bond-editor.js";
-import { coinCount, consolidate, formatPurse } from "../money.js";
 import { FATIGUE_NAME, bookPages } from "../item/item.js";
 import { castFromBook, castSpell, castScroll, memorizeFromBook, booksOn, canReadItem } from "../magic.js";
 import { pickArt } from "../art-picker.js";
@@ -82,16 +83,6 @@ const relationshipLabel = (role, name) =>
 /** The Vínculos list's groups, in render order. A group with no members does
  *  not render (see `connectionGroups`), so the fourth is invisible in a party
  *  of people and holds the mounts, carts and loot piles otherwise. */
-const RELATIONSHIP_GROUPS = [
-  { key: "npc", heading: "CAIRN.RelationshipGroup.Contacts" },
-  { key: "companion", heading: "CAIRN.RelationshipGroup.Companions" },
-  { key: "hireling", heading: "CAIRN.RelationshipGroup.Hired" },
-  { key: "other", heading: "CAIRN.RelationshipGroup.Other" },
-];
-
-/** Which group a connected actor's role falls into. Everything without a
- *  relationship sentence of its own lands in `other`. */
-const relationshipGroupFor = (role) => (RELATIONSHIP_KEYS[role] ? role : "other");
 
 /** Tab labels by id. The nav itself is hand-written in each template, because
  *  the labels carry live data (slot counts, connection counts) — so these are
@@ -479,10 +470,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       removeFatigue: owned(CairnActorSheet.#onRemoveFatigue),
       rollDamage: CairnActorSheet.#onRollDamage,
       // Connections
-      connectionAdd: owned(CairnActorSheet.#onConnectionAdd),
-      connectionAttach: owned(CairnActorSheet.#onConnectionAttach),
-      connectionDetach: owned(CairnActorSheet.#onConnectionDetach),
-      containerUnlink: owned(CairnActorSheet.#onContainerUnlink),
+      /* Las cuatro acciones de CONEXIONES estaban aquí y se han ido
+         (2026-09-06, decisión del usuario: «solo habrá vínculos, no
+         conexiones»). connectionAdd, connectionAttach, connectionDetach y
+         containerUnlink eran los verbos de la interfaz de custodia, que llevaba
+         aparcada desde agosto y ya no tiene ninguna superficie que los invoque.
+         EL GRAFO SIGUE: `connectedTo` gobierna los permisos de Foundry, y de él
+         cuelgan el mercado de transportes y los contenedores que otorgan los
+         trasfondos. Lo que se ha ido es la interfaz, no la fontanería. */
       // The bond web (2026-09-05). NOT owned(): these are Warden-only by their
       // own gate, and `owned()` asks a different question — whether the VIEWER
       // owns this sheet — which a Warden editing a player's bonds would fail
@@ -492,9 +487,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       bondEdit: CairnActorSheet.#onBondEdit,
       bondDelete: CairnActorSheet.#onBondDelete,
       bondOpen: CairnActorSheet.#onBondOpen,
-      // The purse. `owned()`: spending and re-minting a character's coins is a
-      // write to their sheet, so it asks the same question every other write does.
-      purseConsolidate: owned(CairnActorSheet.#onPurseConsolidate),
       // Header counters + buttons
       rollAbility: CairnActorSheet.#onRollAbility,
       toggleCritical: owned(CairnActorSheet.#onToggleCritical),
@@ -588,9 +580,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         template: `systems/mondolme/templates/actor/${t}-sheet.html`,
         templates: [
           "systems/mondolme/templates/parts/items-list.html",
-          "systems/mondolme/templates/parts/container-list.html",
           "systems/mondolme/templates/parts/bond-list.html",
-          "systems/mondolme/templates/parts/purse.html",
+          "systems/mondolme/templates/parts/coins-counter.html",
           "systems/mondolme/templates/parts/bio-block.html",
         ],
       },
@@ -989,189 +980,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // happens to touch the owner. Rebuilding it here costs one pass over
     // game.actors per render and cannot be stale by construction.
     context.system.containerObjects = this.actor.connectedActors();
-    // The Connections rows, decorated with what THIS user may do to each —
-    // unlink needs both ends (the sheet actor and the row's), so it is a
-    // per-row fact no single context flag can carry. The template iterates
-    // these; containerObjects above stays because other derived surfaces
-    // (slot math, worn rows) still read it.
-    context.connectionRows = context.system.containerObjects.map((c) => ({
-      uuid: c.uuid,
-      name: c.name,
-      // COMPUTED HERE, not read off the prepared copy (2026-09-02, user report:
-      // "no se corresponden con el inventario real de los pnjs. Algunos
-      // directamente aparecen como 0/0"). Two separate faults wore one symptom:
-      //
-      //   - the DENOMINATOR was `system.slots`, which is the AUTHORED OVERRIDE
-      //     and reads 0 whenever the Warden did not set one. Every connected
-      //     actor on the default capacity therefore showed "…/0". The
-      //     denominator a reader means is the effective maximum, which is what
-      //     `calcCurrentMaxSlots` answers and what the actor's own sheet shows.
-      //   - the NUMERATOR came from `c.system.slotsUsed`, a value derived in the
-      //     OTHER actor's prepareDerivedData. This list is rebuilt on the
-      //     keeper's render precisely because nothing re-prepares the keeper
-      //     when a child changes — and the same reasoning applies one level
-      //     down: a child whose items changed while this sheet was open could
-      //     hand over a stale count. Calling the method costs one pass over
-      //     that actor's items and cannot be stale by construction.
-      //
-      // Both are the actor's own methods, so a connection row and the sheet it
-      // points at can no longer disagree.
-      slotsUsed: c.calcSlotsUsed(),
-      slotsMax: c.calcCurrentMaxSlots(),
-      canUnlink: game.user.isGM || (this.actor.isOwner && c.isOwner),
-      // What this actor IS to the character keeping it, from the CHILD's role
-      // — the same sentence the child's own sheet header prints, through the
-      // same helper, so the two surfaces cannot drift (they were one ruling).
-      role: c.npcRole,
-      relationship: relationshipLabel(c.npcRole, this.actor.name),
-    }));
-    // ...grouped by relationship, with a heading apiece (2026-09-02, user
-    // ruling): a flat list of ten said nothing about which of them travel with
-    // you and which of them merely owe you a favour. An EMPTY group does not
-    // render, and the group a role falls into is `relationshipGroupFor` — the
-    // three named ones plus a catch-all for a monster, a transport or a
-    // container, whose rows carry no relationship line at all.
     // THE BOND WEB (2026-09-05). Read whole on every render rather than
     // cached: it is a handful of rows out of one world setting, and a cache
     // would need invalidating from four places that write it.
     context.bondRows = bondsFor(this.actor);
     context.canEditBonds = canEditBonds();
-    context.connectionGroups = RELATIONSHIP_GROUPS
-      .map((g) => ({
-        key: g.key,
-        heading: game.i18n.localize(g.heading),
-        rows: context.connectionRows.filter((r) => relationshipGroupFor(r.role) === g.key),
-      }))
-      .filter((g) => g.rows.length);
-    // ...and the keeper line's break link, same rule from the child's end. A
-    // DANGLING keeper (uuid resolving to nothing) has no other end left to
-    // own, so the child's owner suffices — that detach is the only recovery
-    // the child has.
-    const keeperLink = this.actor.system.connectedTo || "";
-    const keeperDoc = keeperLink ? game.actors.find((a) => a.uuid === keeperLink) : null;
-    context.canDetach = game.user.isGM
-      || (this.actor.isOwner && (keeperDoc ? keeperDoc.isOwner : true));
-    // Role-driven pick-lists for the NPC sheet header. The Kind list is the
-    // CONTAINER_CLASSES table filtered to the current role, so a class added
-    // there appears here with nothing else to keep in step; the input itself
-    // stays free text — a Warden's own word is a legal Kind.
-    if (["npc", "hireling"].includes(this.actor.type)) {
-      const role = this.actor.npcRole;
-      context.roleChoices = Object.fromEntries(NPC_ROLES.map((r) => [
-        r, game.i18n.localize(`CAIRN.Role${r.charAt(0).toUpperCase()}${r.slice(1)}`),
-      ]));
-      // The job field is ONE row wearing two names (2026-08-20): a hireling has
-      // a Career off the 2e careers catalogue, an NPC a Background off the
-      // Warden's Guide table. Mutually exclusive on purpose — the template
-      // renders one row and one die, so the two can never be shown together and
-      // never drift into looking like different controls.
-      context.showCareer = role === "hireling";
-      context.showBackground = role === "npc";
-      // FOR HIRE IS EVERY PERSON'S BOX (2026-09-02, user ruling, reversing the
-      // 2026-08-20 "NPCs do not need the For Hire or Day Rate fields"): an
-      // innkeeper who will guide the party for 3gp a day is an NPC with a
-      // price, and the day rate follows the CHECKBOX rather than the role.
-      // A monster, a companion, a cart or a crate gets neither control —
-      // `forHire`'s schema initial is TRUE, so every one of them silently
-      // stores a ticked box, and the role gate is what keeps that unread.
-      //
-      // Derived on the document (actor.js `showForHire`/`showDayRate`), where
-      // the day rate's gate already lived, so the box and the rate cannot
-      // disagree about who is a person. Mirrored onto the context because the
-      // template's own `showForHire` predates the derivation.
-      //
-      // Separate from showCareer: the career row is a FIELD, this is a
-      // mechanic, and the template must be able to move one without the other.
-      // The stored boolean is never cleared — a re-roled actor gets its old
-      // answer back, like every other field the roles do not share.
-      context.showForHire = this.actor.system.showForHire === true;
-      // Faction shows for anyone who can take sides — either person OR a
-      // monster; things have no politics. It used to ride the Career gate,
-      // which is why Monsters never saw it: a job is a person's, and a monster
-      // has a side without one.
-      context.showFaction = GENERATING_ROLES.includes(role);
-      context.showKind = ["companion", "transport", "container"].includes(role);
-      // The Type select's rows: the CONTAINER_CLASSES table filtered to the
-      // current role, so a class added there appears here with nothing else to
-      // keep in step. STRICT since 2026-08-02 — the free-text input lives
-      // behind the select's "Other…" row, disabled otherwise so submitOnChange
-      // never carries a stale word (a disabled control is excluded from
-      // FormData). A stored word the table does not know (a legacy custom
-      // Kind, or one just typed) selects Other and prefills the input.
-      const cls = this.actor.system.containerClass;
-      context.kindOptions = Object.entries(CONTAINER_CLASSES)
-        .filter(([, v]) => v.role === role)
-        .map(([key, v]) => ({ key, label: game.i18n.localize(v.label), selected: key === cls }));
-      context.kindIsCustom = !!cls && !CONTAINER_CLASSES[cls];
-      context.kindCustomValue = context.kindIsCustom ? cls : "";
-      context.professionDisplay = this.actor.system.profession;
-      context.backgroundDisplay = this.actor.system.background;
-      // `notesTabLabel` lived here and is RETIRED (2026-09-02): each sheet
-      // reads ONE static key straight from its own nav — CAIRN.LinksAndNotes on
-      // the character, CAIRN.Notes here — and `tabLabel` says the same thing to
-      // `_getTabsConfig`. The DYNAMIC, data-driven rename it carried stays dead:
-      // two actors of one type must not disagree on what their tabs are called.
-      // The connection line under the header (2026-08-02): the child end's ONE
-      // upward edge, expressed as a field rather than a tab — any child role
-      // has at most one keeper, so the Connections tab this sheet used to carry
-      // could only ever count (0) or (1). Built HERE, at render time, because
-      // the label names the KEEPER and nothing re-prepares this document when
-      // the keeper is renamed — the prepareDerivedData copy it replaces went
-      // stale until something else touched this actor.
-      //
-      // Label sense is RULED BY THE ROLE since 2026-09-02: the line says what
-      // this actor IS to its keeper — "Contacto de X", "Compañero de X",
-      // "Contratado por X" — through `relationshipLabel`, THE SAME helper the
-      // keeper's own Vínculos list prints beside this actor's name. That was
-      // the ask: one sentence, two surfaces, kept in step by having one
-      // builder. A monster, a transport or a container has no such word, so
-      // those keep the plain "Conectado a: X" this line has always shown.
-      //
-      // It replaces a `forHire`-driven "Hired by": a hireling is now hired by
-      // its ROLE, and reading the checkbox here made the label flicker every
-      // time a Warden took somebody off the market.
-      //
-      // Parked (2026-08-09): with the Connections UI off, the line never gains
-      // a label or a control — but it still RENDERS for a person, because
-      // showConnectionLine's showForHire arm below is what keeps the For Hire
-      // checkbox on screen, and For Hire is the day-rate mechanic, not
-      // connections. The builder is skipped, not the line.
-      if (!connectionsUiEnabled()) {
-        // no connectionLine
-      } else if (keeperDoc) {
-        context.connectionLine = {
-          label: relationshipLabel(role, keeperDoc.name)
-            ?? game.i18n.format("CAIRN.ConnectedToNamed", { name: keeperDoc.name }),
-          detach: context.canDetach,
-        };
-      } else if (keeperLink) {
-        // A DANGLING link (keeper deleted, uuid resolving to nothing): the
-        // child-end detach is the only recovery it has — single-parent-ever
-        // refuses to reconnect over it — so the line must surface the break
-        // control rather than render nothing.
-        context.connectionLine = {
-          label: game.i18n.localize("CAIRN.ConnectedToMissing"),
-          detach: context.canDetach,
-        };
-      } else if (this.actor.system.formerlyBelongedTo) {
-        context.connectionLine = {
-          label: game.i18n.format("CAIRN.FormerlyBelongedTo",
-            { name: this.actor.system.formerlyBelongedTo }),
-          attach: this.actor.canBeConnected && context.canManageConnections,
-        };
-      } else if (this.actor.canBeConnected) {
-        context.connectionLine = { attach: context.canManageConnections };
-      }
-      // The line renders whenever it has something to say — and ALWAYS for a
-      // PERSON, whose For Hire checkbox lives on it and must stay visible while
-      // unticked (the deadlock lesson: never hidden by anything it hides). It
-      // follows the checkbox, which is back to both person roles as of
-      // 2026-09-02; a monster or a thing with the Connections UI parked has
-      // nothing at all to put in the line, so it is not drawn.
-      context.showConnectionLine = context.showForHire
-        || !!(context.connectionLine
-          && (context.connectionLine.label || context.connectionLine.attach));
-    }
     let items = this.actor.items.map((i) => ({
       _id: i.id,
       name: i.name,
@@ -3024,34 +2837,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     else this.actor.deleteOwnedItem(row.dataset.itemId);
   }
 
-  /**
-   * Unlink a connected actor: it survives, connected to nobody, which under the
-   * container rule IS a loot pile. Sits beside the trash rather than replacing
-   * it, because "destroy this cart" and "drop this cart here" are different
-   * intentions and the tab used to offer only one icon for both — one that
-   * asked "Delete X?" and then unlinked.
-   * @this {CairnActorSheet}
-   */
-  static #onContainerUnlink(event, target) {
-    event.preventDefault();
-    // Parked UI (2026-08-09): the control is hidden, the refusal is the wall —
-    // a sheet rendered before the park must not be a way in.
-    if (!connectionsUiEnabled()) return;
-    const row = CairnActorSheet.#row(target);
-    if (!row?.dataset.isContainer) return;
-    // Both ends, per row — unlinkOwnedContainer re-checks; this just refuses
-    // politely if a hidden control got reached anyway.
-    const child = game.actors.find((a) => a.uuid === row.dataset.itemId);
-    if (!game.user.isGM && !(this.actor.isOwner && child?.isOwner)) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ConnectionOwnBothEnds"));
-      return;
-    }
-    // Not slid up: unlinking leaves the actor in the world, and the row simply
-    // stops matching on the next render. Animating it away would suggest the
-    // thing itself had gone.
-    this.actor.unlinkOwnedContainer(row.dataset.itemId).then(() => this.render(false));
-  }
-
   /** @this {CairnActorSheet} */
   static async #onItemToggleEquipped(event, target) {
     event.preventDefault();
@@ -3321,29 +3106,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * other; everything is re-checked in `setBond`, so the gate here only spares
    * a Warden-less user a dialog they could not have committed.
    */
-  /**
-   * Trade the purse in for the fewest coins that hold the same money.
-   *
-   * Its own action rather than something that happens automatically, because
-   * under these rates it has a MECHANICAL consequence: weight counts coins, so
-   * turning a thousand copper into one gold frees nine hundred and ninety-nine
-   * coins of carrying capacity. That is a thing a character does at a bank, and
-   * it should take a decision.
-   */
-  static async #onPurseConsolidate(event) {
-    event.preventDefault();
-    const before = this.actor.system.coins;
-    const after = consolidate(before);
-    if (coinCount(before) === coinCount(after)) {
-      ui.notifications?.info(game.i18n.localize("CAIRN.Notify.CoinsAlreadyTidy"));
-      return;
-    }
-    await this.actor.update({ "system.coins": after });
-    ui.notifications?.info(game.i18n.format("CAIRN.Notify.CoinsConsolidated", {
-      before: coinCount(before), after: coinCount(after),
-    }));
-  }
-
   static async #onBondAdd(event) {
     event.preventDefault();
     if (!canEditBonds()) return;
@@ -3374,226 +3136,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await deleteBond(id);
     this.render();
   }
-
-  /** Open the other end's sheet. A read: its own permissions decide. */
-  static #onBondOpen(event, target) {
-    event.preventDefault();
-    const other = fromUuidSync(target.closest("[data-bond-uuid]")?.dataset.bondUuid ?? "");
-    other?.sheet?.render(true);
-  }
-
-  static async #onConnectionAdd(event) {
-    event.preventDefault();
-    // Parked UI (2026-08-09): hidden control, handler wall (stale sheets).
-    if (!connectionsUiEnabled()) return;
-    // connectActor re-checks; refusing before the dialog just spares a
-    // gesture from users who found the action some way the template gating
-    // does not cover. This is the keeper-side HALF of the both-ends wall —
-    // the candidate filter's canUserModify below is the per-target half, so
-    // a player is only ever offered children the whole wall would accept.
-    if (!game.user.isGM && !this.actor.isOwner) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ConnectionOwnBothEnds"));
-      return;
-    }
-    if (!this.actor.canKeepConnected) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.NoNesting", { name: this.actor.name ?? "" }));
-      return;
-    }
-    // Refuse at the ceiling BEFORE the picker, not after a choice: the dialog's
-    // whole contract is that everything it offers can actually be connected.
-    if (atConnectionLimit(this.actor)) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.ConnectionLimit", {
-        name: this.actor.name ?? "",
-        max: maxConnections(),
-      }));
-      return;
-    }
-    const candidates = game.actors
-      .filter((a) => a.uuid !== this.actor.uuid
-        // `canBeConnected` is false for every character now (a PC is never
-        // kept), so the Round 2 pair-rule clause that used to sit here — offer
-        // characters only to another character — has nothing left to exclude.
-        && a.canBeConnected
-        && !a.system?.connectedTo
-        && !this.actor.wouldCreateConnectionCycle(a)
-        && a.canUserModify(game.user, "update"))
-      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
-    if (!candidates.length) {
-      ui.notifications.info(game.i18n.localize("CAIRN.Notify.NoConnectables"));
-      return;
-    }
-    const options = candidates
-      .map((a) => `<option value="${a.uuid}">${foundry.utils.escapeHTML(a.name)}</option>`)
-      .join("");
-    const content = `<div class="form-group">
-        <label>${game.i18n.localize("CAIRN.ConnectionPick")}</label>
-        <select name="connectionTarget">${options}</select>
-      </div>`;
-    await foundry.applications.api.DialogV2.prompt({
-      // ONE verb (2026-08-01): both ends' dialogs read CAIRN.Connect. The
-      // handlers stay separate — this one picks a child for a keeper, the
-      // attach one picks a keeper for a child — but the word is the word.
-      window: { title: game.i18n.localize("CAIRN.Connect") },
-      content,
-      ok: {
-        icon: "fas fa-link",
-        label: game.i18n.localize("CAIRN.Connect"),
-        callback: async (dialogEvent, button) => {
-          const uuid = button.form.connectionTarget?.value;
-          const target = game.actors.find((a) => a.uuid === uuid);
-          if (target) await this.actor.connectActor(target);
-        },
-      },
-      rejectClose: false,
-    });
-  }
-
-  /**
-   * The same edge from the CHILD end: pick a keeper for THIS actor (Round 2).
-   * Renders on any connectable, unconnected actor's tab — a sack, a mount, a
-   * player character joining another's roster. The write is identical to Add
-   * Connection's (`keeper.connectActor(child)`); only the sheet it starts
-   * from differs, so every guard is connectActor's.
-   * @this {CairnActorSheet}
-   */
-  static async #onConnectionAttach(event) {
-    event.preventDefault();
-    // Parked UI (2026-08-09): hidden control, handler wall (stale sheets).
-    if (!connectionsUiEnabled()) return;
-    const child = this.actor;
-    // The child-side half of the both-ends wall; the keeper filter below adds
-    // the other half, so a player is only offered keepers they own.
-    if (!game.user.isGM && !child.isOwner) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ConnectionOwnBothEnds"));
-      return;
-    }
-    if (child.system.connectedTo) return;             // one upward link, ever
-    // Refuse from the child's own end. This replaces the Round 2 pair-rule
-    // clause in the filter below (which offered a character none but other
-    // characters): a PC is never kept, so there is no keeper to narrow to —
-    // and unlike a filter that quietly returns an empty list, this says why.
-    // It covers the monster and unlinked-token cases in the same breath.
-    if (!child.canBeConnected) {
-      ui.notifications.warn(game.i18n.format("CAIRN.Notify.CannotConnect", { name: child.name ?? "" }));
-      return;
-    }
-    const keepers = game.actors
-      .filter((k) => k.uuid !== child.uuid
-        && k.canKeepConnected
-        // The per-keeper half of the both-ends wall: a player is offered only
-        // keepers they own; the Warden is offered all of them.
-        && (game.user.isGM || k.isOwner)
-        // A character with no room left is not an eligible keeper. Filtered
-        // rather than refused-on-choice, same contract as Add Connection's.
-        && !atConnectionLimit(k)
-        // Cycle check runs from the PROSPECTIVE KEEPER's side, exactly as
-        // connectActor will: if the chain above k passes through child, the
-        // link would loop.
-        && !k.wouldCreateConnectionCycle(child))
-      // Same name sort + label as Add Connection's picker.
-      .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
-    if (!keepers.length) {
-      ui.notifications.info(game.i18n.localize("CAIRN.Notify.NoKeepers"));
-      return;
-    }
-    const options = keepers
-      .map((k) => `<option value="${k.uuid}">${foundry.utils.escapeHTML(k.name)}</option>`)
-      .join("");
-    const content = `<div class="form-group">
-        <label>${game.i18n.localize("CAIRN.ConnectionPick")}</label>
-        <select name="keeperTarget">${options}</select>
-      </div>`;
-    await foundry.applications.api.DialogV2.prompt({
-      // The same ONE verb as Add Connection's dialog — see the note there.
-      window: { title: game.i18n.localize("CAIRN.Connect") },
-      content,
-      ok: {
-        icon: "fas fa-link",
-        label: game.i18n.localize("CAIRN.Connect"),
-        callback: async (dialogEvent, button) => {
-          const uuid = button.form.keeperTarget?.value;
-          const keeper = game.actors.find((k) => k.uuid === uuid);
-          if (keeper) await keeper.connectActor(child);
-        },
-      },
-      rejectClose: false,
-    });
-  }
-
-  /**
-   * Break the upward edge from the CHILD end (Round 2). Routes through the
-   * keeper's own unlink — same confirm dialog, same formerlyBelongedTo stamp —
-   * so the two ends cannot drift. The fallback
-   * matters: a DANGLING link (keeper deleted, uuid resolving to nothing) has
-   * no keeper to route through, and single-parent-ever refuses to reconnect
-   * over it, so clearing it here is the only recovery the child has.
-   * @this {CairnActorSheet}
-   */
-  static async #onConnectionDetach(event) {
-    event.preventDefault();
-    // Parked UI (2026-08-09): hidden control, handler wall (stale sheets).
-    if (!connectionsUiEnabled()) return;
-    const child = this.actor;
-    const link = child.system.connectedTo || "";
-    if (!link) return;
-    const keeper = game.actors.find((a) => a.uuid === link);
-    if (keeper) {
-      // The both-ends wall lives in unlinkOwnedContainer; this pre-check just
-      // says no before the confirm rather than after it.
-      if (!game.user.isGM && !(child.isOwner && keeper.isOwner)) {
-        ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ConnectionOwnBothEnds"));
-        return;
-      }
-      await keeper.unlinkOwnedContainer(child.uuid);
-      return;
-    }
-    // A DANGLING keeper: the uuid resolves to nothing, so there IS no other
-    // end to own — the child's owner suffices. This detach is the only
-    // recovery a dangling link has (single-parent-ever refuses to reconnect
-    // over it), which is why it must not demand an owner who no longer exists.
-    if (!game.user.isGM && !child.isOwner) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ConnectionOwnBothEnds"));
-      return;
-    }
-    const proceed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: game.i18n.localize("CAIRN.UnlinkContainerTitle") },
-      content: `<div class="cairn-confirm"><p class="cairn-confirm-q">${
-        game.i18n.format("CAIRN.UnlinkContainerQ", {
-          name: foundry.utils.escapeHTML(child.name ?? ""),
-        })}</p></div>`,
-      rejectClose: false,
-      modal: true,
-    });
-    if (!proceed) return;
-    // No formerlyBelongedTo stamp — the keeper's name is exactly the fact the
-    // dangling uuid already failed to preserve. The broken ownership shape
-    // rides along exactly as in unlinkOwnedContainer: GM writes it, a player
-    // sets the sync flag and asks the active GM's client (monsters excluded).
-    const changes = { "system.connectedTo": "" };
-    if (child.npcRole !== "monster") {
-      if (game.user.isGM) {
-        changes.ownership = foundry.data.operators.ForcedReplacement.create(brokenOwnershipShape(child));
-      } else {
-        changes[`flags.mondolme.${OWNERSHIP_SYNC_FLAG}`] = true;
-      }
-    }
-    await child.update(changes);
-    if (!game.user.isGM && child.npcRole !== "monster") {
-      game.socket.emit(`system.${game.system.id}`, { action: "ownershipSync", childUuid: child.uuid });
-    }
-  }
-
-  /* The "Actions — features" section lived here and is gone with the Features
-     UI (2026-08-09): #onFeatureCreate/Edit/Delete/Description, their DialogV2
-     forms and the FEATURE_FLAGS list. Its two lessons live on with their
-     survivors — the DialogV2 element-not-string content dodge is recorded at
-     the role-pick dialog (actor.js, "ELEMENT content, not a string") and in
-     warden-damage.js, and the sink-side cleaning it needed lives on in
-     cleanDescription (utils.js), whose docblock keeps the XSS history. */
-
-  /* -------------------------------------------- */
-  /*  Actions — counters and buttons              */
-  /* -------------------------------------------- */
 
   /**
    * A d20 save against an ability. On a failed STR save, offer to mark Critical
@@ -4275,40 +3817,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * @param {CairnActor} actor  the dropped Actor, already resolved by ActorSheetV2
    */
   async _onDropActor(event, actor) {
-    // A BOND, first (2026-09-05): dropping a person on a person is the drag
-    // spelling of "these two know each other", and it is the only meaning the
-    // gesture has while the custody UI below stays parked. The drop supplies
-    // the WHO; the editor asks what each is to the other, because a bond with
-    // no words on it is a line nobody can read.
-    if (canEditBonds() && isBondable(actor) && isBondable(this.actor)
-        && actor.uuid !== this.actor.uuid) {
-      await openBondEditor(this.actor, actor);
-      this.render();
-      return actor;
-    }
-
-    // Parked UI (2026-08-09): drag-to-connect goes with the rest of the
-    // Connections surfaces. Silent, matching every other invalid drop here.
-    if (!connectionsUiEnabled()) return null;
-    // Only WORLD actors can be attached. AppV1 expressed this by looking the
-    // uuid up in `game.actors`, which a compendium or unlinked-token actor is
-    // never in; ApplicationV2 hands us the resolved document, so say it directly.
-    if (!actor || actor.pack || actor.isToken) return null;
-    if (this.actor.uuid === actor.uuid) return null;
-
-    // An npc-line drop is the drag spelling of Connect: one write, guarded
-    // inside connectActor (both-ends ownership, keeping type, connectable
-    // role, single-parent, the cap, cycle, permission). "character" left this
-    // list with the flat graph — a PC can never be a child, connectActor
-    // refuses one anyway, and accepting the drop only to bounce it would
-    // toast a refusal at a gesture better ignored. Already-connected stays
-    // refused — re-homing goes through unlink first, exactly as it always has.
-    if (!["npc", "hireling"].includes(actor.type)) return null;
-    if (actor.system.connectedTo) {
-      ui.notifications.warn(game.i18n.localize("CAIRN.AlreadyConnected"));
-      return null;
-    }
-    return (await this.actor.connectActor(actor)) ? actor : null;
+    // UN VÍNCULO, y ya no hay otra lectura del gesto (2026-09-06). Soltar una
+    // persona sobre otra es la forma arrastrada de decir «estos dos se
+    // conocen»: el arrastre aporta el QUIÉN y el editor pregunta qué es cada
+    // uno para el otro, porque un vínculo sin palabras es una línea que nadie
+    // sabe leer.
+    //
+    // Aquí estaba también el «arrastrar para conectar» de la custodia, y se ha
+    // ido con el resto de esa interfaz. El grafo sigue vivo por debajo — de él
+    // cuelgan los permisos, el mercado de transportes y los contenedores de los
+    // trasfondos — pero ya no se teje arrastrando.
+    if (!canEditBonds() || !isBondable(actor) || !isBondable(this.actor)) return null;
+    if (actor.uuid === this.actor.uuid) return null;
+    await openBondEditor(this.actor, actor);
+    this.render();
+    return actor;
   }
 
   /**

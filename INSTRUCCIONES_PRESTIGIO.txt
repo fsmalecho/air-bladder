@@ -1,5 +1,5 @@
-MONDOLME — Prestigio, y las tres monedas
-=========================================
+MONDOLME — Prestigio, monedas, y un solo Vínculos
+==================================================
 
 Sobre los vínculos ya aplicados. Etiqueta 2.0.7.
 
@@ -14,31 +14,30 @@ Sobre los vínculos ya aplicados. Etiqueta 2.0.7.
     module/actor/actor-sheet.js              (modificado)
     templates/actor/character-sheet.html     (modificado)
     templates/actor/npc-sheet.html           (modificado)
+    templates/parts/bond-list.html           (modificado)
     module/money.js                          (NUEVO)
     module/prestige.js                       (NUEVO)
-    templates/parts/purse.html               (NUEVO)
+    templates/parts/coins-counter.html       (NUEVO)
+    templates/parts/container-list.html      (BORRADO)
 
-Ninguno borrado.
+OJO AL BORRADO: hay que eliminar a mano `templates/parts/container-list.html`
+después de descomprimir. Descomprimir no borra archivos.
 
 
 LO PRIMERO: EL DINERO DE LAS FICHAS SE PONE A CERO
 --------------------------------------------------
 
-Lo elegiste tú y conviene repetirlo antes de que abras el mundo. El campo
-`gold` desaparece del esquema, así que lo que hubiera anotado en él no se
-convierte a nada: cada ficha empieza con el monedero vacío y lo repones a mano.
-
-No es un descuido del sistema: dejar el campo viejo conviviendo con el nuevo
-habría sido dejar un número que nadie lee y que alguien acabará leyendo por
-error dentro de seis meses.
+El campo `gold` desaparece del esquema, así que lo que hubiera anotado en él no
+se convierte a nada: cada ficha empieza con el monedero vacío y lo repones a
+mano. Lo elegiste tú y conviene repetirlo antes de que abras el mundo.
 
 
-EL PRESTIGIO
-------------
+1. EL PRESTIGIO
+---------------
 
-Donde estaba el Oro en la cabecera de la ficha de PJ hay ahora un campo
-numérico de Prestigio, y debajo, en pequeño, el rango que ha alcanzado. Pasa el
-ratón por encima y sale la frase entera.
+Donde estaba el Oro, en la cabecera de la ficha de PJ, hay un campo numérico de
+Prestigio. Nada escrito debajo: pasa el ratón por encima y el tooltip dice de
+qué es merecedor.
 
         0  Errante, merecedor de nada
      1000  Merecedor de armarse caballero y tomar un aprendiz
@@ -48,161 +47,150 @@ ratón por encima y sale la frase entera.
     12000  Merecedor de gobernar la Sede del Poder
     15000  Merecedor de convertirse en una Leyenda
 
-EL RANGO NO SE GUARDA. Sale del número en cada repintado. Un rango guardado es
-una segunda copia de algo que el número ya dice, y las segundas copias se
-quedan viejas: editarías el prestigio, olvidarías el rango, y la ficha diría dos
-cosas a la vez.
+EL RANGO NO SE GUARDA: sale del número en cada repintado. Un rango guardado es
+una segunda copia de algo que el número ya dice, y las segundas copias se quedan
+viejas.
 
-LAS ETIQUETAS SON LAS PALABRAS DE TU LIBRO. El texto solo nombra el primer
-rango («Errante») y describe los demás por lo que el Aventurero es merecedor
-DE, así que eso es lo que imprime la ficha. Inventarme «Caballero»,
-«Consejero» y demás habría sido poner palabras en boca de tu ambientación. Si
-luego quieres nombres cortos, están en lang/es.json bajo "CAIRN.Prestige.Ranks"
-y se reescriben sin tocar código.
+LAS ETIQUETAS SON LAS PALABRAS DE TU LIBRO. Tu texto solo nombra el primer rango
+y describe los demás por lo que el Aventurero es merecedor DE, así que eso es lo
+que dice el tooltip. Si luego quieres nombres cortos están en lang/es.json bajo
+"CAIRN.Prestige.Ranks" y se reescriben sin tocar código.
 
-EL MÉRITO NO ESTÁ MECANIZADO, a propósito. Tus reglas dicen que el rango solo
-PRUEBA la valía, y que un Aventurero puede ocupar un puesto que su rango no
-amerita y hacerlo suyo superando la oposición. Eso pasa en la mesa, no en un
-campo de una ficha.
+EL MÉRITO NO ESTÁ MECANIZADO, a propósito: tus reglas dicen que el rango solo
+PRUEBA la valía y que uno puede ocupar un puesto que no amerita y hacerlo suyo
+superando la oposición. Eso pasa en la mesa.
 
-El prestigio es solo de los PJs, como elegiste. Los PNJ no lo tienen.
-
-Lo que NO he automatizado y podría: los 1000 de una Gesta resuelta, el duelo
-que quita mil a uno y se los da al otro, y el 1 por plata derrochada. Son
-botones fáciles de añadir —el número de la Gesta ya está en el código como
-`DEED_PRESTIGE`— pero cada uno necesita decidir a quién se aplica, y eso es una
-conversación aparte. Dime cuáles quieres.
+Prestigio solo para PJs. Los PNJ no lo tienen.
 
 
-LAS TRES MONEDAS
-----------------
+2. EL MONEDERO, DEBAJO DE LA LISTA DE EQUIPO EN LAS DOS FICHAS
+---------------------------------------------------------------
 
-El dinero se ha mudado a la pestaña de Equipo, debajo de la lista de objetos,
-en tres campos: Mo, Mp y Mc. Con las tasas corregidas:
+Está en la pestaña de Equipo, justo debajo de la lista de objetos, tanto en el
+PJ como en el PNJ. Pero lleva la CAJA de un contador de cabecera: la barra negra
+de la etiqueta, el borde y la tipografía salen de `.resource-counter`, que es de
+donde salen HP y Armadura, así que no pueden desviarse. Dentro, tres campos
+pequeños con su abreviatura:
 
-    1 mo = 10 mp        1 mp = 10 mc        (y por tanto 1 mo = 100 mc)
+    ┌──────────┬──────────────────────────────┐
+    │ Monedas  │  [ 2 ]mo [ 3 ]mp [ 4 ]mc     │
+    └──────────┴──────────────────────────────┘
 
-LAS TASAS SON AJUSTES, no números escritos en el código, y el motivo apareció
-la misma tarde en que las escribí: la primera versión decía 100 mc por plata y
-era un lapsus. Corregirlo fue cambiar un número en una ventana en vez de editar
-un archivo, y en el sistema no hay ningún otro sitio que sepa una tasa. Están en
-Configuración → Mondolme → Inventario y equipo.
+UNA SOLA PLANTILLA para PJ y PNJ (`parts/coins-counter.html`), incluida en el
+mismo sitio de las dos. Al estar escrita una vez no pueden separarse nunca.
 
-LA PLATA ES EL ESTÁNDAR, así que va en medio, y es la moneda que se supone
-cuando un precio no dice otra cosa.
+Suelto bajo la lista tiene el ancho entero de la pestaña, así que la etiqueta se
+queda en el 30% y los campos se llevan el 70% — al revés que en la cabecera,
+donde un contador comparte fila con otros y la etiqueta manda.
 
+Los campos son estrechos porque son tres donde los demás contadores ponen uno.
+El detalle que lo hace funcionar es `min-width: 0` en los inputs: sin él, un
+campo de tipo número se planta en su ancho por defecto y el tercero se sale de la
+caja.
 
-EL PRECIO LLEVA SU MONEDA
--------------------------
+    1 mo = 10 mp        1 mp = 10 mc        1 mo = 100 mc
 
-Cada objeto tiene ahora, junto al precio, en qué moneda está. Una cuerda puede
-costar 4 de plata y un caballo de guerra 30 de oro sin que ninguno de los dos
-números mienta sobre lo que significa. Los objetos que ya existen quedan en
-plata, que es el valor inicial del campo.
+Las dos tasas siguen siendo ajustes, en Configuración → Mondolme → Inventario y
+equipo. El borde del contador se pone rojo cuando la sobrecarga viene de las
+monedas.
 
-En la tienda el precio sale con su moneda al lado, y el botón de comprar se
-apaga comparando el VALOR del monedero con el precio, no un montón con otro.
+EL PESO CUENTA MONEDAS, NO VALOR: los tres montones se suman. Mil de cobre pesan
+como mil monedas por poco que compren. El ajuste de «monedas por espacio» (100)
+sigue significando lo mismo, contando los tres montones.
 
-
-PAGAR ROMPE LA MONEDA GRANDE
-----------------------------
-
-Si llevas 2 mo y 3 mp y compras algo de 12 mp, el sistema hace lo que haría un
-tendero: pasa todo a cobre, resta, y devuelve el cambio en las monedas más
-grandes que quepan. Te quedas con 1 mo y 1 mp.
-
-Y aquí hay una consecuencia que merece la pena que veas venir, porque no es un
-efecto secundario sino una mecánica:
-
-EL PESO CUENTA MONEDAS, NO VALOR. Los tres montones se SUMAN para saber cuántos
-espacios ocupan. Mil monedas de cobre pesan como mil monedas por poco que
-compren. Así que pagar puede dejarte MÁS LIGERO: con 1500 de cobre encima y una
-compra de 1 de plata, sales de la tienda con 23 monedas en vez de 1500. Son
-1477 monedas menos de peso por gastar diez.
-
-De ahí el botón de CONSOLIDAR, la flecha doble junto a los tres campos: cambia
-lo que llevas por las monedas más grandes posibles. Vale lo mismo y pesa menos.
-Es un botón y no algo automático justamente porque tiene consecuencia mecánica:
-es lo que haces en un cambista, no algo que pase solo.
-
-El ajuste de «monedas por espacio» (100 por defecto) sigue donde estaba y sigue
-significando lo mismo, solo que ahora cuenta los tres montones sumados.
+FUERA EL BOTÓN DE CAMBIAR MONEDAS, como pediste. Con él se ha ido también la
+función que lo hacía. Pagar sigue dando cambio —eso lo hace el tendero, no el
+jugador— pero ya no hay forma de consolidar a voluntad, así que mil monedas de
+cobre pesan mil monedas hasta que te las gastes.
 
 
-LOS TRASFONDOS DAN PLATA
-------------------------
+3. EL VALOR DE LOS OBJETOS ES PLATA, CON DECIMALES
+--------------------------------------------------
 
-La fórmula de dinero inicial del trasfondo ahora otorga PLATA, coherente con que
-sea el estándar de precios. Los 3d6 de siempre siguen siendo una cantidad
-razonable de dinero para empezar.
+Un solo número y una sola unidad:
 
-DETALLE TÉCNICO que te ahorra un susto: el campo sigue guardándose con el nombre
-viejo (`goldFormula`) y he añadido `silverFormula` al lado, que gana cuando está
-puesto. Los trasfondos que ya tienes escritos siguen funcionando sin tocarlos;
-lo nuevo debería usar el nombre nuevo. Renombrar el campo habría dejado
-huérfanos los que ya llevan fórmula, y eso es peor que un identificador con un
-nombre algo viejo.
+     0.1  =  1 moneda de cobre
+     1    =  1 moneda de plata
+     10   =  1 moneda de oro
+     2.5  =  2 mp y 5 mc
 
-El oro extra por respuesta de trasfondo también entra en plata, y cambiar de
-respuesta lo intercambia igual que antes.
+UNA CORRECCIÓN, y perdona la pedantería: dijiste «si un objeto vale 0.1
+equivaldría a 1 moneda de oro». Con 1 mp = 10 mc, 0,1 de plata es una moneda de
+COBRE; la de oro es el 10. He ido con la aritmética, que solo admite esa lectura.
+Si lo que querías era otra escala, dímelo y son dos números.
+
+El campo de moneda por objeto que te puse ayer se ha ido. Era más expresivo y
+estrictamente peor: ponía una unidad en cada fila de la tienda, hacía imposible
+comparar dos precios de un vistazo, y obligaba al autor de cada objeto a tomar
+una decisión que un punto decimal ya toma por él.
 
 
-LOS PNJ TAMBIÉN LLEVAN MONEDERO
--------------------------------
+4. UN SOLO VÍNCULOS
+-------------------
 
-Como elegiste: prestigio solo para PJs, monedero para todos. Un PNJ, un cofre o
-un caballo pueden llevar dinero encima y pesan por ello exactamente igual. En la
-ficha de PNJ los tres campos están donde estaba el de oro.
+Todo lo que la interfaz llamaba «conexiones» se ha ido:
+
+  - La lista de custodia de la pestaña Vínculos y notas, y su plantilla.
+  - La línea de conexión de la cabecera del PNJ, con sus botones de conectar y
+    desconectar.
+  - Las cuatro acciones que las movían, sus manejadores, el contexto que las
+    alimentaba y las catorce claves de idioma que las nombraban.
+  - Arrastrar una ficha sobre otra ya solo puede significar una cosa: un
+    vínculo. Antes tenía dos lecturas y una estaba aparcada.
+
+EL GRAFO SIGUE VIVO POR DEBAJO, y esto es importante que lo sepas: `connectedTo`
+gobierna los PERMISOS de Foundry —es lo que hace que los jugadores de un PJ
+puedan abrir la ficha de su caballo— y de él cuelgan el mercado de transportes y
+los contenedores que otorgan los trasfondos. Lo que se ha ido es la interfaz, no
+la fontanería. Si algún día quieres volver a tejer custodia a mano, habrá que
+construirle una interfaz nueva; la vieja llevaba aparcada desde agosto y no la
+usaba nadie.
+
+Y FUERA «Y DESDE EL OTRO LADO». Cada fila dice una sola frase: lo que ESTA ficha
+dice de la otra persona. El otro lado sigue guardado y sigue apareciendo en la
+ficha de enfrente, que es donde le toca; para ver los dos a la vez, abre el
+editor del vínculo.
 
 
 COMPROBACIONES HECHAS
 ---------------------
 
-46 casos contra los dos módulos nuevos, con Foundry simulado:
+48 casos contra money.js y prestige.js, con Foundry simulado. Los que importan
+de esta tanda:
 
-  - LAS TASAS: valor de un monedero mixto, ida y vuelta de un número feo, cero,
-    y un negativo que se queda en cero en vez de romper nada.
-  - EL PESO CUENTA MONEDAS: mil de cobre son mil monedas; lo mismo consolidado
-    son diez; y valen igual.
-  - LOS PRECIOS con su moneda, incluida una moneda desconocida que se lee como
-    plata en vez de valer cero.
+  - EL PRECIO DECIMAL: 0,1 es un cobre; 10 es un oro; 30 son tres oros; 2,5 son
+    2 mp y 5 mc; y un precio absurdo (0,04) se redondea al cobre en vez de
+    arrastrar una fracción por toda la aritmética.
   - PAGAR ROMPIENDO LA MONEDA GRANDE: 2 mo y 3 mp comprando algo de 12 mp
     devuelve 1 mo y 1 mp; pagar exacto vacía la bolsa; un cobre de menos se
-    rechaza y con ese cobre justo pasa; gratis no toca nada; y un precio
-    negativo se rechaza, que es la puerta por la que se colaría un objeto que
-    te DA dinero al comprarlo.
-  - PAGAR TE DEJA MÁS LIGERO: el caso de las 1500 monedas, medido.
-  - CONSOLIDAR sin cambiar el valor, y cobrar por su moneda.
-  - QUE EL AJUSTE FUNCIONA: cambiando la tasa a 100, la aritmética entera se
-    recalcula sola.
-  - EL RANGO en los siete umbrales y en los bordes (999 y 1000, 2999 y 3000),
-    un prestigio negativo que no rompe nada, lo que falta para el siguiente,
-    que arriba del todo no hay siguiente, y la barra de progreso.
+    rechaza y con ese cobre justo pasa; y un precio negativo se rechaza, que es
+    la puerta por la que se colaría un objeto que te DA dinero al comprarlo.
+  - EL PESO cuenta monedas y no valor, medido.
+  - EL RANGO en los siete umbrales y en los bordes (999 y 1000, 2999 y 3000).
 
-Y una auditoría de las tres plantillas tocadas: etiquetas y bloques cuadrados,
-las claves de idioma existen en español, y la acción de consolidar está
-declarada en el mapa de la ficha.
+27 casos más de los vínculos, que siguen pasando enteros después de la limpieza.
 
-Más lo de siempre: los 32 archivos de código pasan la comprobación de sintaxis,
-ningún import apunta a algo que no exista, el CSS cierra sus 569 llaves, las dos
-claves de ajuste nuevas están declaradas, registradas y en su grupo, no queda
-ninguna clave de idioma huérfana (las cinco del oro viejo las he borrado) ni sin
-traducir, y es.json y system.json son JSON válido.
+Y una auditoría de las cuatro plantillas tocadas: bloques cuadrados, las claves
+de idioma existen en español, y ninguna acción suelta —lo que confirma que al
+borrar las cuatro acciones de conexiones no quedó ningún botón apuntando al
+vacío.
 
-Y no queda ni una lectura de `system.gold` en el código: solo tres comentarios
-que hablan del pasado.
+Más lo de siempre: los 32 archivos pasan la sintaxis, ningún import apunta a
+algo que no exista (incluido el de connections.js, que se ha retirado entero de
+la ficha), las 7 plantillas registradas existen, todos los `{{> …}}` resuelven,
+el CSS cierra sus 552 llaves, y no queda ninguna clave de idioma huérfana.
 
 
 QUÉ MIRAR PRIMERO
 -----------------
 
-  1. Abre un PJ. En la cabecera, donde estaba el Oro, debe haber Prestigio con
-     «Errante, merecedor de nada» debajo. Escribe 3000 y mira cambiar el rango.
-  2. Pestaña de Equipo, debajo de la lista: los tres campos. Escribe 150 en Mc y
-     mira aparecer el espacio ocupado a la derecha.
-  3. Pulsa la flecha doble: 150 de cobre deben volverse 1 mo y 5 mp, y el
-     espacio debe desaparecer.
-  4. Abre la tienda con 2 mo y compra algo barato: debe romper el oro y darte el
-     cambio.
-  5. Abre un PNJ: los tres campos donde estaba el oro, y ningún prestigio.
-  6. Configuración → Mondolme → Inventario y equipo: las dos tasas nuevas.
+  1. Borra `templates/parts/container-list.html` a mano.
+  2. Abre un PJ: Prestigio donde estaba el Oro, sin nada escrito debajo, y el
+     tooltip al pasar el ratón.
+  3. Pestaña de Equipo, debajo de la lista: el contador de Monedas con los tres
+     campos. Escribe 150 en mc y mira aparecer el espacio ocupado.
+  4. Abre un PNJ: el mismo contador, en el mismo sitio, y ningún prestigio.
+  5. Pestaña Vínculos y notas: solo la lista de vínculos y el editor de notas.
+     Ninguna lista de conexiones, y ninguna fila con «Y desde el otro lado».
+  6. Pon 0.1 de valor a un objeto y cómpralo con 1 mp: debe costarte 1 mc.
+  7. Cabecera del PNJ: ninguna línea de conexión, ningún botón de conectar.

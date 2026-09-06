@@ -5,7 +5,8 @@
       sheets — and it is parked. This is the social web, and it touches no
       permission at all.
 
-      ONE ROW PER PERSON, both directions on it. The bond is a single record
+      ONE ROW PER PERSON, and ONE sentence on it: what THIS sheet says the
+      other person is. The bond is still a single record
       naming two actors and what each says the other is, so «lo que dice esta
       ficha» is the line and «lo que dice la otra» is the second, quieter one.
       When only one side was written the other mirrors it, so a symmetric bond
@@ -33,11 +34,12 @@
                 <a data-action="bondOpen">{{row.name}}</a>
                 {{#if row.secret}}<i class="fas fa-eye-slash bond-secret-mark" data-tooltip="{{ localize 'CAIRN.Bonds.Secret' }}"></i>{{/if}}
             </div>
+            {{!-- SOLO ESTE LADO (2026-09-06, decisión del usuario). La fila
+                  dice lo que ESTA ficha dice de la otra persona y nada más. El
+                  otro lado sigue guardado y sigue apareciendo en la ficha de
+                  enfrente, que es donde le toca; el Guardián que quiera ver los
+                  dos a la vez abre el editor. --}}
             <div class="bond-says">{{row.says}}</div>
-            {{!-- The far side, printed quieter. It is the half a Warden most
-                  often wants and the half nobody would think to go and look
-                  up on the other sheet. --}}
-            <div class="bond-back">{{ localize 'CAIRN.Bonds.BackPrefix' }} {{row.saysBack}}</div>
         </div>
         {{#if @root.canEditBonds}}
         <div class="bond-row-controls">

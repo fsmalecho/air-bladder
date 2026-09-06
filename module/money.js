@@ -1,10 +1,10 @@
 /**
  * THE PURSE: three denominations, and the arithmetic that keeps them honest.
  *
- * SILVER IS THE STANDARD (2026-09-06, user ruling). Prices are quoted in silver
- * unless the item says otherwise, and every item now carries the coin its price
- * is in — so a rope can cost 4 silver and a warhorse 30 gold without either
- * number lying about what it means.
+ * SILVER IS THE STANDARD (2026-09-06, user ruling), and the ONLY unit a price
+ * is ever quoted in. An item's value is a decimal number of silver: 0.1 is one
+ * copper, 4 is four silver, 30 is three gold. One number, one unit, and two
+ * prices can be compared without reading a label first.
  *
  * THE RATES ARE SETTINGS, not constants — 1 gold = 10 silver and 1 silver = 10
  * copper by default. They were briefly 1:10:100 and the user corrected it, which
@@ -91,13 +91,27 @@ export const fromCopper = (total) => {
 export const coinCount = (coins = {}) =>
   Math.max(0, Math.round(num(coins.gold) + num(coins.silver) + num(coins.copper)));
 
-/** A price, in copper. Unknown currencies read as silver — the standard. */
-export const priceInCopper = (cost, currency = "silver") => {
+/**
+ * A price, in copper.
+ *
+ * EVERY PRICE IS IN SILVER, and silver is allowed decimals (2026-09-06, user
+ * ruling): 0.1 is one copper, 1 is one silver, 10 is one gold. One number, one
+ * unit, and the reader never has to check which coin a price is quoted in.
+ *
+ * The per-item currency field this replaced lasted a few hours. It was more
+ * expressive and strictly worse: it put a unit on every row of the shop, made
+ * two prices impossible to compare at a glance, and asked the author of every
+ * item to make a choice that a decimal point already makes for them.
+ */
+export const priceInCopper = (silver) => {
   const { copperPerSilver } = rates();
-  const n = num(cost);
-  if (currency === "gold") return n * copperPerGold();
-  if (currency === "copper") return n;
-  return n * copperPerSilver;
+  return Math.round(num(silver) * copperPerSilver);
+};
+
+/** The other way, for showing what a purse is worth as one number. */
+export const copperToSilver = (copper) => {
+  const { copperPerSilver } = rates();
+  return num(copper) / copperPerSilver;
 };
 
 /** @returns {Boolean} true when the purse covers that many copper. */
@@ -120,17 +134,8 @@ export const spend = (coins, costCopper) => {
   return fromCopper(have - cost);
 };
 
-/** Take money in, in one denomination. */
-export const gain = (coins, amount, currency = "silver") =>
-  fromCopper(toCopper(coins) + priceInCopper(amount, currency));
-
-/**
- * The same money in the fewest coins. Offered as its own action because under
- * these rates it is a real decision: turning a thousand copper into ten silver
- * frees nine hundred and ninety coins of carrying weight, and that is the sort
- * of thing a character does at a bank rather than by accident.
- */
-export const consolidate = (coins) => fromCopper(toCopper(coins));
+/** Take money in, quoted in silver like every other price. */
+export const gain = (coins, silver) => fromCopper(toCopper(coins) + priceInCopper(silver));
 
 /** Is there anything in it at all? */
 export const isEmpty = (coins) => toCopper(coins) <= 0;

@@ -2073,9 +2073,8 @@ const configureHandleBar = () => {
   // Pre-load templates
   const templatePaths = [
     "systems/mondolme/templates/parts/items-list.html",
-    "systems/mondolme/templates/parts/container-list.html",
     "systems/mondolme/templates/parts/bond-list.html",
-    "systems/mondolme/templates/parts/purse.html",
+    "systems/mondolme/templates/parts/coins-counter.html",
     "systems/mondolme/templates/parts/bio-block.html",
   ];
 

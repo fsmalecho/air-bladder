@@ -517,12 +517,8 @@ class NpcData extends CairnDataModel {
       // Purchase price. Needed because mounts and vehicles become Actors stocked
       // in the shop, and NpcData had only `gold` (what it CARRIES), never what it
       // COSTS.
+      /** In silver, decimals and all — see the item schema's copy. */
       cost: money(0),
-      /** Which coin `cost` is in. See the item schema's copy for the reasoning. */
-      costCurrency: new fields.StringField({
-        required: true, blank: false, initial: "silver",
-        choices: ["gold", "silver", "copper"],
-      }),
 
       // Who this used to be connected to, snapshotted as a STRING at unlink time
       // rather than derived from `connectedTo`. Deliberate: the commonest way a
@@ -658,18 +654,14 @@ const universal = () => ({
   weightless: bool(),
   equipped: bool(),
   bulky: bool(),
-  cost: money(0),
   /**
-   * WHICH COIN the price is in (2026-09-06). Silver is the standard, so that is
-   * the initial and what an unset or unknown value reads as — a rope costs 4
-   * silver and a warhorse 30 gold, and neither number has to lie about itself.
-   * `blank: false` with `choices` so a typo fails loudly at validation rather
-   * than quietly pricing something in nothing.
+   * VALUE, IN SILVER, and decimals are the point (2026-09-06): 0.1 is one
+   * copper, 4 is four silver, 30 is three gold. `money()` was already a
+   * non-integer field, so the decimal costs nothing and the per-item currency
+   * this briefly carried is gone — one unit means two prices can be compared
+   * without reading a label first.
    */
-  costCurrency: new fields.StringField({
-    required: true, blank: false, initial: "silver",
-    choices: ["gold", "silver", "copper"],
-  }),
+  cost: money(0),
   quantity: int(1),
 });
 

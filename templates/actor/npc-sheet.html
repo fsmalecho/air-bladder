@@ -197,21 +197,12 @@
                   connectionDetach actions — the same handlers, gates and
                   dialogs the tab used; only their home moved. --}}
             {{#if showConnectionLine}}
-            <div class="profession-line connection-line">
+            <div class="profession-line">
                 {{#if showForHire}}
                 <label class="for-hire-label" data-tooltip="{{ localize 'CAIRN.ForHireTip' }}">
                     <input type="checkbox" class="for-hire-check" name="system.forHire" {{checked system.forHire}} />
                     {{ localize 'CAIRN.ForHire' }}
                 </label>
-                {{/if}}
-                {{#if connectionLine.label}}
-                <span class="connection-label">{{connectionLine.label}}</span>
-                {{/if}}
-                {{#if connectionLine.detach}}
-                <a class="connection-detach" data-action="connectionDetach" title="{{ localize 'CAIRN.UnlinkContainer' }}"><i class="fas fa-link-slash"></i></a>
-                {{/if}}
-                {{#if connectionLine.attach}}
-                <a class="connection-attach" data-action="connectionAttach" title="{{ localize 'CAIRN.ConnectHint' }}"><i class="fas fa-link"></i>&nbsp;{{ localize 'CAIRN.Connect' }}</a>
                 {{/if}}
             </div>
             {{/if}}
@@ -257,31 +248,7 @@
                       50% label put this bar's right edge at 485 while Armor's --
                       directly below it, at 70% -- sat at 526. Widths come from the
                       COUNTER class; there is nothing to align by hand. --}}
-                {{!-- EL MONEDERO (2026-09-06). Un PNJ, un cofre o un caballo
-                      llevan dinero y pesan por ello igual que un PJ; lo que no
-                      tienen es prestigio, que es cosa de Aventureros. Tres
-                      campos estrechos en el sitio donde estaba el de oro. --}}
-                <div class="resource-counter long-counter npc-purse {{#if system.maybeTooMuchGold}}overburdened-gold{{/if}}"
-                    data-tooltip="{{#if system.maybeTooMuchGold}}{{ localize 'CAIRN.OverburdenByCoins' }}{{else}}{{ system.coinTip }}{{/if}}">
-                    <label>{{ localize 'CAIRN.Coins' }}</label>
-                    <div class="npc-purse-piles">
-                        <label class="npc-purse-pile">
-                            <span>{{ localize 'CAIRN.CoinShort.gold' }}</span>
-                            <input type="number" min="0" step="1" name="system.coins.gold"
-                                   value="{{system.coins.gold}}" data-dtype="Number" />
-                        </label>
-                        <label class="npc-purse-pile">
-                            <span>{{ localize 'CAIRN.CoinShort.silver' }}</span>
-                            <input type="number" min="0" step="1" name="system.coins.silver"
-                                   value="{{system.coins.silver}}" data-dtype="Number" />
-                        </label>
-                        <label class="npc-purse-pile">
-                            <span>{{ localize 'CAIRN.CoinShort.copper' }}</span>
-                            <input type="number" min="0" step="1" name="system.coins.copper"
-                                   value="{{system.coins.copper}}" data-dtype="Number" />
-                        </label>
-                    </div>
-                </div>
+
                 {{/if}}
             </div>
             {{/unless}}
@@ -471,6 +438,10 @@
                           sacks, carts and crates. See
                           system.showFatigue in actor.js prepareData. --}}
                     {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=system.showFatigue withShop=withShop}}
+                    {{!-- El mismo monedero que el PJ, en el mismo sitio: debajo
+                          de la lista de equipo. Una sola plantilla para los dos,
+                          así que no pueden separarse. --}}
+                    {{> "systems/mondolme/templates/parts/coins-counter.html"}}
                 </div>
                 <div class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
                     {{!-- THE BOND WEB (2026-09-05). The same list the character

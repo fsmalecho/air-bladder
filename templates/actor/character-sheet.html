@@ -60,7 +60,6 @@
                     <input type="number" min="0" step="1" name="system.prestige" id="{{@root.idp}}-system.prestige"
                         value="{{system.prestige}}" data-dtype="Number" />
                 </div>
-                <span class="prestige-rank">{{system.standing.rankLabel}}</span>
             </div>
 
         </div>
@@ -168,14 +167,15 @@
                       same gate the list does — `showContainersTab` parks the
                       whole connections UI. Counts `containerObjects`, NOT the
                       legacy `containers` array. --}}
-                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{ localize 'CAIRN.LinksAndNotes' }}{{#if system.showContainersTab}} ({{system.containerObjects.length}}){{/if}}</a>
+                <a class="item {{tabs.notes.cssClass}}" data-action="tab" data-group="primary" data-tab="notes">{{ localize 'CAIRN.LinksAndNotes' }}</a>
             </nav>
             <section class="content">
                 <div class="tab {{tabs.items.cssClass}}" data-group="primary" data-tab="items">
                     {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=1 withShop=withShop}}
-                    {{!-- EL MONEDERO (2026-09-06), debajo de la lista: el dinero
-                          es equipo, ocupa espacios y se lleva encima. --}}
-                    {{> "systems/mondolme/templates/parts/purse.html"}}
+                    {{!-- EL MONEDERO, debajo de la lista: el dinero es equipo,
+                          se lleva encima y ocupa espacios. Con la caja de un
+                          contador de cabecera, que es la que pediste. --}}
+                    {{> "systems/mondolme/templates/parts/coins-counter.html"}}
                 </div>
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
                     <div class="description">
@@ -260,10 +260,6 @@
                       parks the whole connections UI), and with the list parked
                       the tab is simply the notes editor it always was. --}}
                 <div class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
-                    {{#if system.showContainersTab}}
-                    {{> "systems/mondolme/templates/parts/container-list.html"}}
-                    <hr class="notes-divider" />
-                    {{/if}}
                     {{!-- THE BOND WEB (2026-09-05), above the free-form notes.
                           Ungated: it is the tab's headline content now, and
                           unlike the custody list above it there is nothing to
