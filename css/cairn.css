@@ -4162,3 +4162,288 @@ body:has(#mondolme-calendar-orb) #hotbar {
 .cal-setdate-row button { width: auto; padding: 2px 10px; line-height: 1.4; white-space: nowrap; }
 
 .cal-hint { margin: 0; font-size: 11px; color: var(--ab-muted); line-height: 1.4; }
+
+
+/******************************************************************************
+ * THE BOND WEB, on the Vínculos tab of both person sheets.
+ *
+ * Takes the SHEET's palette (--ab-*), unlike the calendar: this lives inside a
+ * sheet window and must follow it onto parchment or onto the dark scheme, which
+ * is the exact opposite of the rule the calendar bar needed.
+ ******************************************************************************/
+
+.bond-list {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bond-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 6px;
+    border: 1px solid var(--ab-rule);
+    border-radius: 3px;
+    background: var(--ab-wash);
+}
+
+.bond-row:hover { background: var(--ab-wash-strong); }
+
+/* A secret bond is marked on its EDGE rather than tinted all over: the row is
+   read for its words, and a wash across them makes the words harder to read to
+   say something the eye-slash already says. */
+.bond-row.is-secret { border-left: 3px solid var(--ab-accent); }
+
+.bond-portrait {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border: 1px solid var(--ab-rule-strong);
+    border-radius: 2px;
+    cursor: pointer;
+    background: var(--ab-surface);
+}
+
+.bond-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.bond-name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-variant: small-caps;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.bond-name a { cursor: pointer; }
+.bond-secret-mark { font-size: 11px; color: var(--ab-muted); }
+
+.bond-says {
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+/* The far side, quieter. It is the half a Warden most wants and the half
+   nobody would go to the other sheet to look up. */
+.bond-back {
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ab-muted);
+    font-style: italic;
+}
+
+.bond-row-controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bond-empty {
+    margin: 4px 0 8px;
+    font-size: 12px;
+    color: var(--ab-muted);
+    font-style: italic;
+}
+
+/* ---- the editor ---------------------------------------------------------- */
+
+.bond-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bond-editor .bond-pair {
+    margin: 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--ab-rule);
+    font-variant: small-caps;
+    font-size: 15px;
+}
+
+.bond-editor .bond-pair i { color: var(--ab-muted); font-size: 12px; }
+
+.bond-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bond-field label {
+    font-size: 12px;
+    font-variant: small-caps;
+    color: var(--ab-muted);
+}
+
+.bond-field input,
+.bond-field select { width: 100%; font-family: inherit; }
+
+.bond-editor .bond-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ab-muted);
+}
+
+.bond-secret {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+}
+
+.bond-secret input { margin: 0; }
+
+
+/******************************************************************************
+ * PRESTIGIO Y MONEDERO (2026-09-06).
+ *
+ * El prestigio ocupa la casilla donde estaba el oro, en la cabecera; el dinero
+ * se ha mudado a la pestaña de Equipo, debajo de la lista, porque es una cosa
+ * que se lleva encima y que pesa.
+ ******************************************************************************/
+
+/* El rango va bajo el número, en pequeño y en versalitas: es una lectura, no un
+   campo, y no debe competir con la cifra que lo produce. */
+.prestige-counter { position: relative; }
+
+.prestige-counter .prestige-rank {
+    display: block;
+    margin-top: 1px;
+    font-size: 10px;
+    line-height: 1.2;
+    font-variant: small-caps;
+    letter-spacing: 0.2px;
+    color: var(--ab-muted);
+    text-align: center;
+    /* Una línea, y si no cabe se corta con puntos suspensivos — el tooltip del
+       contador lleva la frase entera. Un rango de siete palabras no puede
+       empujar la cabecera. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ---- el monedero del PJ -------------------------------------------------- */
+
+.purse {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--ab-rule-strong);
+    border-radius: 3px;
+    background: var(--ab-wash);
+}
+
+.purse.is-overburdened { border-color: var(--ab-peril); }
+
+.purse-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.purse-title {
+    font-variant: small-caps;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+}
+
+.purse-weight {
+    font-size: 12px;
+    color: var(--ab-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.purse-piles {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.purse-pile {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* La abreviatura de la moneda hace de etiqueta: tres caracteres, en un cuadro
+   fijo, para que los tres campos empiecen en la misma columna. */
+.purse-coin {
+    flex: 0 0 auto;
+    min-width: 26px;
+    padding: 1px 5px;
+    border: 1px solid var(--ab-chip-border);
+    border-radius: 2px;
+    font-size: 11px;
+    font-variant: small-caps;
+    text-align: center;
+    color: var(--ab-muted);
+}
+
+/* Cada moneda con su color, apagado. La plata es el estándar de precios, así
+   que es la única que lleva el borde marcado. */
+.purse-coin-gold   { color: var(--ab-gold); border-color: var(--ab-gold); }
+.purse-coin-silver { color: var(--ab-ink); border-color: var(--ab-chip-border-strong); }
+.purse-coin-copper { color: var(--ab-amber); border-color: var(--ab-amber); }
+
+.purse-pile input {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.purse-consolidate { flex: 0 0 auto; }
+
+/* ---- el monedero del PNJ, dentro de un contador de la cabecera ----------- */
+
+.npc-purse-piles {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.npc-purse-pile {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.npc-purse-pile span {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-variant: small-caps;
+    color: var(--ab-muted);
+}
+
+.npc-purse-pile input {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- el precio en la tienda, con su moneda ------------------------------- */
+
+.mkt-cost-gold   { color: var(--ab-gold); }
+.mkt-cost-copper { color: var(--ab-amber); }

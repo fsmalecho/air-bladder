@@ -223,8 +223,27 @@ const vitals = () => ({
  */
 const capacity = () => int(0);
 
-/** Coins. Every actor type can hold them, and they weigh the same everywhere. */
+/** One denomination's pile. */
 const purse = () => money(0);
+
+/**
+ * THE PURSE, three denominations (2026-09-06, user ruling). Every actor type
+ * can hold coins and they weigh the same everywhere — and weight counts COINS,
+ * not value, so the three piles are added, never converted, to work it out.
+ *
+ * The old single `gold` field is GONE rather than kept alongside. The user's
+ * ruling was that stored balances go to zero and are re-entered by hand, and a
+ * field nothing reads is a field that will be read by mistake one day. Schema
+ * cleaning drops the old key on the next write, which is exactly the wanted
+ * outcome; nothing here has to do it.
+ *
+ * The RATES between them are settings, not schema — see money.js.
+ */
+const coins = () => new fields.SchemaField({
+  gold: purse(),
+  silver: purse(),
+  copper: purse(),
+});
 
 /* -------------------------------------------- */
 /*  Shape coercion                               */
@@ -304,7 +323,14 @@ class CharacterData extends CairnDataModel {
       panicked: bool(),
       critical: bool(),
       armorOverride: optInt(),
-      gold: purse(),
+      coins: coins(),
+      /**
+       * PRESTIGE (2026-09-06). One number; the RANK it buys is derived from it
+       * on every read and never stored — see prestige.js for why. Characters
+       * only: an Adventurer chases prestige, and the ruling was that the people
+       * they meet do not.
+       */
+      prestige: int(0, { min: 0 }),
       slots: capacity(),
       // The languages this character knows. A list of plain strings, each one a
       // name from the Warden's own list (`languages()` in content-packs.js,
@@ -380,7 +406,9 @@ class NpcData extends CairnDataModel {
       // `_prepareNpcData` clobbered it every prepare so an authored value never
       // showed — false, and doubly so since that method was deleted 2026-07-31.)
       armor: optInt(),
-      gold: purse(),
+      // A purse, but no prestige: a chest, a horse and a bandit can all carry
+      // money, and none of them is chasing the Great Quest.
+      coins: coins(),
       slots: capacity(),
       // ORPHANED since 2026-08-09, same ruling as CharacterData's: the field
       // stays so recorded data survives, but no UI reads or writes it.
@@ -490,6 +518,11 @@ class NpcData extends CairnDataModel {
       // in the shop, and NpcData had only `gold` (what it CARRIES), never what it
       // COSTS.
       cost: money(0),
+      /** Which coin `cost` is in. See the item schema's copy for the reasoning. */
+      costCurrency: new fields.StringField({
+        required: true, blank: false, initial: "silver",
+        choices: ["gold", "silver", "copper"],
+      }),
 
       // Who this used to be connected to, snapshotted as a STRING at unlink time
       // rather than derived from `connectedTo`. Deliberate: the commonest way a
@@ -626,6 +659,17 @@ const universal = () => ({
   equipped: bool(),
   bulky: bool(),
   cost: money(0),
+  /**
+   * WHICH COIN the price is in (2026-09-06). Silver is the standard, so that is
+   * the initial and what an unset or unknown value reads as — a rope costs 4
+   * silver and a warhorse 30 gold, and neither number has to lie about itself.
+   * `blank: false` with `choices` so a typo fails loudly at validation rather
+   * than quietly pricing something in nothing.
+   */
+  costCurrency: new fields.StringField({
+    required: true, blank: false, initial: "silver",
+    choices: ["gold", "silver", "copper"],
+  }),
   quantity: int(1),
 });
 
@@ -948,7 +992,18 @@ class BackgroundData extends CairnDataModel {
       // one field the author fills in the same way, validated at roll time by
       // the same guard (`effectiveFormula`), which refuses an `@` reference and
       // anything `Roll.validate` rejects, warns naming the text, and falls back.
-      goldFormula: str(),
+      /**
+        * STARTING MONEY, in SILVER since 2026-09-06 — silver is the price
+        * standard, so that is what a background hands a new character.
+        *
+        * The KEY still says gold. Deliberate: backgrounds are authored content
+        * and dozens of them already carry a formula in this field; renaming it
+        * would strand every one of them to make an identifier read better.
+        * `silverFormula` is the name new content should use and it wins where
+        * both are set — see `effectiveSilverFormula` in character-generator.js.
+        */
+       goldFormula: str(),
+       silverFormula: str(),
       // The languages a character built on this background starts knowing.
       // Plain names out of the Warden's own list (`languages()` in
       // content-packs.js), stored by NAME for the same reason

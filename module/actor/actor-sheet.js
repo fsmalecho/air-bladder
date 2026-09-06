@@ -38,6 +38,9 @@ const NPC_TRAIT_LABELS = {
 };
 
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
+import { bondsFor, canEditBonds, deleteBond, isBondable } from "../bonds.js";
+import { openBondEditor } from "../bond-editor.js";
+import { coinCount, consolidate, formatPurse } from "../money.js";
 import { FATIGUE_NAME, bookPages } from "../item/item.js";
 import { castFromBook, castSpell, castScroll, memorizeFromBook, booksOn, canReadItem } from "../magic.js";
 import { pickArt } from "../art-picker.js";
@@ -480,6 +483,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       connectionAttach: owned(CairnActorSheet.#onConnectionAttach),
       connectionDetach: owned(CairnActorSheet.#onConnectionDetach),
       containerUnlink: owned(CairnActorSheet.#onContainerUnlink),
+      // The bond web (2026-09-05). NOT owned(): these are Warden-only by their
+      // own gate, and `owned()` asks a different question — whether the VIEWER
+      // owns this sheet — which a Warden editing a player's bonds would fail
+      // on a sheet they do not own. `bondOpen` is a read and gates on nothing:
+      // it opens a sheet, which enforces its own permission.
+      bondAdd: CairnActorSheet.#onBondAdd,
+      bondEdit: CairnActorSheet.#onBondEdit,
+      bondDelete: CairnActorSheet.#onBondDelete,
+      bondOpen: CairnActorSheet.#onBondOpen,
+      // The purse. `owned()`: spending and re-minting a character's coins is a
+      // write to their sheet, so it asks the same question every other write does.
+      purseConsolidate: owned(CairnActorSheet.#onPurseConsolidate),
       // Header counters + buttons
       rollAbility: CairnActorSheet.#onRollAbility,
       toggleCritical: owned(CairnActorSheet.#onToggleCritical),
@@ -574,6 +589,8 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         templates: [
           "systems/mondolme/templates/parts/items-list.html",
           "systems/mondolme/templates/parts/container-list.html",
+          "systems/mondolme/templates/parts/bond-list.html",
+          "systems/mondolme/templates/parts/purse.html",
           "systems/mondolme/templates/parts/bio-block.html",
         ],
       },
@@ -1014,6 +1031,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // render, and the group a role falls into is `relationshipGroupFor` — the
     // three named ones plus a catch-all for a monster, a transport or a
     // container, whose rows carry no relationship line at all.
+    // THE BOND WEB (2026-09-05). Read whole on every render rather than
+    // cached: it is a handful of rows out of one world setting, and a cache
+    // would need invalidating from four places that write it.
+    context.bondRows = bondsFor(this.actor);
+    context.canEditBonds = canEditBonds();
     context.connectionGroups = RELATIONSHIP_GROUPS
       .map((g) => ({
         key: g.key,
@@ -3294,6 +3316,72 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * filter is a courtesy, not the wall.
    * @this {CairnActorSheet}
    */
+  /**
+   * Tie this actor to another. The editor asks who, and what each is to the
+   * other; everything is re-checked in `setBond`, so the gate here only spares
+   * a Warden-less user a dialog they could not have committed.
+   */
+  /**
+   * Trade the purse in for the fewest coins that hold the same money.
+   *
+   * Its own action rather than something that happens automatically, because
+   * under these rates it has a MECHANICAL consequence: weight counts coins, so
+   * turning a thousand copper into one gold frees nine hundred and ninety-nine
+   * coins of carrying capacity. That is a thing a character does at a bank, and
+   * it should take a decision.
+   */
+  static async #onPurseConsolidate(event) {
+    event.preventDefault();
+    const before = this.actor.system.coins;
+    const after = consolidate(before);
+    if (coinCount(before) === coinCount(after)) {
+      ui.notifications?.info(game.i18n.localize("CAIRN.Notify.CoinsAlreadyTidy"));
+      return;
+    }
+    await this.actor.update({ "system.coins": after });
+    ui.notifications?.info(game.i18n.format("CAIRN.Notify.CoinsConsolidated", {
+      before: coinCount(before), after: coinCount(after),
+    }));
+  }
+
+  static async #onBondAdd(event) {
+    event.preventDefault();
+    if (!canEditBonds()) return;
+    await openBondEditor(this.actor);
+    this.render();
+  }
+
+  /** Reopen the editor on an existing row. */
+  static async #onBondEdit(event, target) {
+    event.preventDefault();
+    if (!canEditBonds()) return;
+    const other = fromUuidSync(target.closest("[data-bond-uuid]")?.dataset.bondUuid ?? "");
+    if (!other) return;
+    await openBondEditor(this.actor, other);
+    this.render();
+  }
+
+  /**
+   * Cut a bond. No confirmation: it is one line of text on two sheets, the
+   * editor is one click away to write it again, and a modal for every removed
+   * row is the kind of friction that stops a Warden from tidying.
+   */
+  static async #onBondDelete(event, target) {
+    event.preventDefault();
+    if (!canEditBonds()) return;
+    const id = target.closest("[data-bond-id]")?.dataset.bondId;
+    if (!id) return;
+    await deleteBond(id);
+    this.render();
+  }
+
+  /** Open the other end's sheet. A read: its own permissions decide. */
+  static #onBondOpen(event, target) {
+    event.preventDefault();
+    const other = fromUuidSync(target.closest("[data-bond-uuid]")?.dataset.bondUuid ?? "");
+    other?.sheet?.render(true);
+  }
+
   static async #onConnectionAdd(event) {
     event.preventDefault();
     // Parked UI (2026-08-09): hidden control, handler wall (stale sheets).
@@ -3798,15 +3886,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const questions = foundry.utils.duplicate(this.actor.system.questions ?? []);
       const oldGold = questions[idx]?.gold ?? 0;
       const newGold = opt.bonusGold ?? 0;
-      const gold = Math.max(0, (this.actor.system.gold ?? 0) - oldGold + newGold);
-      // The ability bonuses swing exactly as the gold does: the old answer's
+      // The swing lands on SILVER, which is where a background's money went in.
+      // Written through the purse's own arithmetic so a negative swing cannot
+      // leave a pile below zero.
+      const coins = {
+        ...this.actor.system.coins,
+        silver: Math.max(0, (this.actor.system.coins?.silver ?? 0) - oldGold + newGold),
+      };
+      // The ability bonuses swing exactly as the money does: the old answer's
       // come off, the new answer's go on. The stored `abilities` on the question
       // record is what makes that reversible — same reason `gold` is stored.
       const newBonus = optionAbilityBonuses(opt);
       const abilityUpdate = abilityDeltaUpdate(this.actor, abilityBonusDelta(newBonus, questions[idx]?.abilities));
       questions[idx] = { heading: table.heading ?? "", question: table.question ?? "", answer: opt.description ?? "", gold: newGold, abilities: newBonus };
       // abNoStatusCard: a question re-roll's gold and ability swing is grant machinery.
-      await this.actor.update({ "system.questions": questions, "system.gold": gold, ...abilityUpdate }, { abNoStatusCard: true });
+      await this.actor.update({ "system.questions": questions, "system.coins": coins, ...abilityUpdate }, { abNoStatusCard: true });
     } finally {
       this._rerolling = false;
     }
@@ -4181,6 +4275,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * @param {CairnActor} actor  the dropped Actor, already resolved by ActorSheetV2
    */
   async _onDropActor(event, actor) {
+    // A BOND, first (2026-09-05): dropping a person on a person is the drag
+    // spelling of "these two know each other", and it is the only meaning the
+    // gesture has while the custody UI below stays parked. The drop supplies
+    // the WHO; the editor asks what each is to the other, because a bond with
+    // no words on it is a line nobody can read.
+    if (canEditBonds() && isBondable(actor) && isBondable(this.actor)
+        && actor.uuid !== this.actor.uuid) {
+      await openBondEditor(this.actor, actor);
+      this.render();
+      return actor;
+    }
+
     // Parked UI (2026-08-09): drag-to-connect goes with the rest of the
     // Connections surfaces. Silent, matching every other invalid drop here.
     if (!connectionsUiEnabled()) return null;

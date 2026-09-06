@@ -18,6 +18,7 @@ import { connectionHeadroom, connectedOwnershipShape, syncPendingOwnership, OWNE
 import { injectEncounterButton } from "./encounters.js";
 import { bindGrimoireFatigueButton } from "./magic.js";
 import { initCalendar } from "./calendar/calendar-widget.js";
+import { pruneBonds } from "./bonds.js";
 import { nameableTokens } from "./utils.js";
 
 Hooks.once("init", async function () {
@@ -98,6 +99,12 @@ Hooks.once("ready", () => {
   // AT READY on purpose: this hook must register AFTER every module's
   // init-time hooks so it runs after them — see registerCombatOrderGuard.
   registerCombatOrderGuard();
+
+  // A deleted actor leaves bonds pointing at nothing. ONE client does the
+  // sweep — see `pruneBonds`, which picks the active Warden — and every reader
+  // skips a dangling end in the meantime, so a missed sweep is untidy rather
+  // than broken.
+  Hooks.on("deleteActor", (actor) => { pruneBonds(actor?.uuid); });
 
   // The calendar bar. AT READY because it reads a setting and inserts itself
   // beside `#hotbar`, and neither the settings nor the bottom UI exist before
@@ -2067,6 +2074,8 @@ const configureHandleBar = () => {
   const templatePaths = [
     "systems/mondolme/templates/parts/items-list.html",
     "systems/mondolme/templates/parts/container-list.html",
+    "systems/mondolme/templates/parts/bond-list.html",
+    "systems/mondolme/templates/parts/purse.html",
     "systems/mondolme/templates/parts/bio-block.html",
   ];
 

@@ -43,14 +43,24 @@
                     <input type="number" min="0" max="18" step="1" class="stat-input" name="system.hp.max" value="{{system.hp.max}}" data-dtype="Number" title="{{ localize 'CAIRN.Maximum' }}" />
                 </div>
             </div>
-            <div class="resource-counter deprived-counter long-counter {{#if system.maybeTooMuchGold }}overburdened-gold{{/if}}"
-            {{#if system.maybeTooMuchGold }} title="{{localize 'CAIRN.OverburdenByGold'}}" {{/if}} >
-                <label for="{{@root.idp}}-system.gold" data-tooltip="{{ system.coinTip }}">
-                    {{ localize 'CAIRN.Gold' }}
+            {{!-- PRESTIGIO (2026-09-06) donde estaba el Oro. El dinero se ha
+                  mudado a la pestaña de Equipo, debajo de la lista: es una cosa
+                  que se lleva encima y que pesa, no una estadística.
+
+                  El RANGO no se guarda — sale de `system.standing`, derivado del
+                  número en cada prepare (prestige.js). Va como tooltip y como
+                  línea bajo el número, así que no puede quedar desincronizado
+                  del prestigio que tiene al lado. --}}
+            <div class="resource-counter long-counter prestige-counter"
+                data-tooltip="{{system.standing.rankLabel}}">
+                <label for="{{@root.idp}}-system.prestige">
+                    {{ localize 'CAIRN.Prestige.Label' }}
                 </label>
                 <div class="resource-input-wrapper">
-                    <input type="number" name="system.gold" id="{{@root.idp}}-system.gold" value="{{system.gold}}" data-dtype="Number" />
+                    <input type="number" min="0" step="1" name="system.prestige" id="{{@root.idp}}-system.prestige"
+                        value="{{system.prestige}}" data-dtype="Number" />
                 </div>
+                <span class="prestige-rank">{{system.standing.rankLabel}}</span>
             </div>
 
         </div>
@@ -163,6 +173,9 @@
             <section class="content">
                 <div class="tab {{tabs.items.cssClass}}" data-group="primary" data-tab="items">
                     {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=1 withShop=withShop}}
+                    {{!-- EL MONEDERO (2026-09-06), debajo de la lista: el dinero
+                          es equipo, ocupa espacios y se lleva encima. --}}
+                    {{> "systems/mondolme/templates/parts/purse.html"}}
                 </div>
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
                     <div class="description">
@@ -251,6 +264,13 @@
                     {{> "systems/mondolme/templates/parts/container-list.html"}}
                     <hr class="notes-divider" />
                     {{/if}}
+                    {{!-- THE BOND WEB (2026-09-05), above the free-form notes.
+                          Ungated: it is the tab's headline content now, and
+                          unlike the custody list above it there is nothing to
+                          park — a sheet with no bonds prints one line saying
+                          so. --}}
+                    {{> "systems/mondolme/templates/parts/bond-list.html"}}
+                    <hr class="notes-divider" />
                     {{!-- TOGGLED since 2026-08-02, reversing the always-active decision
                           recorded here: the user reads a permanent toolbar over an empty
                           box as clutter. `toggled collaborate` is the MEASURED-SAFE

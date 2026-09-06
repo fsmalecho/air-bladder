@@ -1,4 +1,6 @@
 import { SETTINGS_NS } from "../settings.js";
+import { coinCount, toCopper } from "../money.js";
+import { standing } from "../prestige.js";
 import { iconForItem, iconForTransport, containerClassSlots, CONTAINER_CLASSES, ICON_DIR } from "../icons.js";
 import { THING_ROLES, PERSON_ROLES } from "../data-models.js";
 import {
@@ -144,7 +146,7 @@ export const postStatusCard = async (actor, kind) => {
 const AUDIT_LABELS = {
   "system.hp.value": () => game.i18n.localize("CAIRN.HitProtection"),
   "system.hp.max": () => game.i18n.format("CAIRN.ChangeLog.MaxOf", { label: game.i18n.localize("CAIRN.HitProtection") }),
-  "system.gold": () => game.i18n.localize("CAIRN.Gold"),
+  "system.coins": () => game.i18n.localize("CAIRN.Coins"),
 };
 for (const k of ["STR", "DEX", "WIL"]) {
   AUDIT_LABELS[`system.abilities.${k}.value`] = () => game.i18n.localize(k);
@@ -522,7 +524,15 @@ export class CairnActor extends Actor {
     // the stored value and the coins-take-slots rule are untouched, so a chest
     // that held 25gp still holds it (and it still weighs) — the sheet just
     // stops offering a purse on something that has no pockets to manage.
-    this.system.showGold = !this.isThing && this.npcRole !== "companion";
+    this.system.showCoins = !this.isThing && this.npcRole !== "companion";
+
+    // PRESTIGE, and the rank it has reached. Characters only — the ruling was
+    // that the people an Adventurer meets are not chasing the Great Quest — and
+    // derived on every prepare rather than stored, so a Warden who edits the
+    // number can never leave a stale rank beside it.
+    this.system.standing = this.type === "character"
+      ? standing(this.system.prestige)
+      : null;
     // The Items tab's Fatigue +/- header. A THING cannot be tired: a sack, cart
     // or crate has no STR to burn and no save to fail, so the control was pure
     // nonsense on one. Casting DOES cost Fatigue, but it costs it to the
@@ -600,10 +610,17 @@ export class CairnActor extends Actor {
 
     // Coins are heavy (Cairn 2e, p.9). The first N coins stay petty (weightless);
     // every further N fills a slot -- N is the GM's "coins per slot" setting
-    // (default 100). The filled slots render as "N Gold" rows in the inventory
-    // (items-list.html) and count toward encumbrance like any other slot.
+    // (default 100). The filled slots render as "N monedas" rows in the
+    // inventory (items-list.html) and count toward encumbrance like any slot.
+    //
+    // COUNTED, NOT VALUED, since the purse became three denominations
+    // (2026-09-06): a thousand copper is a thousand coins and weighs like it,
+    // however little it buys. That is the rule that makes a money changer worth
+    // visiting, and it falls out of `coinCount` adding the three piles.
     this.system.coinsPerSlot = this._coinsPerSlot();
-    this.system.coinRowLabel = game.i18n.format("CAIRN.NGold", { n: this.system.coinsPerSlot });
+    this.system.coinTotal = coinCount(this.system.coins);
+    this.system.coinValue = toCopper(this.system.coins);
+    this.system.coinRowLabel = game.i18n.format("CAIRN.NCoins", { n: this.system.coinsPerSlot });
     // Each filled row is exactly one slot, but the tag still goes through
     // formatCount rather than a hardcoded `CAIRN.NSlot_one` (review #13):
     // "_one" is this repo's suffix convention, not a key every language
@@ -612,8 +629,8 @@ export class CairnActor extends Actor {
     // (ja, zh) was asked for a form its translator was never told exists.
     this.system.coinRowSlotTag = formatCount("CAIRN.NSlot", 1);
     this.system.coinTip = this.system.coinsPerSlot > 0
-      ? game.i18n.format("CAIRN.GoldTip", { n: this.system.coinsPerSlot })
-      : game.i18n.localize("CAIRN.GoldTipWeightless");
+      ? game.i18n.format("CAIRN.CoinTip", { n: this.system.coinsPerSlot })
+      : game.i18n.localize("CAIRN.CoinTipWeightless");
     this.system.goldSlots = this._calcGoldSlots();
     this.system.hasGoldThreshold = this.system.coinsPerSlot > 0;
 
@@ -668,9 +685,10 @@ export class CairnActor extends Actor {
    */
   _calcGoldSlots() {
     const n = this._coinsPerSlot();
-    const gold = this.system.gold ?? 0;
-    if (n <= 0 || gold <= 0) return 0;
-    return Math.max(0, Math.ceil(gold / n) - 1);
+    // The NUMBER of coins across all three denominations, not their worth.
+    const total = coinCount(this.system.coins);
+    if (n <= 0 || total <= 0) return 0;
+    return Math.max(0, Math.ceil(total / n) - 1);
   }
 
   /* `_prepareNpcData` and `_prepareContainerData` lived here and are gone

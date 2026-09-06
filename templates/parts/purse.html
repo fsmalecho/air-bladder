@@ -1,0 +1,41 @@
+{{!-- EL MONEDERO: tres campos, y lo que pesan.
+
+      EL PESO CUENTA MONEDAS, NO VALOR. Los tres montones se SUMAN para saber
+      cuántos espacios ocupan (actor.js `_calcGoldSlots`), así que mil monedas
+      de cobre pesan como mil monedas por poco que compren. De ahí el botón de
+      «Consolidar»: cambiarlas por las más grandes que quepan es una decisión
+      con consecuencia mecánica, no una comodidad de la interfaz.
+
+      La plata es el estándar de precios, así que va en medio y es la que el
+      ojo encuentra primero. --}}
+<div class="purse{{#if system.maybeTooMuchGold}} is-overburdened{{/if}}"
+    {{#if system.maybeTooMuchGold}}data-tooltip="{{ localize 'CAIRN.OverburdenByCoins' }}"{{/if}}>
+    <div class="purse-header">
+        <span class="purse-title">{{ localize 'CAIRN.Coins' }}</span>
+        <span class="purse-weight" data-tooltip="{{ system.coinTip }}">
+            {{ system.coinTotal }} <i class="fas fa-coins"></i>
+            {{#if system.goldSlots}}· {{ system.goldSlots }} <i class="fas fa-box"></i>{{/if}}
+        </span>
+    </div>
+    <div class="purse-piles">
+        <label class="purse-pile">
+            <span class="purse-coin purse-coin-gold">{{ localize 'CAIRN.CoinShort.gold' }}</span>
+            <input type="number" min="0" step="1" name="system.coins.gold"
+                value="{{system.coins.gold}}" data-dtype="Number" />
+        </label>
+        <label class="purse-pile">
+            <span class="purse-coin purse-coin-silver">{{ localize 'CAIRN.CoinShort.silver' }}</span>
+            <input type="number" min="0" step="1" name="system.coins.silver"
+                value="{{system.coins.silver}}" data-dtype="Number" />
+        </label>
+        <label class="purse-pile">
+            <span class="purse-coin purse-coin-copper">{{ localize 'CAIRN.CoinShort.copper' }}</span>
+            <input type="number" min="0" step="1" name="system.coins.copper"
+                value="{{system.coins.copper}}" data-dtype="Number" />
+        </label>
+        {{#if @root.editable}}
+        <a class="item-control purse-consolidate" data-action="purseConsolidate"
+            data-tooltip="{{ localize 'CAIRN.CoinConsolidateHint' }}"><i class="fas fa-right-left"></i></a>
+        {{/if}}
+    </div>
+</div>

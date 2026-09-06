@@ -98,6 +98,35 @@
   "CAIRN.Birthday": "Cumpleaños",
   "CAIRN.Blast": "Estallido",
   "CAIRN.BoldMeanEquipped": "(negrita significa equipado)",
+  "CAIRN.Bonds": {
+    "Title": "Vínculos",
+    "Add": "Vincular",
+    "AddHint": "Tender un vínculo con otra ficha",
+    "AddTitle": "Nuevo vínculo",
+    "EditTitle": "Editar el vínculo",
+    "Edit": "Editar este vínculo",
+    "Delete": "Cortar el vínculo",
+    "Save": "Guardar",
+    "Other": "Con quién",
+    "GroupCharacters": "Personajes",
+    "GroupOthers": "Otras fichas",
+    "Says": "Lo que {self} dice de la otra persona",
+    "SaysNamed": "Lo que {self} dice de {other}",
+    "SaysBack": "Lo que la otra persona dice de {self}",
+    "SaysBackNamed": "Lo que {other} dice de {self}",
+    "SaysPlaceholder": "mi hermana mayor, mi acreedor, el que me delató…",
+    "SaysBackPlaceholder": "mi hermana pequeña, me debe dinero…",
+    "MirrorHint": "Si dejas este campo vacío, el otro lado dirá lo mismo que el primero.",
+    "BackPrefix": "Y desde el otro lado:",
+    "Secret": "Solo para el Guardián",
+    "SecretHint": "Un vínculo secreto no aparece en la ficha para los jugadores. Se guarda en el mismo sitio que los demás, así que es orden y no secreto a prueba de curiosos.",
+    "OpenHint": "Abrir esta ficha",
+    "Empty": "Esta ficha no tiene vínculos.",
+    "EmptyWarden": "Ningún vínculo todavía. Pulsa «Vincular», o arrastra otra ficha aquí.",
+    "Notify": {
+      "NoOne": "No hay ninguna otra ficha en el mundo con la que vincular a esta."
+    }
+  },
   "CAIRN.BookBulkyTip": "Un libro siempre es voluminoso: ocupa dos espacios y no puedes desmarcarlo.",
   "CAIRN.BookLanguage": "Idioma",
   "CAIRN.BookLanguageLocked": "No conoces el idioma en el que está escrito este libro: solo puedes leer su descripción, no sus páginas.",
@@ -287,8 +316,6 @@
   "CAIRN.GeneratePcConfirmTitle": "¿Quieres crear un nuevo personaje?",
   "CAIRN.GenerationRolls": "ha creado un nuevo personaje, {name}!",
   "CAIRN.Gold": "Oro",
-  "CAIRN.GoldTip": "Las monedas pesan: las primeras {n} son insignificantes (sin peso); cada {n} adicional ocupa un espacio del inventario.",
-  "CAIRN.GoldTipWeightless": "El oro no tiene peso en este juego — nunca ocupa espacios en el inventario.",
   "CAIRN.GrantBackground": "Trasfondo",
   "CAIRN.GrantContainer": "Contenedor",
   "CAIRN.GrantQuestion": "Pregunta",
@@ -356,7 +383,6 @@
   "CAIRN.MemorizedCard": "<strong>{actor}</strong> ha memorizado <strong>{spell}</strong> durante 10 minutos.",
   "CAIRN.NArmor": "armadura {n}",
   "CAIRN.NDamage": "daño {n}",
-  "CAIRN.NGold": "{n} monedas",
   "CAIRN.NQuantity": "Cantidad {n}",
   "CAIRN.NSlot": "{n} espacios",
   "CAIRN.NSlot_one": "{n} espacio",
@@ -427,7 +453,6 @@
     "NoWardenForPcGen": "No hay ningún Guardián conectado, por lo que no se puede crear tu personaje. Pídeles que abran el mundo y vuelve a intentarlo.",
     "NoWorldTables": "No hay ninguna tabla en este mundo que se pueda rellenar; primero debes importar o crear una.",
     "NotEditable": "No tienes permiso para editar {name}.",
-    "NotEnoughGold": "No hay suficiente oro para {name} ({cost}).",
     "Overloaded": "{name} añadido — ahora mismo has superado la capacidad máxima (PG 0 hasta que liberes un espacio).",
     "PackLocked": "{pack} está bloqueado: desbloquea el compendio para editar este documento.",
     "PcGenCancelled": "Tu personaje no se ha creado: el Guardián lo ha cancelado..",
@@ -458,7 +483,10 @@
     "NotAGrimoire": "«{name}» no es un grimorio: marca la casilla «Grimorio» en su ficha para poder lanzar sus páginas.",
     "AllMemorized": "Ya conoces todos los hechizos de «{name}».",
     "AlreadyMemorized": "Ya tienes memorizado «{spell}».",
-    "ScrollLanguageUnknown": "No conoces el idioma de «{name}» ({language}): no puedes leer el pergamino ni lanzarlo."
+    "ScrollLanguageUnknown": "No conoces el idioma de «{name}» ({language}): no puedes leer el pergamino ni lanzarlo.",
+    "NotEnoughCoin": "No te llega para «{name}»: cuesta {cost}.",
+    "CoinsConsolidated": "Monedas cambiadas: de {before} piezas a {after}.",
+    "CoinsAlreadyTidy": "No hay nada que cambiar: ya llevas las monedas más grandes posibles."
   },
   "CAIRN.Npc": "PNJ",
   "CAIRN.NpcRegeneratorConfirm": "¿Estás seguro de que quieres volver a generar este PNJ?</p><p>Se eliminará todo lo que lleve consigo, y se sustituirán sus características, su PG, su carrera y su tarifa diaria. Esta acción no se puede deshacer.",
@@ -468,7 +496,6 @@
   "CAIRN.Omen": "Presagio",
   "CAIRN.OmenPlaceholder": "Si eres el miembro más joven del grupo, marca la casilla «Presagio» y pulsa el botón «Tirar» para recibir un presagio.",
   "CAIRN.OmenTableMissing": "No se encuentra la tabla de presagios (mondolme.tables-2e).",
-  "CAIRN.OverburdenByGold": "El personaje puede verse sobrecargado por el oro",
   "CAIRN.Overburdened": "Sobrecargado",
   "CAIRN.OverburdenedBanner": "Inventario lleno — la PG se reduce a 0 hasta que liberes un espacio del inventario.",
   "CAIRN.Panicked": "Pánico",
@@ -658,8 +685,8 @@
       "label": "Utiliza la notación de dados de Cairn: «d6+d6» (queda el resultado más alto)."
     },
     "UseGoldThreshold": {
-      "hint": "Establece la cantidad de monedas de oro que ocupa un espacio completo del inventario. El cero significa que las piezas de oro son siempre insignificantes...",
-      "label": "Oro que ocupa un espacio del inventario (0 = insignificante)"
+      "hint": "Cuántas monedas caben en un espacio de equipo. Las primeras son insignificantes; cada tanda más ocupa un espacio. Se cuentan las monedas de los tres montones sumadas, no su valor. 0 = las monedas no pesan.",
+      "label": "Monedas por espacio"
     },
     "UseItemIcons": {
       "label": "Mostrar los iconos de tipo de objeto (arma, armadura, fatiga) junto al inventario"
@@ -692,6 +719,14 @@
       "autumn": "Tabla de tiempo — Otoño",
       "winter": "Tabla de tiempo — Invierno",
       "hint": "Nombre de la tabla que se tira sola cuando el reloj entra en un día nuevo, para saber qué tiempo hace. Se usa la de la estación en la que cae el día nuevo. A diferencia de las otras dos, el resultado lo ve toda la mesa. Déjalo vacío para no tirar nada."
+    },
+    "SilverPerGold": {
+      "label": "Monedas de plata por moneda de oro",
+      "hint": "Cuántas mp vale 1 mo. Por defecto 10."
+    },
+    "CopperPerSilver": {
+      "label": "Monedas de cobre por moneda de plata",
+      "hint": "Cuántas mc vale 1 mp. Por defecto 10."
     }
   },
   "CAIRN.Slots": "Espacios",
@@ -847,5 +882,29 @@
     "4": "V",
     "5": "S",
     "6": "D"
-  }
+  },
+  "CAIRN.Prestige": {
+    "Label": "Prestigio",
+    "Ranks": {
+      "wanderer": "Errante, merecedor de nada",
+      "knight": "Merecedor de armarse caballero y tomar un aprendiz",
+      "battalion": "Merecedor de liderar un Batallón",
+      "council": "Merecedor de un puesto en el Consejo o la Corte",
+      "lordship": "Merecedor de gobernar un Señorío",
+      "seat": "Merecedor de gobernar la Sede del Poder",
+      "legend": "Merecedor de convertirse en una Leyenda"
+    }
+  },
+  "CAIRN.Coins": "Monedas",
+  "CAIRN.CoinShort": {
+    "gold": "mo",
+    "silver": "mp",
+    "copper": "mc"
+  },
+  "CAIRN.CoinEmpty": "sin blanca",
+  "CAIRN.CoinTip": "Las monedas pesan: las primeras {n} son insignificantes y cada {n} más ocupan un espacio. Cuentan las MONEDAS, no su valor.",
+  "CAIRN.CoinTipWeightless": "En este mundo las monedas no pesan.",
+  "CAIRN.CoinConsolidateHint": "Cambiar por las monedas más grandes que quepan. Vale lo mismo y pesa menos.",
+  "CAIRN.OverburdenByCoins": "Vas sobrecargado, y las monedas tienen parte de la culpa.",
+  "CAIRN.NCoins": "{n} monedas"
 }

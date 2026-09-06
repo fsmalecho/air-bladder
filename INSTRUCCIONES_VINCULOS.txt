@@ -1,0 +1,197 @@
+MONDOLME — Los vínculos, rehechos como una red
+===============================================
+
+Sobre el calendario ya aplicado. Cambian cinco archivos y hay tres nuevos:
+
+    css/cairn.css                              (modificado)
+    lang/es.json                               (modificado)
+    module/cairn.js                            (modificado)
+    module/settings.js                         (modificado)
+    module/actor/actor-sheet.js                (modificado)
+    templates/actor/character-sheet.html       (modificado)
+    templates/actor/npc-sheet.html             (modificado)
+    module/bonds.js                            (NUEVO)
+    module/bond-editor.js                      (NUEVO)
+    templates/parts/bond-list.html             (NUEVO)
+
+Ninguno borrado. Etiqueta 2.0.6 (o el siguiente que te toque).
+
+
+PRIMERO, UNA ACLARACIÓN QUE IMPORTA
+-----------------------------------
+
+Lo que el sistema llamaba «vínculos» hasta hoy NO es esto, y sigue existiendo.
+
+Ese otro es `connectedTo`: una relación de CUSTODIA. Qué caballos, sacos,
+carros y contratados lleva un personaje encima. Es de una sola dirección, tiene
+un tope de diez, y —esto es lo importante— gobierna los PERMISOS de Foundry:
+estar conectado es lo que hace que los jugadores de un PJ puedan abrir la ficha
+de su caballo. De ahí cuelgan el mercado, los contenedores que otorgan los
+trasfondos y la propiedad de las fichas, así que no se toca. Su interfaz lleva
+aparcada desde agosto y sigue aparcada.
+
+Lo nuevo es una capa aparte que no toca ningún permiso: quién conoce a quién.
+
+
+LA FORMA DEL VÍNCULO
+--------------------
+
+Un vínculo es UN SOLO REGISTRO con dos nombres y dos frases:
+
+     Ana  ←→  El barón
+     lo que Ana dice de él:  «mi acreedor»
+     lo que él dice de Ana:  «me debe doce monedas»
+
+La reciprocidad no es entonces una regla que haya que hacer cumplir: es la
+FORMA del registro. El vínculo existe en las dos fichas o en ninguna, porque
+solo hay uno. Ábrele la ficha al barón y ahí está el mismo vínculo, leído desde
+su lado.
+
+Y los dos lados PUEDEN DECIR COSAS DISTINTAS, que es lo que hace expresables los
+interesantes: mentor y aprendiz, acreedor y deudor, señor y vasallo son un solo
+vínculo visto desde dos sitios. Si dejas un lado en blanco, refleja al otro, así
+que «hermanas» cuesta un campo y no dos.
+
+El espejo se hace al LEER, no al guardar. Si escribes «mi melliza» en el lado de
+Ana y dejas el de Berta vacío y luego cambias el de Ana a «mi hermana mayor», el
+lado de Berta cambia con él. Guardar una copia al escribir habría congelado una
+frase que después deja de coincidir en silencio.
+
+CADA PAREJA TIENE UN VÍNCULO Y SOLO UNO. Dos personas tienen una relación, por
+muchas cosas que la compongan; una segunda fila para la misma pareja es una
+ficha que lista a alguien dos veces y dos sitios donde editar el mismo hecho.
+«Ana debe dinero a Berta y además son hermanas» es un vínculo cuyas dos frases
+lo dicen. Volver a vincular una pareja EDITA la que ya hay.
+
+
+DÓNDE ESTÁ
+----------
+
+En la pestaña «Vínculos y notas» del PJ y en la de «Notas» del PNJ, encima del
+editor de texto. La lista es la misma en las dos, leída desde cada extremo.
+
+Cada fila lleva el retrato de la otra ficha, su nombre, lo que esta ficha dice
+de ella, y debajo y más flojito lo que dice la otra. Ese segundo renglón es a
+propósito: es la mitad que más falta te hace como Guardián y la que a nadie se
+le ocurriría ir a buscar a la otra ficha.
+
+Pulsando el retrato o el nombre se abre la ficha del otro extremo.
+
+DOS MANERAS DE CREAR UNO:
+  - El botón «Vincular» en la cabecera de la lista, que abre un desplegable con
+    todas las fichas del mundo (los personajes primero).
+  - ARRASTRAR una ficha desde la barra lateral y soltarla sobre la ficha
+    abierta. El arrastre dice QUIÉN; la ventana pregunta qué es cada uno para el
+    otro, porque un vínculo sin palabras es una línea que nadie sabe leer.
+
+
+QUIÉN ESCRIBE
+-------------
+
+Solo tú, como elegiste. Los jugadores leen.
+
+Y no es solo una decisión de estilo: es lo que ha permitido que esto sea simple.
+Un jugador no puede escribir en la ficha de otro actor —es un muro de Foundry, y
+la única forma de cruzarlo es el relé de socket— así que con un solo escritor
+hay un solo almacén, y un solo almacén no puede contradecirse a sí mismo. La
+alternativa era media arista guardada en cada ficha: dos escrituras que pueden
+descuadrarse y un barrido de todos los actores del mundo para encontrar las
+otras mitades.
+
+Los controles están ocultos para los jugadores, pero eso es cortesía: Foundry
+rechaza su escritura de todos modos.
+
+
+LOS VÍNCULOS SECRETOS
+---------------------
+
+Una casilla en la ventana de edición. Un vínculo secreto no aparece en la ficha
+para los jugadores — ni siquiera en la de su propio personaje.
+
+Aviso honesto, el mismo que las notas del calendario: se guarda en el mismo
+sitio que los demás, así que el navegador del jugador TIENE el texto y
+simplemente no lo dibuja. Es orden, no secreto a prueba de curiosos.
+
+Ten en cuenta además que un jugador solo puede abrir las fichas que le
+pertenecen, así que lo que haya entre dos PNJs ya es privado sin marcar nada.
+La casilla es para el caso que queda: un vínculo que no quieres que el jugador
+vea en la ficha de SU personaje.
+
+
+DETALLES QUE NO SE VEN
+----------------------
+
+  - Los vínculos se guardan por UUID, nunca por nombre, así que renombrar una
+    ficha es gratis: la fila lee el nombre al dibujarse.
+  - Borrar un actor limpia sus vínculos. Lo hace UN solo cliente (el Guardián
+    activo), porque el gancho salta en todos y cuatro escrituras a la vez son
+    cuatro oportunidades de que la última caiga sobre una copia vieja. Mientras
+    tanto, cualquier extremo roto simplemente no se dibuja: un barrido que no
+    llegue a ocurrir deja el mundo desordenado, no roto.
+  - No se puede vincular una ficha de compendio (es una plantilla, no una
+    persona) ni la copia de un token (muere al limpiar la escena).
+  - No hay tope. El de diez es de la custodia, que es casi un inventario; una
+    red social con techo no tendría sentido.
+  - No hay ajuste que configurar. Se edita donde están las personas.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+27 casos contra el módulo real, con Foundry simulado:
+
+  - RECIPROCIDAD: un vínculo escrito desde Ana se lee desde el barón con los dos
+    lados cambiados de sitio, y se guarda UNA sola vez.
+  - EDITAR DESDE EL OTRO EXTREMO sin pisar la mitad equivocada: escrito
+    Ana→barón y luego editado desde la ficha del barón, las etiquetas llegan en
+    orden contrario y aun así cada una acaba en su lado.
+  - UN VÍNCULO DISTINTO CON OTRO PJ: Ana ve a Berta y al barón, y dicen cosas
+    distintas; Berta solo ve a Ana.
+  - EL ESPEJO: el lado vacío repite al otro leído desde las dos fichas, y sigue
+    al original cuando lo cambias.
+  - UNA SOLA ARISTA POR PAREJA: volver a vincular no duplica.
+  - LO QUE SE RECHAZA: uno consigo mismo, una ficha de compendio, la copia de un
+    token — y ninguna de las tres deja rastro en el almacén.
+  - LOS SECRETOS: el Guardián lo ve, el jugador no; y un jugador no puede ni
+    escribir ni borrar.
+  - BORRAR UN ACTOR: se van sus vínculos y solo los suyos.
+  - UN EXTREMO ROTO se salta sin romper la ficha.
+  - EL ORDEN: personajes primero, luego por nombre.
+
+Y una auditoría de la plantilla, que hace de render en un entorno sin npm: los
+7 bloques de Handlebars cuadran, las 19 etiquetas HTML cuadran, las 10 claves de
+idioma existen en español, las cuatro acciones (`bondAdd`, `bondEdit`,
+`bondDelete`, `bondOpen`) están declaradas en el mapa de la ficha, los siete
+campos que imprime cada fila son los siete que produce el módulo, y la ficha
+asigna las dos claves de contexto que la plantilla lee.
+
+Más lo de siempre: los 30 archivos de código pasan la comprobación de sintaxis,
+ningún import apunta a algo que no exista, el CSS cierra sus 548 llaves, la
+clave de ajuste nueva está en las dos listas y registrada y fuera de todo grupo
+visible, no hay claves de idioma huérfanas ni sin traducir, y es.json y
+system.json son JSON válido.
+
+
+QUÉ MIRAR PRIMERO
+-----------------
+
+  1. Abre un PJ → pestaña «Vínculos y notas». Debe salir la cabecera «Vínculos»
+     con el botón «Vincular» y una línea diciendo que no hay ninguno.
+  2. Arrastra un PNJ desde la barra lateral y suéltalo sobre la ficha. Se abre
+     la ventana: escribe las dos frases y guarda.
+  3. Abre la ficha de ESE PNJ. El vínculo debe estar ahí, con las dos frases
+     cambiadas de lado.
+  4. Edítalo desde la ficha del PNJ y vuelve al PJ: cada frase donde estaba.
+  5. Vincula el PJ con otro PJ y comprueba que dice algo distinto.
+  6. Marca uno como secreto y míralo con un jugador conectado.
+
+
+LO QUE NO LLEVA, Y QUE DIJISTE QUE NO POR AHORA
+-----------------------------------------------
+
+  - NO hay vista de red (el grafo con nodos y líneas). Los datos ya son una red;
+    lo que falta es la ventana que la dibuje, y se puede añadir después sin
+    tocar nada de esto.
+  - NO hay etiqueta de tono (aliado / neutral / hostil).
+  - Los trasfondos no otorgan vínculos todavía. Sería el paso natural siguiente
+    si quieres que una respuesta de trasfondo teja media red sola.

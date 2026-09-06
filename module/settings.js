@@ -63,11 +63,16 @@ export const SETTING_KEYS = [
   "connections-ui-enabled",
   // Inventory & Encumbrance
   "max-equip-slots", "character-inventory-limit", "allow-player-marketplace",
-  "use-gold-threshold",
+  "use-gold-threshold", "silver-per-gold", "copper-per-silver",
   // Calendar
   "show-calendar", "calendar-table-turn", "calendar-table-travel",
   "calendar-table-spring", "calendar-table-summer",
   "calendar-table-autumn", "calendar-table-winter",
+  // The bond web (2026-09-05). Internal and Warden-written: there is no
+  // settings row for it, because it is edited on the sheets where the people
+  // are. In SETTING_KEYS because losing a campaign's relationship web to a
+  // namespace migration would be worse than losing any switch above.
+  "bonds",
   // …and its two internal ones. `calendar-epoch` is CONFIGURATION — the
   // campaign's start date — and must ride the namespace migration like
   // `custom-portrait-list` does; `calendar-notes` is the Warden's own writing,
@@ -142,6 +147,8 @@ export const INTERNAL_SETTING_KEYS = [
   // «Fecha del mundo» field in the calendar itself, and the notes by writing a
   // note. Neither belongs in a settings window.
   "calendar-epoch", "calendar-notes",
+  // The bond web, for the same reason: it is written on the sheets.
+  "bonds",
 ];
 
 /**
@@ -210,7 +217,7 @@ export const SETTING_GROUPS = [
     icon: "fa-solid fa-weight-hanging",
     keys: [
       "max-equip-slots", "character-inventory-limit", "allow-player-marketplace",
-      "use-gold-threshold",
+      "use-gold-threshold", "silver-per-gold", "copper-per-silver",
     ],
   },
   {
@@ -757,6 +764,8 @@ export const registerSettings = () => {
 
   // Cairn 2e (p.9): coins are heavy. The first N are petty; every further N fills
   // a slot. N is this "coins per slot" value (default 100). 0 = coins weightless.
+  // Since 2026-09-06 N counts the coins across ALL THREE denominations, added
+  // rather than converted — value has nothing to do with what a purse weighs.
   game.settings.register(SETTINGS_NS, "use-gold-threshold", {
     name: "CAIRN.Settings.UseGoldThreshold.label",
     hint: "CAIRN.Settings.UseGoldThreshold.hint",
@@ -767,12 +776,41 @@ export const registerSettings = () => {
     requiresReload: true,
   });
 
+  // THE EXCHANGE RATES (2026-09-06): 1 gold = 10 silver, 1 silver = 10 copper.
+  // Settings rather than constants, and the reason showed up the same afternoon
+  // they were written: the first ruling said 100 copper to the silver and was a
+  // slip. Correcting it was a number in a window instead of an edit to money.js,
+  // and nothing else in the system knows a rate.
+  game.settings.register(SETTINGS_NS, "silver-per-gold", {
+    name: "CAIRN.Settings.SilverPerGold.label",
+    hint: "CAIRN.Settings.SilverPerGold.hint",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 10,
+    // Not a reload: the rates only change how coins are counted and shown, and
+    // every sheet re-derives that on its next prepare.
+    requiresReload: false,
+    onChange: rerenderActorSheets,
+  });
+
+  game.settings.register(SETTINGS_NS, "copper-per-silver", {
+    name: "CAIRN.Settings.CopperPerSilver.label",
+    hint: "CAIRN.Settings.CopperPerSilver.hint",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 10,
+    requiresReload: false,
+    onChange: rerenderActorSheets,
+  });
+
   /* `show-gold-not-cost` was registered here and is GONE (2026-07-31), for the
      same reason `show-containers-tab` went: the behaviour it toggled no longer
      exists. It swapped the Cost box on a CONTAINER SHEET for a Gold box, and
      the container type — sheet, model and all — is retired. The npc sheet that
      replaced it has no Cost box to swap: Round 2 settled that Gold simply hides
-     on a thing or a mount (`system.showGold`), which is a role fact, not a
+     on a thing or a mount (`system.showCoins`), which is a role fact, not a
      world preference. Do not re-add it without a field for it to govern. */
 
   /* `show-container-actors` was registered here and is GONE (2026-08-02, by
@@ -828,6 +866,22 @@ export const registerSettings = () => {
     type: String,
     default: "",
     requiresReload: false,
+  });
+
+  // THE BOND WEB: every relationship in the world, in one array of edges.
+  // ONE store rather than half an edge on each actor, which the Warden-only
+  // ruling makes possible — with a single writer there is nothing to keep in
+  // step, and the reciprocal half of a bond cannot go missing because there is
+  // no reciprocal half: there is one record that both sheets read.
+  game.settings.register(SETTINGS_NS, "bonds", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: [],
+    requiresReload: false,
+    // Both ends of a bond are often open at once, and the write lands on every
+    // client.
+    onChange: rerenderActorSheets,
   });
 
   // ONE WEATHER TABLE PER SEASON, drawn when the clock crosses into a new day.

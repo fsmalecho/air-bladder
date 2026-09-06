@@ -712,13 +712,26 @@ const effectiveFormula = (configuredRaw, fallback) => {
 };
 
 /**
- * The coin dice a character built on this background rolls: its own
- * `goldFormula` when set and usable, else the system default (`3d6`).
+ * The coin dice a character built on this background rolls: its own formula
+ * when set and usable, else the system default (`3d6`).
+ *
+ * IN SILVER since 2026-09-06 — silver is the price standard, so that is what a
+ * background hands a new Adventurer. TWO KEYS are consulted and the new one
+ * wins: `silverFormula` is what content should carry now, and `goldFormula` is
+ * what dozens of already-authored backgrounds carry. Reading both costs one
+ * `??` and saves renaming a field across every background in the world to make
+ * an identifier read better.
  * @param {CairnItem|null} bg @param {String} fallback
  * @returns {{formula:String, configured:String, usable:Boolean}}
  */
-export const effectiveGoldFormula = (bg, fallback) =>
-  effectiveFormula(bg?.system?.goldFormula, fallback);
+export const effectiveSilverFormula = (bg, fallback) =>
+  effectiveFormula(
+    String(bg?.system?.silverFormula ?? "").trim() || bg?.system?.goldFormula,
+    fallback,
+  );
+
+/** @deprecated the name this had before silver became the standard. */
+export const effectiveGoldFormula = effectiveSilverFormula;
 
 /**
  * Roll a character's starting coins off its background.
@@ -1087,8 +1100,9 @@ export const previewBackground = async (bg, n = 10) => {
     problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintBadAge", { formula: ageFormula }) });
   }
   // …and the same for the coin dice, which fail the same silent way.
-  const goldFormula = String(sys.goldFormula ?? "").trim();
-  if (goldFormula && !effectiveGoldFormula(bg, Cairn.characterGenerator2e.gold).usable) {
+  // Either spelling; `silverFormula` is the one new content should carry.
+  const goldFormula = String(sys.silverFormula ?? "").trim() || String(sys.goldFormula ?? "").trim();
+  if (goldFormula && !effectiveSilverFormula(bg, Cairn.characterGenerator2e.gold).usable) {
     problems.push({ level: "error", msg: game.i18n.format("CAIRN.BgAuthor.LintBadGold", { formula: goldFormula }) });
   }
 
@@ -2464,7 +2478,10 @@ export const changeBackground = async (actor, newBg = null) => {
     "system.background": bg.name,
     "system.backgroundUuid": bg.uuid,
     "system.questions": choices.questions,
-    "system.gold": Math.max(0, goldRoll.total + choices.gold),
+    // Starting money lands in SILVER, the price standard. The purse is written
+    // whole rather than field by field: it is one schema object, and a partial
+    // write would leave the other two piles at whatever the template had.
+    "system.coins": { gold: 0, silver: Math.max(0, goldRoll.total + choices.gold), copper: 0 },
     // ABSOLUTE, not the signed delta this line used to carry: `start` above is
     // already the whole answer, question bonuses included, so a delta on top
     // would apply them twice.

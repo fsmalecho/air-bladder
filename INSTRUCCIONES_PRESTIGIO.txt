@@ -1,0 +1,208 @@
+MONDOLME — Prestigio, y las tres monedas
+=========================================
+
+Sobre los vínculos ya aplicados. Etiqueta 2.0.7.
+
+    css/cairn.css                            (modificado)
+    lang/es.json                             (modificado)
+    module/cairn.js                          (modificado)
+    module/settings.js                       (modificado)
+    module/data-models.js                    (modificado)
+    module/marketplace.js                    (modificado)
+    module/character-generator.js            (modificado)
+    module/actor/actor.js                    (modificado)
+    module/actor/actor-sheet.js              (modificado)
+    templates/actor/character-sheet.html     (modificado)
+    templates/actor/npc-sheet.html           (modificado)
+    module/money.js                          (NUEVO)
+    module/prestige.js                       (NUEVO)
+    templates/parts/purse.html               (NUEVO)
+
+Ninguno borrado.
+
+
+LO PRIMERO: EL DINERO DE LAS FICHAS SE PONE A CERO
+--------------------------------------------------
+
+Lo elegiste tú y conviene repetirlo antes de que abras el mundo. El campo
+`gold` desaparece del esquema, así que lo que hubiera anotado en él no se
+convierte a nada: cada ficha empieza con el monedero vacío y lo repones a mano.
+
+No es un descuido del sistema: dejar el campo viejo conviviendo con el nuevo
+habría sido dejar un número que nadie lee y que alguien acabará leyendo por
+error dentro de seis meses.
+
+
+EL PRESTIGIO
+------------
+
+Donde estaba el Oro en la cabecera de la ficha de PJ hay ahora un campo
+numérico de Prestigio, y debajo, en pequeño, el rango que ha alcanzado. Pasa el
+ratón por encima y sale la frase entera.
+
+        0  Errante, merecedor de nada
+     1000  Merecedor de armarse caballero y tomar un aprendiz
+     3000  Merecedor de liderar un Batallón
+     6000  Merecedor de un puesto en el Consejo o la Corte
+     9000  Merecedor de gobernar un Señorío
+    12000  Merecedor de gobernar la Sede del Poder
+    15000  Merecedor de convertirse en una Leyenda
+
+EL RANGO NO SE GUARDA. Sale del número en cada repintado. Un rango guardado es
+una segunda copia de algo que el número ya dice, y las segundas copias se
+quedan viejas: editarías el prestigio, olvidarías el rango, y la ficha diría dos
+cosas a la vez.
+
+LAS ETIQUETAS SON LAS PALABRAS DE TU LIBRO. El texto solo nombra el primer
+rango («Errante») y describe los demás por lo que el Aventurero es merecedor
+DE, así que eso es lo que imprime la ficha. Inventarme «Caballero»,
+«Consejero» y demás habría sido poner palabras en boca de tu ambientación. Si
+luego quieres nombres cortos, están en lang/es.json bajo "CAIRN.Prestige.Ranks"
+y se reescriben sin tocar código.
+
+EL MÉRITO NO ESTÁ MECANIZADO, a propósito. Tus reglas dicen que el rango solo
+PRUEBA la valía, y que un Aventurero puede ocupar un puesto que su rango no
+amerita y hacerlo suyo superando la oposición. Eso pasa en la mesa, no en un
+campo de una ficha.
+
+El prestigio es solo de los PJs, como elegiste. Los PNJ no lo tienen.
+
+Lo que NO he automatizado y podría: los 1000 de una Gesta resuelta, el duelo
+que quita mil a uno y se los da al otro, y el 1 por plata derrochada. Son
+botones fáciles de añadir —el número de la Gesta ya está en el código como
+`DEED_PRESTIGE`— pero cada uno necesita decidir a quién se aplica, y eso es una
+conversación aparte. Dime cuáles quieres.
+
+
+LAS TRES MONEDAS
+----------------
+
+El dinero se ha mudado a la pestaña de Equipo, debajo de la lista de objetos,
+en tres campos: Mo, Mp y Mc. Con las tasas corregidas:
+
+    1 mo = 10 mp        1 mp = 10 mc        (y por tanto 1 mo = 100 mc)
+
+LAS TASAS SON AJUSTES, no números escritos en el código, y el motivo apareció
+la misma tarde en que las escribí: la primera versión decía 100 mc por plata y
+era un lapsus. Corregirlo fue cambiar un número en una ventana en vez de editar
+un archivo, y en el sistema no hay ningún otro sitio que sepa una tasa. Están en
+Configuración → Mondolme → Inventario y equipo.
+
+LA PLATA ES EL ESTÁNDAR, así que va en medio, y es la moneda que se supone
+cuando un precio no dice otra cosa.
+
+
+EL PRECIO LLEVA SU MONEDA
+-------------------------
+
+Cada objeto tiene ahora, junto al precio, en qué moneda está. Una cuerda puede
+costar 4 de plata y un caballo de guerra 30 de oro sin que ninguno de los dos
+números mienta sobre lo que significa. Los objetos que ya existen quedan en
+plata, que es el valor inicial del campo.
+
+En la tienda el precio sale con su moneda al lado, y el botón de comprar se
+apaga comparando el VALOR del monedero con el precio, no un montón con otro.
+
+
+PAGAR ROMPE LA MONEDA GRANDE
+----------------------------
+
+Si llevas 2 mo y 3 mp y compras algo de 12 mp, el sistema hace lo que haría un
+tendero: pasa todo a cobre, resta, y devuelve el cambio en las monedas más
+grandes que quepan. Te quedas con 1 mo y 1 mp.
+
+Y aquí hay una consecuencia que merece la pena que veas venir, porque no es un
+efecto secundario sino una mecánica:
+
+EL PESO CUENTA MONEDAS, NO VALOR. Los tres montones se SUMAN para saber cuántos
+espacios ocupan. Mil monedas de cobre pesan como mil monedas por poco que
+compren. Así que pagar puede dejarte MÁS LIGERO: con 1500 de cobre encima y una
+compra de 1 de plata, sales de la tienda con 23 monedas en vez de 1500. Son
+1477 monedas menos de peso por gastar diez.
+
+De ahí el botón de CONSOLIDAR, la flecha doble junto a los tres campos: cambia
+lo que llevas por las monedas más grandes posibles. Vale lo mismo y pesa menos.
+Es un botón y no algo automático justamente porque tiene consecuencia mecánica:
+es lo que haces en un cambista, no algo que pase solo.
+
+El ajuste de «monedas por espacio» (100 por defecto) sigue donde estaba y sigue
+significando lo mismo, solo que ahora cuenta los tres montones sumados.
+
+
+LOS TRASFONDOS DAN PLATA
+------------------------
+
+La fórmula de dinero inicial del trasfondo ahora otorga PLATA, coherente con que
+sea el estándar de precios. Los 3d6 de siempre siguen siendo una cantidad
+razonable de dinero para empezar.
+
+DETALLE TÉCNICO que te ahorra un susto: el campo sigue guardándose con el nombre
+viejo (`goldFormula`) y he añadido `silverFormula` al lado, que gana cuando está
+puesto. Los trasfondos que ya tienes escritos siguen funcionando sin tocarlos;
+lo nuevo debería usar el nombre nuevo. Renombrar el campo habría dejado
+huérfanos los que ya llevan fórmula, y eso es peor que un identificador con un
+nombre algo viejo.
+
+El oro extra por respuesta de trasfondo también entra en plata, y cambiar de
+respuesta lo intercambia igual que antes.
+
+
+LOS PNJ TAMBIÉN LLEVAN MONEDERO
+-------------------------------
+
+Como elegiste: prestigio solo para PJs, monedero para todos. Un PNJ, un cofre o
+un caballo pueden llevar dinero encima y pesan por ello exactamente igual. En la
+ficha de PNJ los tres campos están donde estaba el de oro.
+
+
+COMPROBACIONES HECHAS
+---------------------
+
+46 casos contra los dos módulos nuevos, con Foundry simulado:
+
+  - LAS TASAS: valor de un monedero mixto, ida y vuelta de un número feo, cero,
+    y un negativo que se queda en cero en vez de romper nada.
+  - EL PESO CUENTA MONEDAS: mil de cobre son mil monedas; lo mismo consolidado
+    son diez; y valen igual.
+  - LOS PRECIOS con su moneda, incluida una moneda desconocida que se lee como
+    plata en vez de valer cero.
+  - PAGAR ROMPIENDO LA MONEDA GRANDE: 2 mo y 3 mp comprando algo de 12 mp
+    devuelve 1 mo y 1 mp; pagar exacto vacía la bolsa; un cobre de menos se
+    rechaza y con ese cobre justo pasa; gratis no toca nada; y un precio
+    negativo se rechaza, que es la puerta por la que se colaría un objeto que
+    te DA dinero al comprarlo.
+  - PAGAR TE DEJA MÁS LIGERO: el caso de las 1500 monedas, medido.
+  - CONSOLIDAR sin cambiar el valor, y cobrar por su moneda.
+  - QUE EL AJUSTE FUNCIONA: cambiando la tasa a 100, la aritmética entera se
+    recalcula sola.
+  - EL RANGO en los siete umbrales y en los bordes (999 y 1000, 2999 y 3000),
+    un prestigio negativo que no rompe nada, lo que falta para el siguiente,
+    que arriba del todo no hay siguiente, y la barra de progreso.
+
+Y una auditoría de las tres plantillas tocadas: etiquetas y bloques cuadrados,
+las claves de idioma existen en español, y la acción de consolidar está
+declarada en el mapa de la ficha.
+
+Más lo de siempre: los 32 archivos de código pasan la comprobación de sintaxis,
+ningún import apunta a algo que no exista, el CSS cierra sus 569 llaves, las dos
+claves de ajuste nuevas están declaradas, registradas y en su grupo, no queda
+ninguna clave de idioma huérfana (las cinco del oro viejo las he borrado) ni sin
+traducir, y es.json y system.json son JSON válido.
+
+Y no queda ni una lectura de `system.gold` en el código: solo tres comentarios
+que hablan del pasado.
+
+
+QUÉ MIRAR PRIMERO
+-----------------
+
+  1. Abre un PJ. En la cabecera, donde estaba el Oro, debe haber Prestigio con
+     «Errante, merecedor de nada» debajo. Escribe 3000 y mira cambiar el rango.
+  2. Pestaña de Equipo, debajo de la lista: los tres campos. Escribe 150 en Mc y
+     mira aparecer el espacio ocupado a la derecha.
+  3. Pulsa la flecha doble: 150 de cobre deben volverse 1 mo y 5 mp, y el
+     espacio debe desaparecer.
+  4. Abre la tienda con 2 mo y compra algo barato: debe romper el oro y darte el
+     cambio.
+  5. Abre un PNJ: los tres campos donde estaba el oro, y ningún prestigio.
+  6. Configuración → Mondolme → Inventario y equipo: las dos tasas nuevas.

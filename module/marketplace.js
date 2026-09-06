@@ -1,6 +1,7 @@
 import { findTableItems } from "./compendium.js";
 import { marketTable, packFor, MARKET_TABLES } from "./content-packs.js";
 import { iconForTransport } from "./icons.js";
+import { canAfford, priceInCopper, spend, toCopper, formatPurse } from "./money.js";
 import { atConnectionLimit, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { formatCount } from "./utils.js";
 import { SETTINGS_NS } from "./settings.js";
@@ -192,15 +193,15 @@ const chips = (item) => {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 /** One shop row. `metaHtml` is the slot column. */
-const rowHtml = ({ idx, cost, name, tagsHtml, metaHtml, descHtml }) =>
-  `<div class="mkt-row" data-idx="${idx}" data-cost="${cost}" data-name="${esc(String(name).toLowerCase())}">
+const rowHtml = ({ idx, cost, currency, name, tagsHtml, metaHtml, descHtml }) =>
+  `<div class="mkt-row" data-idx="${idx}" data-copper="${priceInCopper(cost, currency)}" data-name="${esc(String(name).toLowerCase())}">
     <div class="mkt-line">
       <div class="mkt-row-main" title="${game.i18n.localize("CAIRN.Description")}">
         <span class="mkt-name">${esc(name)}</span>
         <span class="mkt-tags">${tagsHtml}</span>
       </div>
       ${metaHtml}
-      <span class="mkt-cost"><i class="fas fa-coins"></i> ${cost}</span>
+      <span class="mkt-cost mkt-cost-${esc(currency)}"><i class="fas fa-coins"></i> ${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}</span>
       <span class="mkt-actions">
         <button type="button" class="mkt-buy" data-idx="${idx}">${game.i18n.localize("CAIRN.Buy")}</button>
         <button type="button" class="mkt-take" data-idx="${idx}" title="${game.i18n.localize("CAIRN.TakeHint")}">${game.i18n.localize("CAIRN.Take")}</button>
@@ -222,9 +223,12 @@ const acquire = async (actor, data, pay) => {
     return false;
   }
   const cost = data.system.cost ?? 0;
+  const currency = data.system.costCurrency ?? "silver";
+  const price = priceInCopper(cost, currency);
   const shown = data.name;
-  if (pay && (actor.system.gold ?? 0) < cost) {
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughGold", { name: shown, cost }));
+  const priceText = `${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}`;
+  if (pay && !canAfford(actor.system.coins, price)) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughCoin", { name: shown, cost: priceText }));
     return false;
   }
   // A THING is strict (refuses anything that won't fit, never holds equipped
@@ -257,8 +261,14 @@ const acquire = async (actor, data, pay) => {
   // two — the price is on the item line's other side of the same click.
   await actor.createEmbeddedDocuments("Item", [data]);
   if (pay) {
-    await actor.update({ "system.gold": (actor.system.gold ?? 0) - cost }, { abNoStatusCard: true });
-    ui.notifications.info(game.i18n.format("CAIRN.Notify.Bought", { name: shown, cost }));
+    // MAKING CHANGE: `spend` breaks the big coin and hands the rest back in the
+    // largest that fit, so a purse of gold can buy a rope priced in silver. It
+    // re-checks affordability and answers null rather than going negative — the
+    // wall above is the affordance, this is the enforcement.
+    const after = spend(actor.system.coins, price);
+    if (!after) return false;
+    await actor.update({ "system.coins": after }, { abNoStatusCard: true });
+    ui.notifications.info(game.i18n.format("CAIRN.Notify.Bought", { name: shown, cost: priceText }));
   } else {
     ui.notifications.info(game.i18n.format("CAIRN.Notify.Took", { name: shown }));
   }
@@ -293,9 +303,12 @@ export const acquireTransport = async (actor, doc, pay) => {
     return false;
   }
   const cost = doc.system.cost ?? 0;
+  const currency = doc.system.costCurrency ?? "silver";
+  const price = priceInCopper(cost, currency);
   const shown = doc.name;
-  if (pay && (actor.system.gold ?? 0) < cost) {
-    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughGold", { name: shown, cost }));
+  const priceText = `${cost} ${game.i18n.localize(`CAIRN.CoinShort.${currency}`)}`;
+  if (pay && !canAfford(actor.system.coins, price)) {
+    ui.notifications.warn(game.i18n.format("CAIRN.Notify.NotEnoughCoin", { name: shown, cost: priceText }));
     return false;
   }
   // A container cannot itself keep a container — no nesting. Not a type test
@@ -388,8 +401,9 @@ export const acquireTransport = async (actor, doc, pay) => {
     // a transport is a connected ACTOR, so no item lands on the buyer and this
     // deduction is the ONLY trace a bought mule leaves in the change log.
     // Flagging it would make transports the one purchase the ledger never sees.
-    await actor.update({ "system.gold": (actor.system.gold ?? 0) - cost });
-    ui.notifications.info(game.i18n.format("CAIRN.Notify.Bought", { name: shown, cost }));
+    const after = spend(actor.system.coins, price);
+    if (after) await actor.update({ "system.coins": after });
+    ui.notifications.info(game.i18n.format("CAIRN.Notify.Bought", { name: shown, cost: priceText }));
   } else {
     ui.notifications.info(game.i18n.format("CAIRN.Notify.Took", { name: shown }));
   }
@@ -449,13 +463,13 @@ export const openMarketplace = async (actor, opts = {}) => {
         const idx = built.push(data) - 1;
         const cap = data.system.slots ?? 0;
         const metaHtml = `<span class="mkt-slots mkt-capacity" title="${game.i18n.localize("CAIRN.TransportCapacity")}">+${esc(formatCount("CAIRN.NSlot", cap))}</span>`;
-        return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: "", metaHtml, descHtml: descHtmlOf(d.system.description) });
+        return rowHtml({ idx, cost: data.system.cost ?? 0, currency: data.system.costCurrency ?? "silver", name: d.name, tagsHtml: "", metaHtml, descHtml: descHtmlOf(d.system.description) });
       }
       const idx = built.push(data) - 1;
       const slots = slotCost(data.system);
       const tags = chips(data).map((c) => `<span class="mkt-chip">${esc(c)}</span>`).join("");
       const metaHtml = `<span class="mkt-slots">${esc(formatCount("CAIRN.NSlot", slots))}</span>`;
-      return rowHtml({ idx, cost: data.system.cost ?? 0, name: d.name, tagsHtml: tags, metaHtml, descHtml: descHtmlOf(d.system.description) });
+      return rowHtml({ idx, cost: data.system.cost ?? 0, currency: data.system.costCurrency ?? "silver", name: d.name, tagsHtml: tags, metaHtml, descHtml: descHtmlOf(d.system.description) });
     }).join("");
     return `<div class="mkt-cat"><div class="mkt-cat-name">${esc(cat.label ?? cat.name)}</div>${rows}</div>`;
   }).join("");
@@ -494,8 +508,10 @@ export const openMarketplace = async (actor, opts = {}) => {
   const refresh = () => {
     const root = dialog.element;
     if (!root) return;
-    const gold = actor.system.gold ?? 0;
-    root.querySelector(".mkt-coins").textContent = gold;
+    // The shopper's purse, shown as what it IS (three piles) and compared as
+    // what it is WORTH (one number in copper).
+    const wealth = toCopper(actor.system.coins);
+    root.querySelector(".mkt-coins").textContent = formatPurse(actor.system.coins);
     root.querySelector(".mkt-slotval").textContent = `${actor.system.slotsUsed}/${actor.system.slotsMax}`;
     // A full pack greys the rows it cannot take, rather than leaving a live
     // button that answers with a refusal — the shop should not offer what it is
@@ -504,7 +520,7 @@ export const openMarketplace = async (actor, opts = {}) => {
     // through.
     const full = !actor.isThing && actor.isEncumbered();
     root.querySelectorAll(".mkt-row").forEach((row) => {
-      const cost = Number(row.dataset.cost);
+      const cost = Number(row.dataset.copper);
       const buy = row.querySelector(".mkt-buy");
       const take = row.querySelector(".mkt-take");
       const data = built[Number(buy.dataset.idx)];
@@ -514,7 +530,7 @@ export const openMarketplace = async (actor, opts = {}) => {
       // a PETTY item costs no slot at all.
       const needsRoom = data && data.documentName !== "Actor" && !data.system?.weightless;
       const noRoom = full && !!needsRoom;
-      buy.disabled = noRoom || gold < cost;
+      buy.disabled = noRoom || wealth < cost;
       take.disabled = noRoom;
     });
   };

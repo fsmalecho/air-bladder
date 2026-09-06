@@ -251,18 +251,35 @@
                                value="{{system.hp.max}}" data-dtype="Number" title="{{ localize 'CAIRN.Maximum' }}" />
                     </div>
                 </div>
-                {{#if system.showGold}}
+                {{#if system.showCoins}}
                 {{!-- `long-counter`, matching the character sheet's Gold box, NOT
                       `middle-counter`. The counters are 213px in both columns, so a
                       50% label put this bar's right edge at 485 while Armor's --
                       directly below it, at 70% -- sat at 526. Widths come from the
                       COUNTER class; there is nothing to align by hand. --}}
-                <div class="resource-counter long-counter gold-counter {{#if system.maybeTooMuchGold}}overburdened-gold{{/if}}"
-                    {{#if system.maybeTooMuchGold}}data-tooltip="{{ localize 'CAIRN.OverburdenByGold' }}"{{/if}}>
-                    <label for="{{@root.idp}}-system.gold" data-tooltip="{{ system.coinTip }}">{{ localize 'CAIRN.Gold' }}</label>
-                    <div class="resource-input-wrapper">
-                        <input type="number" min="0" step="1" name="system.gold" id="{{@root.idp}}-system.gold"
-                               value="{{system.gold}}" data-dtype="Number" />
+                {{!-- EL MONEDERO (2026-09-06). Un PNJ, un cofre o un caballo
+                      llevan dinero y pesan por ello igual que un PJ; lo que no
+                      tienen es prestigio, que es cosa de Aventureros. Tres
+                      campos estrechos en el sitio donde estaba el de oro. --}}
+                <div class="resource-counter long-counter npc-purse {{#if system.maybeTooMuchGold}}overburdened-gold{{/if}}"
+                    data-tooltip="{{#if system.maybeTooMuchGold}}{{ localize 'CAIRN.OverburdenByCoins' }}{{else}}{{ system.coinTip }}{{/if}}">
+                    <label>{{ localize 'CAIRN.Coins' }}</label>
+                    <div class="npc-purse-piles">
+                        <label class="npc-purse-pile">
+                            <span>{{ localize 'CAIRN.CoinShort.gold' }}</span>
+                            <input type="number" min="0" step="1" name="system.coins.gold"
+                                   value="{{system.coins.gold}}" data-dtype="Number" />
+                        </label>
+                        <label class="npc-purse-pile">
+                            <span>{{ localize 'CAIRN.CoinShort.silver' }}</span>
+                            <input type="number" min="0" step="1" name="system.coins.silver"
+                                   value="{{system.coins.silver}}" data-dtype="Number" />
+                        </label>
+                        <label class="npc-purse-pile">
+                            <span>{{ localize 'CAIRN.CoinShort.copper' }}</span>
+                            <input type="number" min="0" step="1" name="system.coins.copper"
+                                   value="{{system.coins.copper}}" data-dtype="Number" />
+                        </label>
                     </div>
                 </div>
                 {{/if}}
@@ -456,6 +473,12 @@
                     {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=system.showFatigue withShop=withShop}}
                 </div>
                 <div class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
+                    {{!-- THE BOND WEB (2026-09-05). The same list the character
+                          sheet carries, from the other end: a bond is one record
+                          and both sheets read it, so an NPC shows who they know
+                          without anything being written twice. --}}
+                    {{> "systems/mondolme/templates/parts/bond-list.html"}}
+                    <hr class="notes-divider" />
                     {{!-- TOGGLED like the Description editor above, since 2026-08-02
                           (user ask: the always-active toolbar over an empty box read
                           as clutter on a monster sheet). Same two-input shape — the
