@@ -174,27 +174,58 @@
   </div>
 </div>
 {{/each}}
-{{!-- The coin rows are NOT gated on withFatigue, and that is load-bearing rather
-      than tidiness. They rode on that flag until 2026-08-06 purely because both
-      callers passed it, so the first attempt to hide the Fatigue header on a
-      container would have silently deleted them too — leaving a chest whose
-      slotsUsed counts its coins with nothing on the tab saying why. Coins take
-      slots for EVERY actor type (2e p.9), things included, so this needs no gate
-      at all: goldSlots is 0 when there are none, and {{#times 0}} renders
-      nothing. --}}
-{{#times system.goldSlots}}
-<div class="cairn-items-list-row gold-slot-row">
+{{!-- EL MONEDERO (2026-09-07). Una fila del inventario que se lee como un
+      objeto y se comporta como un campo.
+
+      NO ES UN OBJETO DE VERDAD, y es una decisión, no una simplificación. Un
+      Item se puede borrar y se puede duplicar —la Fatiga, que es el precedente
+      del sistema, se puede hacer las dos cosas— y con la Fatiga eso da igual,
+      pero con el dinero significa que un clic accidental es una campaña
+      arruinada. Aquí las monedas siguen viviendo en la ficha: no hay nada que
+      borrar, no puede haber dos, y no hizo falta migrar nada. Lo que se pierde
+      es poder regalar la bolsa arrastrándola.
+
+      LOS TRES CAMPOS SON DEL ACTOR (`system.coins.*`), así que se guardan por
+      el mismo camino que HP o Armadura y no hizo falta abrir ninguno nuevo: la
+      lista de equipo no tenía ni un solo campo editable hasta hoy, y los de un
+      OBJETO habrían necesitado su propio manejador de envío.
+
+      SIN PUERTA, para todo el que pueda llevar objetos. Antes eran N filas
+      —una por espacio ocupado— y no estaban condicionadas a `withFatigue` por
+      un motivo que sigue vigente: las monedas pesan para todos, cofres y carros
+      incluidos, y una fila que aparece y desaparece dejaría un cofre contando
+      espacios sin nada en la pestaña que lo explique. Ahora es UNA fila, que se
+      ve siempre y dice cuántos espacios ocupa cuando ocupa alguno. --}}
+<div class="cairn-items-list-row purse-row{{#if system.maybeTooMuchGold}} is-overburdened{{/if}}"
+  {{#if system.maybeTooMuchGold}}data-tooltip="{{ localize 'CAIRN.OverburdenByCoins' }}"{{/if}}>
   <div class="cairn-items-list-row-header">
     <div class="cairn-item-name-and-tags">
-      <i class="fas fa-coins gold-slot-icon"></i>
-      <span class="cairn-item-title">{{ system.coinRowLabel }}</span>
-      {{!-- Derived through formatCount (actor.js), never a hardcoded plural
-            form: `localize 'CAIRN.NSlot_one'` renders the literal key text in
-            any language that ships only the base key. --}}
-      <span class="cairn-item-tag">{{ system.coinRowSlotTag }}</span>
+      <i class="fas fa-coins purse-row-icon"></i>
+      <span class="cairn-item-title">{{ localize 'CAIRN.Purse' }}</span>
+      {{!-- La etiqueta de espacios solo cuando pesa. Derivada por formatCount
+            (actor.js), nunca una forma plural escrita a mano. --}}
+      {{#if system.goldSlots}}
+      <span class="cairn-item-tag purse-row-slots" data-tooltip="{{ system.coinTip }}">{{ system.coinRowSlotTag }}</span>
+      {{/if}}
+    </div>
+    <div class="purse-row-coins">
+      <label class="purse-coin">
+        <span>{{ localize 'CAIRN.CoinShort.gold' }}</span>
+        <input type="number" min="0" step="1" name="system.coins.gold"
+               value="{{system.coins.gold}}" data-dtype="Number" />
+      </label>
+      <label class="purse-coin">
+        <span>{{ localize 'CAIRN.CoinShort.silver' }}</span>
+        <input type="number" min="0" step="1" name="system.coins.silver"
+               value="{{system.coins.silver}}" data-dtype="Number" />
+      </label>
+      <label class="purse-coin">
+        <span>{{ localize 'CAIRN.CoinShort.copper' }}</span>
+        <input type="number" min="0" step="1" name="system.coins.copper"
+               value="{{system.coins.copper}}" data-dtype="Number" />
+      </label>
     </div>
   </div>
 </div>
-{{/times}}
 <div class="cairn-reorder-hint"><i class="fas fa-up-down"></i> {{ localize 'CAIRN.ReorderHint' }}</div>
 <div class="cairn-grant-hint"><i class="fas fa-tag"></i> {{ localize 'CAIRN.GrantTagsHint' }}</div>

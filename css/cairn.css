@@ -4316,53 +4316,56 @@ body:has(#mondolme-calendar-orb) #hotbar {
     font-variant-numeric: tabular-nums;
 }
 
-/* ---- el monedero, tres campos en la caja de un contador ----------------- */
+/* ---- el monedero, una fila del inventario ------------------------------- */
 
-/* Vive DEBAJO de la lista de equipo, no entre los contadores de la cabecera,
-   pero lleva su caja: es dinero que se lleva encima y pesa, y merece leerse
-   como una estadística y no como una fila más del inventario. Al estar suelto
-   necesita el margen y el ancho que en la cabecera le daba la rejilla. */
-.coins-counter {
-    margin-top: 10px;
-    width: 100%;
-}
-
-.coins-wrapper {
+/* Se lee como una fila de equipo porque ES una fila de equipo: hereda
+   `cairn-items-list-row` entera y solo añade los tres campos. Lo único que la
+   distingue es que no tiene controles a la derecha — no se equipa, no se borra
+   y no se edita en su propia ficha, porque no es un objeto. */
+.purse-row .cairn-items-list-row-header {
+    display: flex;
     align-items: center;
-    gap: 1px;
-    padding: 0 4px;
-    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-/* Campos pequeños, como pediste: tres números donde los demás contadores
-   ponen uno. `min-width: 0` es lo que deja que un input de tipo number se
-   encoja de verdad dentro de un flex — sin él se planta en su ancho por
-   defecto y el tercero se sale de la caja. */
-.coins-counter .coins-wrapper input {
-    flex: 1 1 0;
-    min-width: 0;
-    font-size: 13px;
-    padding: 0 1px;
-    font-variant-numeric: tabular-nums;
-}
+.purse-row-icon { color: var(--ab-gold); }
 
-/* La abreviatura hace de separador y de unidad a la vez. En versalitas y
-   apagada, para que los números sigan siendo lo que se lee. */
-.coins-counter .coin-mark {
+/* Sobrecargado por el peso de las monedas: la misma señal que llevaba el
+   contador viejo, ahora sobre la fila que la causa. */
+.purse-row.is-overburdened { border-color: var(--ab-peril); }
+.purse-row.is-overburdened .purse-row-icon { color: var(--ab-peril); }
+
+.purse-row-slots { white-space: nowrap; }
+
+.purse-row-coins {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex: 0 0 auto;
-    margin: auto 3px auto 0;
+}
+
+.purse-coin {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* La abreviatura hace de unidad, apagada, para que el número sea lo que se lee.
+   En versalitas, como el resto de etiquetas pequeñas de la ficha. */
+.purse-coin span {
     font-size: 10px;
     font-variant: small-caps;
     letter-spacing: 0.3px;
     color: var(--ab-muted);
 }
 
-/* El borde en rojo cuando la sobrecarga viene de las monedas — la misma señal
-   que ya usaba el contador de oro. */
-.coins-counter.overburdened-gold { border-color: var(--ab-peril); }
-
-/* La etiqueta no necesita el 70% que le da `long-counter` cuando comparte fila
-   con otros contadores: aquí tiene el ancho entero de la pestaña, y tres campos
-   agradecen el sitio. */
-.coins-counter.long-counter label { width: 30%; }
-.coins-counter.long-counter .resource-input-wrapper { width: 70%; }
+/* Anchos fijos y pequeños: son tres seguidos y el nombre de la fila tiene que
+   seguir teniendo sitio. `min-width: 0` porque un campo de tipo número se
+   planta en su ancho por defecto dentro de un flex si no se le dice otra cosa. */
+.purse-coin input {
+    width: 3.4em;
+    min-width: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}

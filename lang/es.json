@@ -887,6 +887,6 @@
   "CAIRN.CoinTip": "Las monedas pesan: las primeras {n} son insignificantes y cada {n} más ocupan un espacio. Cuentan las MONEDAS, no su valor.",
   "CAIRN.CoinTipWeightless": "En este mundo las monedas no pesan.",
   "CAIRN.OverburdenByCoins": "Vas sobrecargado, y las monedas tienen parte de la culpa.",
-  "CAIRN.NCoins": "{n} monedas",
-  "CAIRN.CoinEmpty": "sin blanca"
+  "CAIRN.CoinEmpty": "sin blanca",
+  "CAIRN.Purse": "Monedero"
 }

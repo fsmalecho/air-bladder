@@ -1,10 +1,10 @@
 MONDOLME — Prestigio, monedas, y un solo Vínculos
 ==================================================
 
-SEGUNDA CORRECCIÓN. La 2.0.7 dejaba TODAS las fichas en blanco; la 2.0.8
-arreglaba las de PJ pero dejaba las de PNJ sin abrirse. Esta arregla las dos.
+Etiqueta 2.1.0, sobre la 2.0.9 que ya funciona.
 
-Etiqueta 2.0.9. La 2.0.7 y la 2.0.8 están rotas; no las uses.
+UN BORRADO A MANO: `templates/parts/coins-counter.html`. Descomprimir no borra
+archivos, y esa plantilla ya no la usa nadie.
 
     css/cairn.css                            (modificado)
     lang/es.json                             (modificado)
@@ -66,30 +66,42 @@ superando la oposición. Eso pasa en la mesa.
 Prestigio solo para PJs. Los PNJ no lo tienen.
 
 
-2. EL MONEDERO, DEBAJO DE LA LISTA DE EQUIPO EN LAS DOS FICHAS
----------------------------------------------------------------
+2. EL MONEDERO, UNA FILA MÁS DEL INVENTARIO
+--------------------------------------------
 
-Está en la pestaña de Equipo, justo debajo de la lista de objetos, tanto en el
-PJ como en el PNJ. Pero lleva la CAJA de un contador de cabecera: la barra negra
-de la etiqueta, el borde y la tipografía salen de `.resource-counter`, que es de
-donde salen HP y Armadura, así que no pueden desviarse. Dentro, tres campos
-pequeños con su abreviatura:
+Al final de la lista de equipo, con su icono y su nombre, como un objeto:
 
-    ┌──────────┬──────────────────────────────┐
-    │ Monedas  │  [ 2 ]mo [ 3 ]mp [ 4 ]mc     │
-    └──────────┴──────────────────────────────┘
+    ┌────────────────────────────────────────────────────────┐
+    │ 🪙 Monedero            2 espacios    mo[ 2 ] mp[ 3 ] mc[ 4 ] │
+    └────────────────────────────────────────────────────────┘
 
-UNA SOLA PLANTILLA para PJ y PNJ (`parts/coins-counter.html`), incluida en el
-mismo sitio de las dos. Al estar escrita una vez no pueden separarse nunca.
+Se ve en las dos fichas y en todo lo que pueda llevar objetos: PJ, PNJ,
+monstruo, saco, carro y cofre. Las monedas pesan para todos, así que todos
+tienen dónde ponerlas.
 
-Suelto bajo la lista tiene el ancho entero de la pestaña, así que la etiqueta se
-queda en el 30% y los campos se llevan el 70% — al revés que en la cabecera,
-donde un contador comparte fila con otros y la etiqueta manda.
+NO ES UN OBJETO DE VERDAD, y es una decisión que quiero que sepas que tomé.
+Un Item se puede borrar y se puede duplicar — la Fatiga, que es el precedente
+del sistema, se puede hacer las dos cosas. Con la Fatiga eso da igual; con el
+dinero significa que un clic accidental es una campaña arruinada, y que hacen
+falta guardias contra el borrado, contra los duplicados y para fusionar al
+soltarlo en otra ficha, más una migración para todas las fichas que ya existen.
+Aquí las monedas siguen viviendo en la ficha: no hay nada que borrar, no puede
+haber dos, y no hizo falta migrar nada.
 
-Los campos son estrechos porque son tres donde los demás contadores ponen uno.
-El detalle que lo hace funcionar es `min-width: 0` en los inputs: sin él, un
-campo de tipo número se planta en su ancho por defecto y el tercero se sale de la
-caja.
+Lo que pierdes: no puedes regalar la bolsa arrastrándola. Si eso te acaba
+haciendo falta, se puede convertir en objeto de verdad más adelante — pero
+entonces toca escribir esas guardias.
+
+UN DETALLE TÉCNICO que hizo el trabajo pequeño: los tres campos son del ACTOR
+(`system.coins.*`), no de un objeto. Se guardan por el mismo camino que HP o
+Armadura. La lista de equipo no tenía ni un solo campo editable hasta hoy, y
+los de un objeto habrían necesitado su propio manejador de envío.
+
+La fila lleva la etiqueta de espacios solo cuando pesa, y se pone en rojo cuando
+la sobrecarga viene de las monedas. Antes eran N filas de peso —una por espacio
+ocupado— y ahora es una sola que se ve siempre.
+
+    1 mo = 10 mp        1 mp = 10 mc        1 mo = 100 mc
 
     1 mo = 10 mp        1 mp = 10 mc        1 mo = 100 mc
 
@@ -271,9 +283,10 @@ QUÉ MIRAR PRIMERO
 -----------------
 
   0. Si ya borraste `container-list.html`, no hay que repetirlo.
-  1. Abre una ficha de PJ y una de PNJ. Las dos deben abrirse y verse enteras.
-  2. En la de PNJ, comprueba el desplegable de rol, la casilla «Se alquila» y
-     el desplegable de clase de contenedor: son las once claves que faltaban.
+  1. Abre una ficha de PJ y una de PNJ y ve a la pestaña de Equipo: al final de
+     la lista debe estar la fila del Monedero con los tres campos.
+  2. Escribe 150 en mc: debe aparecer la etiqueta de espacios y ponerse en rojo.
+  3. Abre un cofre o un carro: también debe tener su fila de Monedero.
   2. Abre un PJ: Prestigio donde estaba el Oro, sin nada escrito debajo, y el
      tooltip al pasar el ratón.
   3. Pestaña de Equipo, debajo de la lista: el contador de Monedas con los tres

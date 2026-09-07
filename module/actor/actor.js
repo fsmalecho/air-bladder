@@ -1,5 +1,5 @@
 import { SETTINGS_NS } from "../settings.js";
-import { coinCount, toCopper } from "../money.js";
+import { coinCount } from "../money.js";
 import { standing } from "../prestige.js";
 import { iconForItem, iconForTransport, containerClassSlots, CONTAINER_CLASSES, ICON_DIR } from "../icons.js";
 import { THING_ROLES, PERSON_ROLES } from "../data-models.js";
@@ -618,9 +618,14 @@ export class CairnActor extends Actor {
     // however little it buys. That is the rule that makes a money changer worth
     // visiting, and it falls out of `coinCount` adding the three piles.
     this.system.coinsPerSlot = this._coinsPerSlot();
-    this.system.coinTotal = coinCount(this.system.coins);
-    this.system.coinValue = toCopper(this.system.coins);
-    this.system.coinRowLabel = game.i18n.format("CAIRN.NCoins", { n: this.system.coinsPerSlot });
+    /* `coinTotal` y `coinValue` estaban aquí y se han ido (2026-09-07): los
+       leía la cabecera del monedero viejo, y la fila del inventario enseña los
+       tres montones directamente. Un derivado sin lector es un derivado que
+       alguien leerá por error. El recuento sigue existiendo donde hace falta,
+       dentro de `_calcGoldSlots`. */
+    /* `coinRowLabel` estaba aquí y se ha ido (2026-09-07). Decía «100 monedas»
+       y era el nombre de cada una de las N filas de peso; ahora hay UNA fila
+       llamada Monedero y su nombre es una clave de idioma, no un derivado. */
     // Each filled row is exactly one slot, but the tag still goes through
     // formatCount rather than a hardcoded `CAIRN.NSlot_one` (review #13):
     // "_one" is this repo's suffix convention, not a key every language

@@ -581,7 +581,6 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         templates: [
           "systems/mondolme/templates/parts/items-list.html",
           "systems/mondolme/templates/parts/bond-list.html",
-          "systems/mondolme/templates/parts/coins-counter.html",
           "systems/mondolme/templates/parts/bio-block.html",
         ],
       },

@@ -438,10 +438,6 @@
                           sacks, carts and crates. See
                           system.showFatigue in actor.js prepareData. --}}
                     {{> "systems/mondolme/templates/parts/items-list.html" withFatigue=system.showFatigue withShop=withShop}}
-                    {{!-- El mismo monedero que el PJ, en el mismo sitio: debajo
-                          de la lista de equipo. Una sola plantilla para los dos,
-                          así que no pueden separarse. --}}
-                    {{> "systems/mondolme/templates/parts/coins-counter.html"}}
                 </div>
                 <div class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
                     {{!-- THE BOND WEB (2026-09-05). The same list the character
