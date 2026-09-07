@@ -3137,6 +3137,13 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.render();
   }
 
+  /** Open the other end's sheet. A read: its own permissions decide. */
+  static #onBondOpen(event, target) {
+    event.preventDefault();
+    const other = fromUuidSync(target.closest("[data-bond-uuid]")?.dataset.bondUuid ?? "");
+    other?.sheet?.render(true);
+  }
+
   /**
    * A d20 save against an ability. On a failed STR save, offer to mark Critical
    * Damage — but only when STR is damaged and still above 0 (the crawling state;

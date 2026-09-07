@@ -1,7 +1,10 @@
 MONDOLME — Prestigio, monedas, y un solo Vínculos
 ==================================================
 
-Sobre los vínculos ya aplicados. Etiqueta 2.0.7.
+CORRECCIÓN URGENTE del ZIP anterior. Si aplicaste el de las 23:53, este lo
+arregla: dejaba las fichas en blanco, con solo el nombre y el retrato.
+
+Etiqueta 2.0.8 (la 2.0.7 está rota; no la uses).
 
     css/cairn.css                            (modificado)
     lang/es.json                             (modificado)
@@ -152,6 +155,36 @@ ficha de enfrente, que es donde le toca; para ver los dos a la vez, abre el
 editor del vínculo.
 
 
+LA FICHA EN BLANCO, Y POR QUÉ SE ME ESCAPÓ
+------------------------------------------
+
+Al borrar las cuatro acciones de conexiones, mi script se llevó por delante un
+método vecino: `#onBondOpen`, el que abre la ficha del otro extremo de un
+vínculo al pulsar su nombre. El mapa de acciones seguía apuntando a él.
+
+En JavaScript, referirse a un campo privado que no está declarado no es un error
+de ejecución: es un error de SINTAXIS. El archivo entero deja de parsearse, la
+clase de la ficha nunca se registra, y Foundry cae en su ficha genérica — que es
+exactamente lo que viste: nombre y retrato, y nada más.
+
+Y AQUÍ VIENE LO QUE DE VERDAD FALLÓ. Mi comprobación de sintaxis lo dejó pasar.
+`node --check archivo.js` parsea el archivo como CommonJS, y estos archivos son
+módulos ES. En modo CommonJS ese error no salta; en modo módulo salta con la
+línea exacta. Llevo toda la sesión comprobando la sintaxis en el modo
+equivocado, y esta es la primera vez que ha importado.
+
+Ya está corregido, y no es un parche mental: la comprobación ahora pasa cada
+archivo por `node --input-type=module --check`, que lo parsea como lo que es. La
+he pasado por los 32 archivos de este ZIP y por los 30 del ZIP anterior — los
+anteriores estaban limpios, así que nada de lo que te mandé antes de anoche
+llevaba este problema escondido.
+
+Y he añadido una segunda comprobación que lo habría cazado por otro camino:
+cotejar cada acción declarada en el mapa de la ficha contra los métodos que
+existen de verdad, en los dos sentidos. Ninguna referenciada sin definir, y
+ninguna definida sin usar.
+
+
 COMPROBACIONES HECHAS
 ---------------------
 
@@ -175,7 +208,8 @@ de idioma existen en español, y ninguna acción suelta —lo que confirma que a
 borrar las cuatro acciones de conexiones no quedó ningún botón apuntando al
 vacío.
 
-Más lo de siempre: los 32 archivos pasan la sintaxis, ningún import apunta a
+Más lo de siempre, con la sintaxis ya comprobada EN EL MODO CORRECTO: los 32
+archivos pasan, ningún import apunta a
 algo que no exista (incluido el de connections.js, que se ha retirado entero de
 la ficha), las 7 plantillas registradas existen, todos los `{{> …}}` resuelven,
 el CSS cierra sus 552 llaves, y no queda ninguna clave de idioma huérfana.
@@ -184,7 +218,9 @@ el CSS cierra sus 552 llaves, y no queda ninguna clave de idioma huérfana.
 QUÉ MIRAR PRIMERO
 -----------------
 
-  1. Borra `templates/parts/container-list.html` a mano.
+  0. Si ya borraste `container-list.html` con el ZIP anterior, no hay que
+     volver a hacerlo. Si no, bórralo ahora.
+  1. Abre una ficha. Debe verse entera.
   2. Abre un PJ: Prestigio donde estaba el Oro, sin nada escrito debajo, y el
      tooltip al pasar el ratón.
   3. Pestaña de Equipo, debajo de la lista: el contador de Monedas con los tres
