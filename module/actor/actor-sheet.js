@@ -985,6 +985,36 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // would need invalidating from four places that write it.
     context.bondRows = bondsFor(this.actor);
     context.canEditBonds = canEditBonds();
+    // TODO LO QUE LA FICHA DE PNJ NECESITA, restaurado el 2026-09-07: un corte
+    // por índices se llevó este bloque entero al retirar la interfaz de
+    // conexiones, y sin él la ficha de PNJ no llegaba a abrirse. Lo único que
+    // NO vuelve es la línea de conexión (el guardián, sus botones de conectar y
+    // desconectar), que es lo que había que quitar.
+    if (["npc", "hireling"].includes(this.actor.type)) {
+      const role = this.actor.npcRole;
+      context.roleChoices = Object.fromEntries(NPC_ROLES.map((r) => [
+        r, game.i18n.localize(`CAIRN.Role${r.charAt(0).toUpperCase()}${r.slice(1)}`),
+      ]));
+      context.showCareer = role === "hireling";
+      context.showBackground = role === "npc";
+      context.showForHire = this.actor.system.showForHire === true;
+      context.showFaction = GENERATING_ROLES.includes(role);
+      context.showKind = ["companion", "transport", "container"].includes(role);
+      const cls = this.actor.system.containerClass;
+      context.kindOptions = Object.entries(CONTAINER_CLASSES)
+        .filter(([, v]) => v.role === role)
+        .map(([key, v]) => ({ key, label: game.i18n.localize(v.label), selected: key === cls }));
+      context.kindIsCustom = !!cls && !CONTAINER_CLASSES[cls];
+      context.kindCustomValue = context.kindIsCustom ? cls : "";
+      // Localized for display only, never written back — same rule as the
+      // enriched description below.
+      context.professionDisplay = this.actor.system.profession;
+      context.backgroundDisplay = this.actor.system.background;
+      // La línea ya solo lleva la casilla de «Se alquila», así que se dibuja
+      // exactamente cuando esa casilla tiene que verse. Antes era una condición
+      // de tres brazos porque compartía sitio con el guardián.
+      context.showConnectionLine = context.showForHire;
+    }
     let items = this.actor.items.map((i) => ({
       _id: i.id,
       name: i.name,

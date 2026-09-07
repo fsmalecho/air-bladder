@@ -1,10 +1,10 @@
 MONDOLME — Prestigio, monedas, y un solo Vínculos
 ==================================================
 
-CORRECCIÓN URGENTE del ZIP anterior. Si aplicaste el de las 23:53, este lo
-arregla: dejaba las fichas en blanco, con solo el nombre y el retrato.
+SEGUNDA CORRECCIÓN. La 2.0.7 dejaba TODAS las fichas en blanco; la 2.0.8
+arreglaba las de PJ pero dejaba las de PNJ sin abrirse. Esta arregla las dos.
 
-Etiqueta 2.0.8 (la 2.0.7 está rota; no la uses).
+Etiqueta 2.0.9. La 2.0.7 y la 2.0.8 están rotas; no las uses.
 
     css/cairn.css                            (modificado)
     lang/es.json                             (modificado)
@@ -155,8 +155,60 @@ ficha de enfrente, que es donde le toca; para ver los dos a la vez, abre el
 editor del vínculo.
 
 
-LA FICHA EN BLANCO, Y POR QUÉ SE ME ESCAPÓ
-------------------------------------------
+LOS DOS FALLOS, Y POR QUÉ SE ME ESCAPARON LOS DOS
+--------------------------------------------------
+
+Los dos tienen la misma causa: para retirar la interfaz de conexiones usé
+cortes por ÍNDICES —«desde esta línea hasta aquella»— y las dos veces el corte
+se llevó código vecino que no tenía nada que ver.
+
+EL PRIMERO (fichas en blanco). Se llevó `#onBondOpen`, el método que abre la
+ficha del otro extremo de un vínculo. El mapa de acciones seguía apuntando a él,
+y en JavaScript referirse a un campo privado no declarado no es un error de
+ejecución: es un error de SINTAXIS. El archivo entero deja de parsearse, la
+clase de la ficha nunca se registra, y Foundry cae en su ficha genérica.
+
+EL SEGUNDO (PNJ que no abren). Peor. El corte se llevó el bloque ENTERO de
+contexto del PNJ: `roleChoices`, `showCareer`, `showBackground`, `showForHire`,
+`showFaction`, `showKind`, `kindOptions`, `kindIsCustom`, `kindCustomValue`,
+`professionDisplay` y `backgroundDisplay`. Once claves que la plantilla del PNJ
+necesita y que dejaron de existir de golpe.
+
+
+POR QUÉ NINGUNA DE MIS COMPROBACIONES LOS VIO
+---------------------------------------------
+
+Y esta es la parte que de verdad importa, porque explica por qué te llegaron
+dos ZIPs rotos seguidos con un informe de comprobaciones en verde.
+
+TODAS MIS COMPROBACIONES PREGUNTABAN «¿ESTO ES VÁLIDO?». Ninguna preguntaba
+«¿ESTO SEGUÍA HACIENDO FALTA?». La sintaxis era válida, los bloques de
+Handlebars cuadraban, los imports resolvían, las plantillas existían. Faltaban
+DATOS, y nada miraba eso.
+
+Y encima la de sintaxis estaba mal hecha: `node --check archivo.js` parsea como
+CommonJS, y estos archivos son módulos ES. En ese modo el error del campo
+privado no salta.
+
+Tres comprobaciones nuevas, y las tres las he probado contra la copia ROTA para
+asegurarme de que la cazan de verdad, no de que parecen que sí:
+
+  - SINTAXIS COMO MÓDULO: `node --input-type=module --check`. Caza el primero,
+    con la línea exacta. Pasada también sobre los ZIPs anteriores: estaban
+    limpios, así que nada de lo de antes lleva esto escondido.
+  - ANIDAMIENTO DE HANDLEBARS con una pila, no contando aperturas y cierres.
+    Contar deja pasar quitar un `{{#if}}` de un nivel y su `{{/if}}` de otro.
+  - QUÉ HABÍA ANTES Y YA NO ESTÁ: comparar el árbol contra la última entrega que
+    funcionaba, y listar las claves de contexto, los métodos, las exportaciones
+    y las plantillas que han desaparecido. Sin falsos positivos y sin necesidad
+    de entender Handlebars: lo que desaparece se ve solo, y lo que desaparece a
+    propósito se lee en una línea y se aprueba.
+
+    Contra la copia rota canta 21 desapariciones, doce de ellas claramente no
+    deliberadas. Contra esta, nueve, y las nueve son las que quería quitar: las
+    cuatro claves de contexto de conexiones, los cuatro métodos y la plantilla.
+
+Era la comprobación que faltaba, y llevaba faltando toda la sesión.
 
 Al borrar las cuatro acciones de conexiones, mi script se llevó por delante un
 método vecino: `#onBondOpen`, el que abre la ficha del otro extremo de un
@@ -218,9 +270,10 @@ el CSS cierra sus 552 llaves, y no queda ninguna clave de idioma huérfana.
 QUÉ MIRAR PRIMERO
 -----------------
 
-  0. Si ya borraste `container-list.html` con el ZIP anterior, no hay que
-     volver a hacerlo. Si no, bórralo ahora.
-  1. Abre una ficha. Debe verse entera.
+  0. Si ya borraste `container-list.html`, no hay que repetirlo.
+  1. Abre una ficha de PJ y una de PNJ. Las dos deben abrirse y verse enteras.
+  2. En la de PNJ, comprueba el desplegable de rol, la casilla «Se alquila» y
+     el desplegable de clase de contenedor: son las once claves que faltaban.
   2. Abre un PJ: Prestigio donde estaba el Oro, sin nada escrito debajo, y el
      tooltip al pasar el ratón.
   3. Pestaña de Equipo, debajo de la lista: el contador de Monedas con los tres
