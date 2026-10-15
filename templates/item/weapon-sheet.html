@@ -85,6 +85,25 @@
             </div>
         </div>
 
+        {{!-- Ranged. Cairn 2e does not distinguish melee from ranged, and
+              NOTHING reads this since the night of 2026-10-03 (the maneuver
+              option it served now covers ranged attacks too; the user kept the
+              field). The tooltip says so rather than leaving a Warden guessing
+              at a checkbox with no effect.
+              This is the weapon sheet's TENTH counter. The base grid holds ten
+              (five 36px rows x two columns) and the armor sheet already proves it
+              at ten, so no row override is owed -- but see the note above
+              `.object.item-sheet-grid` in cairn.css: the ninth counter once
+              auto-placed BELOW the tabs and pushed Cost off the bottom of the
+              window. Count the counters before adding another. --}}
+        <div class="resource-counter long-counter">
+            <label class="large-resource-label" for="{{@root.idp}}-system.ranged" data-tooltip="{{ localize 'CAIRN.RangedTip' }}">{{ localize 'CAIRN.Ranged' }}</label>
+            <div class="resource-input-wrapper">
+                <input type="checkbox" {{checked system.ranged}} name="system.ranged" id="{{@root.idp}}-system.ranged"
+                    value="{{system.ranged}}" data-dtype="Boolean" data-tooltip="{{ localize 'CAIRN.RangedTip' }}" />
+            </div>
+        </div>
+
          <!-- Cost -->
          <div class="resource-counter long-counter">
             <label class="large-resource-label" for="{{@root.idp}}-system.cost">{{ localize 'CAIRN.Cost' }}</label>

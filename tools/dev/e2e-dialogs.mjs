@@ -180,8 +180,9 @@ await page.waitForTimeout(500);
 // abHideHirelingType hook (DOM surgery on core's rendered dialog) is deleted
 // with the dialog it operated on, so its withHookOff control is replaced by
 // STRUCTURAL assertions: the hook is no longer registered, the switchboard
-// lists exactly the six choices for a Warden, and no `select[name="type"]`
-// renders on the world create path.
+// lists exactly the seven choices for a Warden, and no `select[name="type"]`
+// renders on the world create path. (This comment said SIX while the leg below
+// asserted seven — the split's neighbour set again, one file further along.)
 const switchboard = await page.evaluate(async () => {
   const p = getDocumentClass("Actor").createDialog();
   let sel = null;
@@ -195,6 +196,15 @@ const switchboard = await page.evaluate(async () => {
     selected: sel?.value ?? null,
     coreTypeSelect: !!document.querySelector('dialog select[name="type"]'),
     hookGone: !(Hooks.events.renderDialogV2 ?? []).some((h) => h.fn?.name === "abHideHirelingType"),
+    // The hint that tells a Warden what the choice costs them (2026-09-10): a
+    // Monster's tokens each take their own damage, an NPC's all share one
+    // sheet. A player reported a session's worth of shared HP bars because
+    // nothing here said so. Read the RENDERED text and compare it to the
+    // LOCALIZED value rather than to an English literal — the leg then
+    // survives a wording change, and still proves the key resolved, since a
+    // missing key localizes to itself and the assertion rejects that.
+    hint: sel?.closest("dialog")?.querySelector("p.hint")?.textContent.trim() ?? null,
+    hintWanted: game.i18n.localize("CAIRN.CreateActorHint"),
   };
   // Dismiss WITHOUT creating — and dismiss WHATEVER opened: under the
   // negative control core's own dialog renders instead of the switchboard,
@@ -225,6 +235,12 @@ switchboard.opened
   && JSON.stringify(switchboard.values) === JSON.stringify(["character", "npc", "hireling", "monster", "companion", "transport", "container"])
   ? ok("the switchboard offers the Warden seven role choices", switchboard.values.join(", "))
   : fail("the switchboard offers the Warden seven role choices", JSON.stringify(switchboard));
+switchboard.hint
+  && switchboard.hint === switchboard.hintWanted
+  && switchboard.hintWanted !== "CAIRN.CreateActorHint"
+  ? ok("the switchboard says what the choice does to tokens", switchboard.hint)
+  : fail("the switchboard says what the choice does to tokens",
+    JSON.stringify({ rendered: switchboard.hint, localized: switchboard.hintWanted }));
 !switchboard.coreTypeSelect
   ? ok("no core type-picker", "roles, never types — the hireling TYPE is unmintable by construction")
   : fail("no core type-picker", JSON.stringify(switchboard));
@@ -234,6 +250,74 @@ switchboard.selected === "character" && switchboard.resolvedNull
 switchboard.hookGone
   ? ok("abHideHirelingType is no longer registered", "the surgery died with the dialog it operated on")
   : fail("abHideHirelingType is no longer registered", "still on renderDialogV2");
+
+/* ------------------------- Create NPC / Hireling: the LINKING reminder ---
+ * An NPC and a hireling are created with their tokens LINKED (ruled
+ * 2026-09-10 and not changing), which is right for one person and wrong for a
+ * crowd. The answer chosen then was signposting, and the Create Actor
+ * switchboard above got its sentence — the Actors directory's own Create NPC
+ * and Create Hireling buttons got nothing, which is the gap this closes
+ * (2026-09-12). It is a REMINDER and never a control: the dialog still asks
+ * one question, and Foundry's own Link Actor Data is the place to change it.
+ *
+ * Read the RENDERED text and compare it to the LOCALIZED value, the
+ * switchboard leg's own pattern: the leg survives a wording change, and still
+ * proves the key resolved, since a missing key localizes to itself and the
+ * assertion rejects that. The dialog is dismissed without creating anything.
+ */
+await page.evaluate(() => ui.sidebar.changeTab?.("actors", "primary") ?? ui.sidebar.activateTab?.("actors"));
+await page.waitForTimeout(600);
+for (const [cls, kind] of [["create-npc-button", "NPC"], ["create-hireling-button", "Hireling"]]) {
+  const seen = await page.evaluate(async (cls) => {
+    const before = new Set([...document.querySelectorAll(".application.dialog")].map((d) => d.id));
+    const btn = document.querySelector(`.${cls}`);
+    if (!btn) return { button: false };
+    btn.click();
+    let el = null;
+    for (let i = 0; i < 60 && !el; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      el = [...document.querySelectorAll(".application.dialog")].find((d) => !before.has(d.id));
+    }
+    const out = {
+      button: true,
+      opened: !!el,
+      // EVERY hint in the dialog, because the reminder is the SECOND one and
+      // a leg that read only the first would pass on the empty-sheet line.
+      hints: el ? [...el.querySelectorAll("p.hint")].map((p) => p.textContent.trim()) : [],
+      // The key CARRIES `<strong>` around the control's name, so the expected
+      // value is the localized string with its tags stripped — and `emphasis`
+      // is what proves the markup actually rendered rather than printing as
+      // literal angle brackets, which is what `textContent` would have done.
+      wanted: game.i18n.localize("CAIRN.Blank.LinkedPerson").replace(/<[^>]+>/g, ""),
+      raw: game.i18n.localize("CAIRN.Blank.LinkedPerson"),
+      emphasis: el
+        ? [...el.querySelectorAll("p.hint strong")].map((s) => s.textContent.trim()).filter(Boolean)
+        : [],
+      // The dialog must WRAP a long hint, not stretch to hold it on one line.
+      // `DialogV2.wait` inherits ApplicationV2's `width: "auto"` while core's
+      // own `prompt`/`confirm` merge width 400, so this note took the window
+      // to 777px until `promptCreation` stated one.
+      width: el ? Math.round(el.getBoundingClientRect().width) : 0,
+    };
+    el?.querySelector('button[data-action="cancel"], [data-action="close"]')?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    return out;
+  }, cls);
+  seen.opened && seen.hints.includes(seen.wanted) && seen.wanted !== "CAIRN.Blank.LinkedPerson"
+    ? ok(`Create ${kind} says what its tokens will do`, seen.wanted)
+    : fail(`Create ${kind} says what its tokens will do`, JSON.stringify(seen));
+  seen.width > 0 && seen.width <= 460
+    ? ok(`   …in a window that wrapped it`, `${seen.width}px, core's own dialog width`)
+    : fail(`Create ${kind} stretched to hold its hint on one line`, `${seen.width}px`);
+  // The control's name is EMPHASISED, and the emphasis is real markup: the
+  // name is what a Warden has to go and find. Its words are read off the
+  // rendered `<strong>` and required to be part of the localized string, so
+  // no English literal is pinned here either.
+  seen.emphasis?.length === 1 && seen.raw?.includes(seen.emphasis[0]) && !seen.hints.some((h) => h.includes("<strong>"))
+    ? ok(`   …with the control's name picked out`, seen.emphasis[0])
+    : fail(`Create ${kind} does not emphasise the control's name`,
+      JSON.stringify({ emphasis: seen.emphasis, hints: seen.hints }));
+}
 
 /* ------------------------------------------- impaired / enhanced damage ---
  * Cairn has no advantage or disadvantage: a damage roll is STANDARD (the weapon's
@@ -253,6 +337,26 @@ switchboard.hookGone
 const installQualityHelpers = async () => page.evaluate(async () => {
   window.__ab = {
     settle: (ms) => new Promise((r) => setTimeout(r, ms)),
+    /**
+     * The optional combat rules rewrite a PC's damage formula (`1d12` →
+     * `1d12x`), so every roll in this section runs with them SET OFF, never
+     * assumed off — the 0.1.24 battery redded the enhanced, standard and panic
+     * legs on a dev world a Warden had been testing them in (2026-10-04). Each
+     * roll puts them back before it returns, the way it does use-panic.
+     */
+    combatOff: async () => {
+      const was = {};
+      for (const key of ["exploding-damage-dice", "maneuver-on-max-damage"]) {
+        was[key] = game.settings.get("air-bladder", key);
+        if (was[key]) await game.settings.set("air-bladder", key, false);
+      }
+      return was;
+    },
+    combatRestore: async (was) => {
+      for (const [key, value] of Object.entries(was ?? {})) {
+        if (value) await game.settings.set("air-bladder", key, value);
+      }
+    },
     /**
      * Wait until NO dialog is left in the DOM.
      *
@@ -392,6 +496,7 @@ const rollWith = async (choice) => page.evaluate(async ({ id, choice }) => {
   const actor = game.actors.get(id);
   const panicWas = game.settings.get("air-bladder", "use-panic");
   if (panicWas) await game.settings.set("air-bladder", "use-panic", false);
+  const combatWas = await window.__ab.combatOff();
   // The previous roll's dialog must be off the DOM first, or every click below
   // lands on it instead.
   const priorGone = await gone();
@@ -423,6 +528,7 @@ const rollWith = async (choice) => page.evaluate(async ({ id, choice }) => {
   };
   await card?.delete();
   if (panicWas) await game.settings.set("air-bladder", "use-panic", true);
+  await window.__ab.combatRestore(combatWas);
   return out;
 }, { id: actorId, choice });
 
@@ -439,6 +545,7 @@ const panicRoll = await page.evaluate(async ({ id }) => {
   const actor = game.actors.get(id);
   const panicWas = game.settings.get("air-bladder", "use-panic");
   if (!panicWas) await game.settings.set("air-bladder", "use-panic", true);
+  const combatWas = await window.__ab.combatOff();
   await actor.update({ "system.panicked": true });
   const priorGone = await gone();
 
@@ -474,6 +581,7 @@ const panicRoll = await page.evaluate(async ({ id }) => {
   await card?.delete();
   await actor.update({ "system.panicked": false });
   if (!panicWas) await game.settings.set("air-bladder", "use-panic", false);
+  await window.__ab.combatRestore(combatWas);
   return out;
 }, { id: actorId });
 

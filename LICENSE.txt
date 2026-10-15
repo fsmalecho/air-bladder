@@ -36,6 +36,28 @@ Code — MIT
     The System Docs journals travel here for the same reason: they are this
     project's own Warden guides, generated from docs/ by
     tools/import/system-docs.mjs, and they reproduce no Cairn text.
+    CAIRN'S GAME TEXT IS ALWAYS CC BY-SA 4.0, WHEREVER IT SITS. The paths above
+    are where this project's own code and writing live; they are not a container
+    that changes what is inside them. Any of Cairn's text held in a file under
+    them travels under the game-text clause below and never under this notice,
+    and the MIT grant can neither reach it nor relicense it. Being a rule about
+    the text rather than a list of files, it cannot go stale as files are added
+    — but two homes are worth naming so a fork can find them:
+    module/npc-careers-2e.json, the SRD's twelve example hirelings extracted
+    from its hirelings table by this project's importer and read by the hireling
+    generator at runtime; and the rules tooltips in lang/en.json, which quote
+    2e's own wording for the attributes, for Deprived and for resting.
+    docs/provenance.md is this project's own writing too, and is the record of
+    WHO AUTHORED WHAT across every category above — code, art, game text,
+    translations, audio and marketing copy — and of how each claim can be
+    checked. This file says which licence covers which path; that one says
+    whether a human made it.
+    A note on where to look: src/packs/, tools/ and docs/ are named above for
+    provenance and are NOT in the installed system — the release zip carries
+    the built packs, not their sources. Find them in the source repository at
+    https://github.com/domfortunato/air-bladder. Every notice that carries an
+    attribution obligation — the CREDITS files, each gallery's license.txt,
+    fonts/OFL.txt and logo/README.md — ships with the system.
 
 Game text — CC BY-SA 4.0, © Yochai Gal
     https://creativecommons.org/licenses/by-sa/4.0/
@@ -45,11 +67,21 @@ Game text — CC BY-SA 4.0, © Yochai Gal
     itself — the Cairn 2e Rules compendium holds "Overview & Principles" and
     "Core Rules for Players", transcribed from the 2e text and shipping as
     readable pages rather than as a link to it, and the Vald compendium holds
-    the Warden's Guide setting chapter of the same name, fetched from the
-    Cairn SRD by tools/import/vald.mjs.
+    the Warden's Guide setting chapter of the same name plus the 24 named
+    festivals of its calendar, both fetched from the Cairn SRD by
+    tools/import/vald.mjs.
+    The hireling catalogue module/npc-careers-2e.json is this too, and so are
+    the rules tooltips in lang/en.json. Neither is an exception carved out of
+    the Code clause: this clause follows Cairn's text wherever it is written,
+    including inside a file whose directory that clause names.
     Two packs are not this: the macros pack holds no game text, and the System
     Docs journals are this project's own writing, generated from docs/ by
     tools/import/system-docs.mjs. Both are covered by the Code clause above.
+    README.md and README.es.md ship in the release archive and travel HERE
+    rather than under the Code clause: both summarise and quote the Cairn 2e
+    text they credit, so ShareAlike reaches them. They were named by no clause
+    at all until this was written, which under the Code clause's "these and
+    only these" left two shipped documents with no grant.
     ATTRIBUTION IS REQUIRED AND SHAREALIKE IS NOT WAIVED. A derivative of this
     text must carry the same licence. The MIT grant below does not reach it and
     cannot be used to relicense it, including by a fork of this repository.
@@ -88,20 +120,24 @@ Cairn compatibility marks — CC BY-SA 4.0, © Yochai Gal
     "Compatible with Cairn 2e" badge it replaced. Ship them unmodified;
     see logo/README.md.
 
-Air Bladder logo and monster art — © Lydia Comer. ALL RIGHTS RESERVED.
-    art/lydia-comer/  — https://linktr.ee/lydiadidmyink
+Air Bladder logo — © Lydia Comer. ALL RIGHTS RESERVED.
+    art/lydia-comer/  — the three Airbladder logo files at the top of the
+    folder — https://linktr.ee/lydiadidmyink
     NOT a Creative Commons licence, and not covered by MIT. Licensed to the Air
     Bladder system for inclusion and redistribution as part of the system and
     its forks, and for use representing and promoting the project — the project
     website, package listings, and release announcements. Any use outside the
     Air Bladder project requires the artist's permission.
-    Two jobs, one grant. The logo files sit at the top of the folder; below
-    them, art/lydia-comer/portraits/ and art/lydia-comer/tokens/ hold 17
-    creatures drawn for this system, offered in the portrait picker and paired
-    portrait-to-token by filename stem. They ship re-encoded to WebP q95, the
-    tokens/ half sized for the canvas (400×400); beyond that the artwork is
-    left as drawn — this project's own practice, not a term of the grant,
-    which bounds USE, not modification.
+
+Monster and character art — CC BY-NC-SA 4.0, © Lydia Comer
+    art/lydia-comer/portraits/ tokens/ portraits-monsters/ tokens-monsters/
+    https://creativecommons.org/licenses/by-nc-sa/4.0/
+    https://domfortunato.itch.io/lydia-comer
+    The four gallery folders hold 22 creatures and 31 characters, offered in
+    the portrait picker and paired portrait-to-token by filename stem. The
+    artist states no AI was used. They ship re-encoded to WebP q95, the token
+    halves sized for the canvas (400×400); beyond that the artwork is left as
+    drawn — this project's own practice, not a licence term.
     Contents: art/lydia-comer/CREDITS.md.
     Full terms: art/lydia-comer/license.txt.
 

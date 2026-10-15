@@ -190,6 +190,29 @@ export const tokenDisplayName = (tok) =>
   tok?.actor?.type === "character" ? (tok?.name ?? "") : t("monster.name", tok?.name ?? "");
 
 /**
+ * A chat message SPEAKER's name as THIS viewer's card header shows it
+ * (cairn.js `localizeSpeakerName`, review #19): the token's where the message
+ * was spoken as one, the world actor's otherwise, and the stored alias when
+ * nothing resolves or the alias was not the actor's own name (a Warden's
+ * "Goblin A" stays "Goblin A"; a PC never localizes — the two helpers above
+ * carry that gate). One resolver, shared by every flavor that is rebuilt per
+ * viewer (GLOG cast cards, initiative save cards), so a card's flavor and its
+ * header can never disagree about a name.
+ * @param {ChatMessage} message
+ * @param {String} alias  the alias the card was composed with
+ * @return {String}
+ */
+export const speakerDisplayName = (message, alias) => {
+  const speaker = message?.speaker ?? {};
+  const token = speaker.scene && speaker.token
+    ? game.scenes?.get(speaker.scene)?.tokens?.get(speaker.token) : null;
+  if (token) return tokenDisplayName(token) || alias;
+  const actor = speaker.actor ? game.actors?.get(speaker.actor) : null;
+  if (!actor || actor.name !== alias) return alias;
+  return actorDisplayName(actor) || alias;
+};
+
+/**
  * Return a shallow copy of an item-like object ({ name, system: { description } })
  * with its display name/description translated under the given namespaces. The
  * original is NEVER mutated — callers hand this to a template, never back to a
@@ -202,6 +225,49 @@ export const localizeNameDesc = (obj, { nameNs = "item.name", descNs = "item.des
   const description = t(descNs, obj.system?.description);
   if (name === obj.name && description === obj.system?.description) return obj;
   return { ...obj, name, system: { ...obj.system, description } };
+};
+
+/**
+ * Block-level tags a journal page is translated at, ONE lookup per element.
+ * MUST stay identical to BLOCK_TAGS in tools/i18n/content-strings.mjs: the
+ * extractor emits `node.innerHTML` for exactly these and the overlay is keyed on
+ * it, so a tag in one list and not the other is a key nothing ever asks for.
+ * `npm run dev:journal-i18n` is what holds the two honest — it collects the real
+ * rendered DOM's keys and checks the extractor emits every one.
+ *
+ * IT LIVES HERE, beside `translationOf`, because two surfaces render journal
+ * prose now: the journal sheet (`cairn.js`) and the Vald calendar's festival
+ * panel. It moved out of `cairn.js` on 2026-09-10 so the "must stay identical
+ * to the extractor" contract has ONE home rather than one per reader.
+ */
+export const JOURNAL_BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, figcaption";
+
+/**
+ * Translate a rendered page's prose, paragraph by paragraph.
+ *
+ * PARAGRAPH-level, ruled 2026-08-14: a page here is one `text.content` string of
+ * up to 14,000 characters, so keying the overlay on the whole page would hand a
+ * translator a rulebook page in one cell and orphan all of it on any English
+ * edit. Split this way an edit costs only the sentences it touched.
+ *
+ * Nested blocks are skipped so only the INNERMOST block owns its text — a `<li>`
+ * wrapping a nested list yields the inner items, never the outer's concatenation
+ * of them, which would otherwise be keyed on a string that is also its own
+ * children and fight them at render.
+ *
+ * `translationOf`, never `t`: the value written to innerHTML is then provably
+ * from our own overlay JSON and DOM text can never round-trip back out as
+ * markup — the same rule `swapResultNode` in `cairn.js` is written to.
+ */
+export const localizeJournalBlocks = (root) => {
+  if (!root) return;
+  for (const node of root.querySelectorAll(JOURNAL_BLOCKS)) {
+    if (node.querySelector(JOURNAL_BLOCKS)) continue;
+    const en = node.innerHTML.trim();
+    if (!en) continue;
+    const es = translationOf("journal.block", en);
+    if (es !== undefined && es !== en) node.innerHTML = es;
+  }
 };
 
 /**

@@ -1,13 +1,22 @@
 # Generating NPCs and hirelings
 
-Two buttons, two kinds of person. **Generate NPC** makes somebody the party
+Two buttons, two kinds of person. **Create NPC** makes somebody the party
 *meets* — an innkeeper, a rival, a hostage — with a Background off the Warden's
-Guide table and four traits of their own. **Generate Hireling** makes somebody
+Guide table and four traits of their own. **Create Hireling** makes somebody
 the party *pays*, with a Career off the 2e careers list, the gear that career
 carries and a day rate.
 
 Both arrive as complete Actors: a name, a portrait, a matching token, a
-biography and a stat block. Neither asks you a question first.
+biography and a stat block. Each asks one question first — a tick-box reading
+**Use random generation.** — and clearing it opens an empty sheet instead (see
+[Generating characters](generating-characters.md#start-from-an-empty-sheet)).
+
+That window also tells you what the new person's tokens will do: **all of
+their tokens share one sheet**, because an NPC or a hireling is one person.
+That is what you want for an innkeeper and not what you want for six guards.
+When you need a crowd whose members take damage separately, make a Monster, or
+clear **Link Actor Data** on the actor's Prototype Token. Both routes are
+explained in [Tokens and Sheets](tokens-and-sheets.md).
 
 You need permission to create Actors. The Warden always has it; a player only
 if you have granted it.
@@ -34,8 +43,8 @@ switches one into the other, and switching costs you nothing — see
 
 **Actors tab → the button row at the top.**
 
-- **Generate NPC** (the person-plus icon)
-- **Generate Hireling** (the coin-in-hand icon)
+- **Create NPC** (the person-plus icon)
+- **Create Hireling** (the coin-in-hand icon)
 
 Both also live in the folder **+** menu, under *What are you creating?*, which
 is the one to use when you want the new person filed straight into a folder.
@@ -303,6 +312,8 @@ Both are tagged, and the tags are what tell them apart when you re-roll:
 
 - [Generating Monsters](generating-monsters.md) — the same idea for things that
   fight, with a danger tier to pick.
+- [Tokens and Sheets](tokens-and-sheets.md) — why every token of one of these
+  people shares a sheet, and what to reach for when you want a crowd instead.
 - [Generating Factions](generating-factions.md) — for the groups these people
   belong to.
 - [Using Your Own Portraits](using-your-own-portraits.md) — how the `npc` folder

@@ -3,9 +3,12 @@
  * Phase 3 acceptance probe: the marketplace is a REFERENCE catalog over the
  * editable gear pool, so editing a pool item's cost/description updates the shop.
  *
- *   node tools/dev/marketplace-probe.mjs   (needs Foundry running, world launched)
+ *   node tools/dev/marketplace-probe.mjs   (needs Foundry running, world launched,
+ *                                          and `npm run dev:players` for step 5)
  *
- * Steps, driven headless as GM:
+ * Steps, driven headless as GM (after an ENTRY sweep of every world `Market:`
+ * table — the shop is world first, and a Warden's own copies point it at
+ * WORLD items, so step 2's pack edit would never reach it):
  *   1. Read the shop via module/marketplace.js getMarketplaceCatalog(); assert the
  *      three categories resolve every reference (Weapons 15, Armor 6, Gear 49) and
  *      that prices are read off the items (Dagger 5, Plate Mail 60), plus a bundle
@@ -24,6 +27,13 @@
  *      is the enforcement, and a dialog left open while the pack filled must not
  *      be a way through. Transports and petty items stay available (neither
  *      costs the buyer a slot). Control: free one slot and the buy lands again.
+ *   5. WORLD FIRST (2026-09-13). A world RollTable named "Market: Gear" replaces
+ *      that aisle; "Market: Trinkets" adds one after the four; deleting them puts
+ *      the shipped shop back. This is the only durable way for a Warden to price
+ *      or stock the shop, because an update deletes the system directory whole.
+ *      Control, in-page: the pack-only lookup this replaced sees neither. And a
+ *      PLAYER's client is measured too — the Warden and the table shopping from
+ *      different catalogs is the failure nobody would notice until a purchase.
  *
  * Two traps this probe pays for, both of which made step 4 pass or fail for the
  * wrong reason before they were found:
@@ -38,7 +48,7 @@
  */
 
 import { chromium } from "playwright";
-import { VIEWPORT, joinAsGM, watchErrors } from "./lib.mjs";
+import { VIEWPORT, joinAs, joinAsGM, watchErrors } from "./lib.mjs";
 
 const browser = await chromium.launch();
 const page = await browser.newContext({ viewport: VIEWPORT }).then((c) => c.newPage());
@@ -49,6 +59,22 @@ const ok = (m) => console.log(`  ok    ${m}`);
 
 try {
   await joinAsGM(page);
+
+  // ENTRY SWEEP (2026-09-15). Every leg below reads the shop, and the shop is
+  // WORLD FIRST: a Warden's own `Market:` copies — the Create a Custom
+  // Marketplace… button's output, pointing at WORLD items — make step 2 edit
+  // a pack Dagger the shop no longer reads, and the leg reports the edit as
+  // lost. The world-first section swept them, but only when it began, three
+  // steps too late; it redded exactly that way with the dev world's copies
+  // in place. Swept here and named, so a Warden knows to press the button
+  // again afterwards.
+  const sweptAtEntry = await page.evaluate(async () => {
+    const names = game.tables.filter((t) => /^Market:/i.test(t.name)).map((t) => t.name);
+    for (const t of [...game.tables].filter((x) => /^Market:/i.test(x.name))) await t.delete();
+    return names;
+  });
+  if (sweptAtEntry.length) console.log(`  --    swept ${sweptAtEntry.length} world Market: table(s) at entry (a Warden's own copies read as overrides): ${sweptAtEntry.join(", ")}`);
+  else ok("no world Market: tables at entry — the shop reads the shipped aisles");
 
   const r = await page.evaluate(async () => {
     const mkt = await import("/systems/air-bladder/module/marketplace.js");
@@ -302,6 +328,207 @@ try {
   F.buyEnabledAgain && F.buyLandsAgain
     ? ok(`CONTROL: freeing one slot (${F.freedSlots}) re-enables Buy and the purchase lands — the refusals above can fail`)
     : fail(`CONTROL FAILED at ${F.freedSlots}: re-enabled=${F.buyEnabledAgain}, purchase landed=${F.buyLandsAgain}`);
+
+  /* ---- 5. WORLD FIRST ------------------------------------------------------
+   * A Warden cannot keep anything they change inside our compendium: Foundry's
+   * installer deletes the whole system directory before extracting an update.
+   * So a world RollTable named "Market: Gear" REPLACES that aisle, and one under
+   * a name nothing ships ADDS one — the rule Bonds and Omens already follow.
+   *
+   * The control is IN-PAGE and is the OLD algorithm: pack-only `getDocuments()`
+   * over the same planted tables. It must see neither the override nor the new
+   * aisle, or every green line below could be reporting the shipped catalog. */
+  console.log("\nworld-first market tables");
+  const w = await page.evaluate(async () => {
+    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const catItems = (cat, name) => cat?.categories.find((c) => c.name === name)?.items ?? [];
+    const names = (cat) => cat.categories.map((c) => c.name);
+    const out = {};
+
+    // A leftover from a killed run reds every leg below and looks like a defect
+    // in the code. Clear it, and SAY so — silently deleting a Warden's table
+    // would be worse than failing.
+    out.swept = game.tables.filter((t) => /^Market:/i.test(t.name)).map((t) => t.name);
+    for (const t of [...game.tables].filter((x) => /^Market:/i.test(x.name))) await t.delete();
+
+    const pack = game.packs.get("air-bladder.marketplace");
+    const shipped = await pack.getDocuments();
+    const gearTable = shipped.find((t) => t.name === "Market: Gear");
+    const row = [...gearTable.results][0];
+    const seed = { type: "document", documentUuid: row.documentUuid, name: row.name, img: row.img, range: [1, 1], weight: 1 };
+
+    const base = await mkt.getMarketplaceCatalog();
+    out.baseGear = catItems(base, "Gear").length;
+    out.baseCats = names(base);
+
+    // One at a time: a batch of 2+ comes back in server-finish order.
+    const RollTableClass = CONFIG.RollTable.documentClass;
+    const override = await RollTableClass.create({ name: "Market: Gear", results: [seed] });
+    const afterOverride = await mkt.getMarketplaceCatalog();
+    out.overrideCats = names(afterOverride);
+    out.overrideGear = catItems(afterOverride, "Gear").length;
+    out.overrideRow = catItems(afterOverride, "Gear")[0]?.name;
+
+    const aisle = await RollTableClass.create({ name: "Market: Trinkets", results: [seed] });
+    const afterAisle = await mkt.getMarketplaceCatalog();
+    out.aisleCats = names(afterAisle);
+    out.aisleItems = catItems(afterAisle, "Trinkets").length;
+
+    // CONTROL: the pack-only lookup this replaced, run against the same world.
+    const packOnly = await pack.getDocuments();
+    out.oldGearRows = [...(packOnly.find((t) => t.name === "Market: Gear")?.results ?? [])].length;
+    out.oldSeesAisle = packOnly.some((t) => t.name === "Market: Trinkets");
+
+    out.overrideUuid = override.uuid;
+    out.aisleUuid = aisle.uuid;
+    return out;
+  });
+
+  w.swept.length
+    ? console.log(`  --    swept ${w.swept.length} leftover world table(s) first: ${w.swept.join(", ")}`)
+    : ok("no leftover Market: tables in the world — the legs below start clean");
+  w.overrideGear === 1 && w.overrideRow
+    ? ok(`a world "Market: Gear" REPLACES the aisle: ${w.baseGear} shipped rows → 1 ("${w.overrideRow}")`)
+    : fail(`the world table did not replace the aisle: ${w.overrideGear} rows (shipped baseline ${w.baseGear})`);
+  JSON.stringify(w.overrideCats) === JSON.stringify(w.baseCats)
+    ? ok("an override changes the aisle's CONTENTS and not the category list or its order")
+    : fail(`categories moved under an override: ${JSON.stringify(w.overrideCats)} vs ${JSON.stringify(w.baseCats)}`);
+  JSON.stringify(w.aisleCats) === JSON.stringify([...w.baseCats, "Trinkets"]) && w.aisleItems === 1
+    ? ok(`a world "Market: Trinkets" ADDS a fifth aisle, after the four known ones: ${w.aisleCats.join(", ")}`)
+    : fail(`new aisle wrong: ${JSON.stringify(w.aisleCats)} (want the four then Trinkets), items=${w.aisleItems}`);
+  w.oldGearRows === w.baseGear && w.oldSeesAisle === false
+    ? ok(`CONTROL: the pack-only lookup sees neither — still ${w.oldGearRows} shipped Gear rows and no Trinkets aisle`)
+    : fail(`CONTROL FAILED: pack-only saw ${w.oldGearRows} Gear rows (want ${w.baseGear}) / Trinkets=${w.oldSeesAisle} — `
+      + "the legs above may be reading the shipped catalog");
+
+  /* A PLAYER's client must resolve the override too, or the Warden and the table
+   * shop from two different catalogs. Nothing about world-document visibility
+   * makes this obvious, so it is measured rather than reasoned about.
+   * Needs `npm run dev:players`. */
+  const aliceContext = await browser.newContext({ viewport: VIEWPORT });
+  const alicePage = await aliceContext.newPage();
+  const aliceErrors = watchErrors(alicePage);
+  await joinAs(alicePage, "Alice");
+  const p = await alicePage.evaluate(async () => {
+    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const cat = await mkt.getMarketplaceCatalog();
+    const gear = cat.categories.find((c) => c.name === "Gear")?.items ?? [];
+    return { isGM: game.user.isGM, gear: gear.length, row: gear[0]?.name, cats: cat.categories.map((c) => c.name) };
+  });
+  p.isGM === false && p.gear === 1 && p.cats.includes("Trinkets")
+    ? ok(`a PLAYER shops the same catalog: Gear is the Warden's 1 row ("${p.row}"), and the added aisle is there`)
+    : fail(`a player's shop disagrees with the Warden's: GM=${p.isGM}, Gear rows=${p.gear} (want 1), cats=${JSON.stringify(p.cats)}`);
+  if (aliceErrors.length) {
+    console.error("\nconsole errors on the player's client:");
+    aliceErrors.slice(0, 5).forEach((e) => console.error("  " + e));
+    failed = true;
+  }
+  await aliceContext.close();
+
+  // cleanup, and the restore is its own assertion: deleting the world table must
+  // put the shipped aisle back, which is half of what "world FIRST" promises.
+  const restored = await page.evaluate(async ({ overrideUuid, aisleUuid }) => {
+    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    for (const uuid of [overrideUuid, aisleUuid]) await (await fromUuid(uuid))?.delete();
+    const cat = await mkt.getMarketplaceCatalog();
+    return {
+      gear: cat.categories.find((c) => c.name === "Gear")?.items.length ?? 0,
+      cats: cat.categories.map((c) => c.name),
+      leftovers: game.tables.filter((t) => /^Market:/i.test(t.name)).map((t) => t.name),
+    };
+  }, { overrideUuid: w.overrideUuid, aisleUuid: w.aisleUuid });
+  restored.gear === w.baseGear && JSON.stringify(restored.cats) === JSON.stringify(w.baseCats)
+    ? ok(`deleting the world tables restores the shipped shop (${restored.gear} Gear rows, ${restored.cats.length} aisles)`)
+    : fail(`the shipped shop did not come back: ${restored.gear} Gear rows (want ${w.baseGear}), ${JSON.stringify(restored.cats)}`);
+  restored.leftovers.length === 0
+    ? ok("no planted table left behind")
+    : fail(`ORPHANS LEFT: ${restored.leftovers.join(", ")} — the next run will read them as a Warden's own`);
+
+  /* ---- 6. A DROP RE-SORTS A WORLD MARKET TABLE (2026-09-13) -----------------
+   * Core appends a dropped row at maxRoll + 1 and orders the sheet and the shop
+   * by range, so a Warden's first drop lands at the bottom of an otherwise
+   * alphabetical aisle. The createTableResult hook re-ranges the rows by name.
+   * Fixture rows are planted OUT of order in the table's create data — embedded
+   * rows created with their parent fire no createTableResult, so the plant is
+   * inert — and the drop is the same createEmbeddedDocuments call core's sheet
+   * makes. CONTROL: an identical world table without the Market: prefix keeps
+   * its dropped row at the bottom. */
+  console.log("\na drop re-sorts a world market table");
+  const s = await page.evaluate(async () => {
+    const mkt = await import("/systems/air-bladder/module/marketplace.js");
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const pack = game.packs.get("air-bladder.marketplace");
+    const gear = (await pack.getDocuments()).find((t) => t.name === "Market: Gear");
+    // Three DISTINCT shipped items, so the shop's order is distinguishable —
+    // with every row pointing at one item, the shop leg below passed in the red
+    // phase, because three copies of one name look the same in any order. The
+    // shipped aisle is alphabetical, so its first three rows are A < B < C.
+    const [A, B, C] = [...gear.results].sort((a, b) => a.range[0] - b.range[0]).slice(0, 3)
+      .map((r) => ({ type: "document", documentUuid: r.documentUuid, name: r.name, img: r.img, weight: 1 }));
+    const at = (r, i) => ({ ...r, range: [i, i] });
+    const RT = CONFIG.RollTable.documentClass;
+    const seed = [at(B, 1), at(A, 2)];                                     // deliberately B before A
+    const market = await RT.create({ name: "Market: Gear", formula: "1d2", results: seed });
+    const plain = await RT.create({ name: "PROBE not a market", formula: "1d2", results: seed });
+    // A DRAG-BUILT aisle stores NO formula (review #30): Create Roll Table
+    // then drag never submits the sheet form, so `_source.formula` is "" and
+    // prepareDerivedData fills the derived one. The re-sort compared against
+    // the derived value, saw 1dN already there, and never wrote — so the first
+    // roll() normalized the table back to drag order. This fixture is that
+    // shape; the assertion reads `_source`, because the derived value is "1d3"
+    // either way.
+    const bare = await RT.create({ name: "Market: Trinkets", results: seed });
+    const order = (t) => [...t.results].sort((a, b) => a.range[0] - b.range[0]).map((r) => r.name);
+    const out = { names: [A.name, B.name, C.name], marketBefore: order(market), plainBefore: order(plain), bareStoredBefore: bare._source.formula };
+
+    // The drop, as core's sheet makes it (roll-table-sheet.mjs _createResult).
+    await market.createEmbeddedDocuments("TableResult", [at(C, 3)], { renderSheet: false });
+    await plain.createEmbeddedDocuments("TableResult", [at(C, 3)], { renderSheet: false });
+    await bare.createEmbeddedDocuments("TableResult", [at(C, 3)], { renderSheet: false });
+    for (let i = 0; i < 40 && bare._source.formula !== "1d3"; i++) await wait(100);
+    out.bareStoredAfter = bare._source.formula;
+    out.bareAfter = order(bare);
+    await bare.delete();                                                   // before the catalog read below
+    // The sort is a second write, from the hook — poll for it rather than trust
+    // the await, and for BOTH halves: the first run polled for order alone and
+    // read the formula before it had landed, a race in the probe that also
+    // showed the code was making two writes where one would do.
+    const want = [A.name, B.name, C.name].join();
+    for (let i = 0; i < 40; i++) {
+      if (order(market).join() === want && market.formula === "1d3") break;
+      await wait(100);
+    }
+    out.marketAfter = order(market);
+    out.marketFormula = market.formula;
+    out.marketRanges = [...market.results].sort((a, b) => a.range[0] - b.range[0]).map((r) => r.range.join("-"));
+    await wait(300);                                                       // give a wrong sort time to show on the control
+    out.plainAfter = order(plain);
+    out.plainFormula = plain.formula;
+    const cat = await mkt.getMarketplaceCatalog();
+    out.shopGear = cat.categories.find((c) => c.name === "Gear")?.items.map((i) => i.name) ?? [];
+    await market.delete();
+    await plain.delete();
+    return out;
+  });
+  const [A, B, C] = s.names;
+  JSON.stringify(s.marketBefore) === JSON.stringify([B, A])
+    ? ok(`fixture planted out of order (${B} before ${A}), inert — no hook fires for rows created with their table`)
+    : fail(`fixture not as planted: ${JSON.stringify(s.marketBefore)}`);
+  JSON.stringify(s.marketAfter) === JSON.stringify([A, B, C])
+    && s.marketFormula === "1d3" && JSON.stringify(s.marketRanges) === JSON.stringify(["1-1", "2-2", "3-3"])
+    ? ok(`a drop re-sorts the whole table alphabetically: ${s.marketAfter.join(", ")} — ranges 1-1, 2-2, 3-3, formula 1d3`)
+    : fail(`market table after the drop: ${JSON.stringify(s.marketAfter)}, ranges ${JSON.stringify(s.marketRanges)}, formula ${s.marketFormula}`);
+  JSON.stringify(s.plainAfter) === JSON.stringify([B, A, C]) && s.plainFormula === "1d2"
+    ? ok("CONTROL: a world table without the Market: prefix keeps its dropped row at the bottom, formula untouched")
+    : fail(`CONTROL FAILED — the non-market table was re-sorted too: ${JSON.stringify(s.plainAfter)}, formula ${s.plainFormula}`);
+  // `undefined`, not "": BaseRollTable's formula StringField has no initial, so
+  // a create with no formula stores nothing at all — the same blank roll() tests.
+  !s.bareStoredBefore && s.bareStoredAfter === "1d3" && JSON.stringify(s.bareAfter) === JSON.stringify([A, B, C])
+    ? ok("a drag-built aisle with NO stored formula gets 1d3 WRITTEN — read off _source, so the first roll() cannot normalize the sort away")
+    : fail(`drag-built aisle: stored formula before "${s.bareStoredBefore}", after "${s.bareStoredAfter}", order ${JSON.stringify(s.bareAfter)}`);
+  JSON.stringify(s.shopGear) === JSON.stringify([A, B, C])
+    ? ok("and the shop reads the aisle in the new order")
+    : fail(`shop Gear aisle after the sort: ${JSON.stringify(s.shopGear)} (want ${JSON.stringify([A, B, C])})`);
 } catch (e) {
   fail(`${e.name}: ${e.message}`);
 } finally {

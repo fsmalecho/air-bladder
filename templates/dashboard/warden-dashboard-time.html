@@ -1,0 +1,185 @@
+{{!--
+  The Warden's clock, above the Dashboard's tabs.
+
+  A BAND, NOT A SEVENTH TAB. The date is context for everything below it, and
+  a tab would put it one click away from every roll it informs. It is also the
+  only shape that keeps the tab strip at six, which the probe asserts.
+
+  ONE ROOT ELEMENT, like every part here.
+
+  Every <button> is type="button" EXPLICITLY: the application element is a
+  <form>, so a bare button is a submit button and advancing a watch would
+  submit the window instead.
+
+  "To Next Morning" is deliberately NOT called "Make Camp" (user ruling
+  2026-09-10). Make Camp is a Wilderness Action the PLAYERS choose, and the
+  no-automation deviation protects player-facing rules. The Warden moves the
+  calendar; the party decides whether they camped.
+
+  Today's Weather renders only when the calendar in play HAS a season we know a
+  table for. It is `rollWeather` rather than `rollTable` because it does two
+  more things than an ordinary button — the card goes out PUBLIC whatever the
+  dropdown says, and the drawn row becomes the day's weather on everyone's
+  calendar — but it still posts CORE'S OWN card through the same helper, so
+  THE RULE in warden-dashboard.js is untouched. It keeps its eye, so the
+  probe's show/roll invariant still holds.
+--}}
+<div class="cairn-dashboard-time">
+
+    {{!--
+      STACKED, LIKE THE CALENDAR'S DAY PANEL (user, 2026-09-11, with both
+      windows open side by side: "the top three lines of the Warden's dashboard
+      should look like the lines in the calendar"). These four facts used to
+      share one row separated by middle dots, which is the crowding the rest of
+      this window was fixed for.
+
+      So: the long date as a headline, then three quiet lines each led by its
+      own glyph in a fixed box, so all three labels start at the same x. The
+      same shape `.cairn-calendar-season` uses, deliberately.
+
+      THE WATCH GETS A LINE OF ITS OWN (user ruling, chosen from three
+      mockups). The panel has three lines because a calendar has no watch; this
+      is the surface where the clock is MOVED, so the watch stays legible
+      rather than being folded into the date.
+
+      NO TOOLTIP. It carried the long date, the season, the watch and the
+      weather joined — every word of which is now on screen, and a tooltip that
+      repeats what it covers is noise.
+    --}}
+    <div class="cairn-time-read">
+        <div class="cairn-time-date">{{time.dateLong}}</div>
+
+        {{!-- ONE glyph for all three watches, and `fa-hourglass-half` rather
+              than a sun-and-moon set: `fa-cloud-sun` is the weather line
+              directly below, and the band's rule is that a glyph means one
+              thing per window. `dev:vald-time` enforces it. --}}
+        <div class="cairn-time-watch">
+            <i class="fa-solid fa-hourglass-half"></i>
+            <span>{{time.watchLine}}</span>
+        </div>
+
+        {{#if time.seasonLine}}
+            <div class="cairn-time-season">
+                {{#if time.seasonIcon}}<i class="fa-solid {{time.seasonIcon}}"></i>{{/if}}
+                <span>{{time.seasonLine}}</span>
+            </div>
+        {{/if}}
+
+        {{#if time.weather}}
+            <div class="cairn-time-today-weather">
+                <i class="fa-solid fa-cloud-sun"></i>
+                <span>{{time.weather}}</span>
+            </div>
+        {{/if}}
+    </div>
+
+    {{!-- Every control here carries a STABLE id — the five clock buttons from
+          review #27, and the ones BELOW them (calendar, the weather pair, set
+          weather, and a roll/show pair per TIME_EVENTS entry) which this line
+          claimed for a day before they had one, added in review #28. Six
+          markup sites, but the event pair is inside {{#each events}} and its
+          ids are generated from @index, so the rendered count follows
+          TIME_EVENTS and is eight today — read it as "every button", not as a
+          list to check off (review #29). A click
+          re-renders this part alone, and core restores keyboard focus across
+          a part replacement only to an element it can name by `#id` or
+          `[name]` (handlebars-application.mjs, _preSyncPartState); without
+          one, Enter three times on Advance Watch advanced ONE watch and
+          stranded the focus on <body>. --}}
+    <div class="cairn-time-controls">
+        <button type="button" data-action="backWatch" id="cairn-warden-dashboard-back-watch"
+                data-tooltip="{{localize 'CAIRN.Time.Tip.BackWatch'}}">
+            <i class="fa-solid fa-backward-step"></i>
+            <span>{{localize "CAIRN.Time.BackWatch"}}</span>
+        </button>
+        <button type="button" data-action="advanceWatch" id="cairn-warden-dashboard-advance-watch"
+                data-tooltip="{{localize 'CAIRN.Time.Tip.AdvanceWatch'}}">
+            <i class="fa-solid fa-forward-step"></i>
+            <span>{{localize "CAIRN.Time.AdvanceWatch"}}</span>
+        </button>
+        <button type="button" data-action="advanceDay" id="cairn-warden-dashboard-advance-day"
+                data-tooltip="{{localize 'CAIRN.Time.Tip.AdvanceDay'}}">
+            <i class="fa-solid fa-calendar-day"></i>
+            <span>{{localize "CAIRN.Time.AdvanceDay"}}</span>
+        </button>
+        {{!-- `fa-sunrise`, not `fa-sun`: this lands the clock at the START of
+              the next morning, and the plain sun was the Dry season's mark one
+              row above. A glyph means one thing per window. --}}
+        <button type="button" data-action="nextMorning" id="cairn-warden-dashboard-next-morning"
+                data-tooltip="{{localize 'CAIRN.Time.Tip.NextMorning'}}">
+            <i class="fa-solid fa-sunrise"></i>
+            <span>{{localize "CAIRN.Time.NextMorning"}}</span>
+        </button>
+        <button type="button" data-action="setDate" id="cairn-warden-dashboard-set-date">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>{{localize "CAIRN.Time.SetDate"}}</span>
+        </button>
+        {{#if calendarOpen}}
+            {{!-- A plain action, not a table pair, so the show/roll invariant
+                  is unaffected. Vald only: there is no month grid to open
+                  under Foundry's own calendar. --}}
+            <button type="button" data-action="openCalendar" id="cairn-warden-dashboard-open-calendar"
+                    data-tooltip="{{localize 'CAIRN.Calendar.Open'}}">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>{{localize "CAIRN.Dashboard.Calendar"}}</span>
+            </button>
+        {{/if}}
+    </div>
+
+    {{#if weatherTable}}
+        <div class="cairn-dashboard-grid cairn-time-weather">
+            {{!-- A PAIR with an eye, like every other table button on this
+                  window: the probe asserts show buttons and roll buttons come
+                  in equal numbers, and an un-paired one reds it. --}}
+            <div class="cairn-dashboard-pair">
+                <button type="button" id="cairn-warden-dashboard-roll-weather" data-action="rollWeather" data-table="{{weatherTable}}"
+                        data-tooltip="{{localize 'CAIRN.Time.Tip.TodaysWeather'}}">
+                    <i class="fa-solid {{weatherIcon}}"></i>
+                    <span>{{weatherLabel}}</span>
+                </button>
+                <button type="button" class="cairn-show-btn" data-action="showTable"
+                        data-table="{{weatherTable}}"
+                        id="cairn-warden-dashboard-show-weather"
+                        data-tooltip="{{localize 'CAIRN.Dashboard.ShowTable'}}">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            {{!-- The Warden may also just SAY what the weather is: a d6 of
+                  seasonal weather has no row for a curse, a spell, or the
+                  thing in the valley. Same function as the calendar's own
+                  pencil. --}}
+            <button type="button" class="cairn-time-say-weather" id="cairn-warden-dashboard-set-weather" data-action="setWeather"
+                    data-tooltip="{{localize 'CAIRN.Calendar.SetWeatherHint'}}">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>{{localize "CAIRN.Calendar.SetWeather"}}</span>
+            </button>
+        </div>
+    {{/if}}
+
+    {{!--
+      The event tables, moved here off the Encounters tab (user ask
+      2026-09-11). An event is something that happens as time passes, so it
+      belongs beside the clock — and the band renders on every tab, so it is
+      one click from wherever the Warden is standing.
+
+      ITS OWN BLOCK, deliberately outside the weather's `{{#if weatherTable}}`.
+      Nested inside it, the events would vanish under any calendar this system
+      has no weather table for, which has nothing to do with them.
+    --}}
+    <div class="cairn-dashboard-grid cairn-time-events">
+        {{#each events as |btn|}}
+            <span class="cairn-dashboard-pair">
+                <button type="button" id="cairn-warden-dashboard-event-{{@index}}" data-action="rollTable" data-table="{{btn.table}}">
+                    <i class="fa-solid {{btn.icon}}"></i>
+                    <span>{{btn.label}}</span>
+                </button>
+                <button type="button" class="cairn-show-btn" data-action="showTable"
+                        data-table="{{btn.table}}"
+                        id="cairn-warden-dashboard-event-show-{{@index}}"
+                        data-tooltip="{{localize 'CAIRN.Dashboard.ShowTable'}}"
+                        aria-label="{{localize 'CAIRN.Dashboard.ShowTable'}}"><i class="fas fa-eye"></i></button>
+            </span>
+        {{/each}}
+    </div>
+
+</div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate Monster: the Warden's directory button, the tier picker, and the
+ * Create Monster: the Warden's directory button, the tier picker, and the
  * shape of what it mints.
  *
  * The generator is table-driven (the 8 Warden monster tables) with a stats
@@ -13,7 +13,7 @@
  *      her role holds ACTOR_CREATE. The grant is what makes the leg mean
  *      anything: without it Alice gets no generator section at all, and the
  *      assertion passed identically with the isGM gate deleted (caught by this
- *      probe's own fail-witness run, 2026-08-01). Her Generate PC button is
+ *      probe's own fail-witness run, 2026-08-01). Her Create PC button is
  *      asserted PRESENT as the non-vacuousness witness. A GM can never see the
  *      player half of a permission policy (lib.mjs joinAs);
  *   2. the tier picker opens, and DISMISSING it creates nothing — a ✕ is an
@@ -222,7 +222,7 @@ try {
     }, PREFIX);
 
     setup.button
-      ? ok("the GM's directory has the Generate Monster button")
+      ? ok("the GM's directory has the Create Monster button")
       : fail("no .create-monster-button in the GM's directory");
     if (!setup.button) return;
 
@@ -237,13 +237,19 @@ try {
       fail("no tier picker appeared — nothing below can run");
       return;
     }
-    const tierButtons = await Promise.all(
-      ["standard", "hardier", "serious", "random"].map((t) =>
-        picker.locator(`button[data-action="${t}"]`).count()),
-    );
-    tierButtons.every((n) => n === 1)
-      ? ok("all four tier buttons render (standard/hardier/serious/random)")
-      : fail(`tier buttons found: ${JSON.stringify(tierButtons)}`);
+    // A DROPDOWN since 2026-09-11, not four buttons. The empty-sheet feature
+    // folded the tier into the shared creation dialog, so `promptMonsterTier`'s
+    // `data-action="standard"` buttons are gone from this route and the leg had
+    // been red ever since without anyone running it (review #26). The four
+    // tiers are OPTIONS now, and the roll checkbox rides alongside them.
+    const tierOptions = await picker.locator('select[name="choice"] option')
+      .evaluateAll((els) => els.map((e) => e.value));
+    ["standard", "hardier", "serious", "random"].every((t) => tierOptions.includes(t))
+      ? ok("all four tiers are offered (standard/hardier/serious/random)")
+      : fail(`tier options found: ${JSON.stringify(tierOptions)}`);
+    (await picker.locator('input[name="roll"]').count()) === 1
+      ? ok("...alongside the empty-sheet checkbox")
+      : fail("the monster dialog carries no empty-sheet checkbox");
 
     await picker.locator('[data-action="close"]').click();
     await page.waitForTimeout(3000);
@@ -258,7 +264,8 @@ try {
     await page.evaluate(() => document.querySelector(".create-monster-button").click());
     const picker2 = page.locator(DIALOG).last();
     await picker2.waitFor({ state: "visible", timeout: 5000 });
-    await picker2.locator('button[data-action="standard"]').click();
+    await picker2.locator('select[name="choice"]').selectOption("standard");
+    await picker2.locator('button[data-action="create"]').click();
 
     let born = null;
     for (let i = 0; i < 30 && !born; i++) {
@@ -508,11 +515,11 @@ try {
   });
   if (aliceSees.isGM) fail("the Alice leg joined as a GM — it proves nothing");
   aliceSees.pcButton
-    ? ok("Alice (with ACTOR_CREATE) sees the Generate PC button — the leg is not vacuous")
+    ? ok("Alice (with ACTOR_CREATE) sees the Create PC button — the leg is not vacuous")
     : fail("Alice sees no generator section at all — the ACTOR_CREATE grant did not take, and the check below proves nothing");
   aliceSees.monsterButton
-    ? fail("Alice can see the Generate Monster button — Warden-only failed")
-    : ok("Alice has no Generate Monster button");
+    ? fail("Alice can see the Create Monster button — Warden-only failed")
+    : ok("Alice has no Create Monster button");
   errors.push(...aliceErrors);
   await aliceContext.close();
 } finally {

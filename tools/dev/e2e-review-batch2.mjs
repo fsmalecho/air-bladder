@@ -271,6 +271,24 @@ try {
         // of the read set was dead here (review #18). The anchors never were.
         const dof = sheet.element.querySelector('[data-action="dieOfFate"]');
         out.dieOfFate = { present: !!dof, tag: dof?.tagName ?? null, disabled: !!dof?.disabled };
+        // Improvised Attack is the OTHER read roll with no item behind it, and it
+        // was a <button> in that stack for a few hours on 2026-10-02 before
+        // becoming a row in the items list. As an <a> it is OUTSIDE core's
+        // _toggleDisabled sweep entirely -- which is the claim being measured
+        // here, not assumed: if it ever goes back to being a <button> without
+        // joining the exemption above, `tag` changes and this leg says so.
+        const improvised = sheet.element.querySelector('[data-action="improvisedAttack"]');
+        // NO DROP ON A PACK ACTOR (review #33): `owned()` tests only
+        // `isEditable`, which an unlocked world pack passes, so the control
+        // rendered on every compendium row and moved pack items into the
+        // party's world pile. Counted on the locked pack's rows, where the
+        // gate — not the lock — is what must hide it.
+        out.dropControls = sheet.element.querySelectorAll('[data-action="itemDrop"]').length;
+        out.improvised = {
+          present: !!improvised,
+          tag: improvised?.tagName ?? null,
+          disabled: !!improvised?.disabled,
+        };
         try {
           const before = game.messages.size;
           const target = document.createElement("a");
@@ -324,9 +342,16 @@ try {
         : fail(`rollDamage on a locked pack: rolled=${locked.rolled}, warns=${locked.rollWarns}`,
           "the read set is still wrapped in owned()");
       locked.dieOfFate?.present && !locked.dieOfFate.disabled
-        ? ok("Die of Fate is clickable on a locked pack", "(the one read roll that is a <button>, re-enabled past core's disable)")
+        ? ok("Die of Fate is clickable on a locked pack", "(a read roll that is a <button>, re-enabled past core's disable)")
         : fail(`Die of Fate on a locked pack: ${JSON.stringify(locked.dieOfFate)}`,
           "core's _toggleDisabled(true) disables every form element; the read button must be re-enabled after super._onRender");
+      locked.improvised?.present && locked.improvised.tag === "A" && !locked.improvised.disabled
+        ? ok("the Improvised Attack row is live on a locked pack", "(an <a>, so core's form-element sweep never reaches it)")
+        : fail(`Improvised Attack on a locked pack: ${JSON.stringify(locked.improvised)}`,
+          "an <a> is outside _toggleDisabled; if this is a <button> again it needs the _onRender exemption above");
+      locked.dropControls === 0
+        ? ok("no Drop control on a compendium actor's rows", "(canDrop asks !actor.pack; the pile is for the world's items)")
+        : fail(`${locked.dropControls} Drop control(s) on a pack actor's sheet`, "pressing one would move a pack item into the party's world pile");
       locked.deleteWarned
         ? ok("itemDelete still warns", "(mutations stay walled)")
         : fail("itemDelete no longer warns on a locked pack — the wall moved too far");
@@ -460,27 +485,36 @@ try {
 
     /* ---- 6. two GMs, one portrait scan -------------------------------------- */
 
-    // Poll until no client has written custom-portrait-list for a whole quiet
-    // period, so a login-time scan cannot be counted as part of the change
-    // below. Fails loudly rather than proceeding into a leg it would poison.
-    const settleWrites = async (pages) => {
+    // Spy on custom-portrait-list writes on every client. Installed BEFORE the
+    // election is read, so a login scan already walking cannot land unseen.
+    const spyWrites = async (pages) => {
       for (const p of pages) {
         await p.evaluate(() => {
           if (globalThis.__b2Settle) return;
           const orig = game.settings.set;
-          globalThis.__b2Settle = { orig, last: Date.now() };
+          globalThis.__b2Settle = { orig, last: Date.now(), count: 0 };
           game.settings.set = function (ns, key, ...rest) {
             if (ns === "air-bladder" && key === "custom-portrait-list") {
               globalThis.__b2Settle.last = Date.now();
+              globalThis.__b2Settle.count++;
             }
             return orig.call(this, ns, key, ...rest);
           };
         });
       }
-      const deadline = Date.now() + 30000;
+    };
+    // Poll until the elected GM's login scan has LANDED (when one is owed) and
+    // then no client has written for a whole quiet period, so a login-time scan
+    // cannot be counted as part of the change below. Fails loudly rather than
+    // proceeding into a leg it would poison.
+    const settleWrites = async (pages, { expectFrom = null } = {}) => {
+      const deadline = Date.now() + 60000;
+      let seen = expectFrom === null;
       let quiet = false;
       while (Date.now() < deadline && !quiet) {
         await pages[0].waitForTimeout(500);
+        if (!seen) seen = (await expectFrom.evaluate(() => globalThis.__b2Settle.count)) > 0;
+        if (!seen) continue;
         const ages = [];
         for (const p of pages) ages.push(await p.evaluate(() => Date.now() - globalThis.__b2Settle.last));
         quiet = ages.every((a) => a >= 5000);
@@ -491,7 +525,8 @@ try {
           delete globalThis.__b2Settle;
         });
       }
-      if (!quiet) fail("the portrait-list writes never went quiet", "the single-writer legs below would count somebody else's scan");
+      if (!seen) fail("the elected GM's login scan never wrote", "the change below would race a scan still walking");
+      else if (!quiet) fail("the portrait-list writes never went quiet", "the single-writer legs below would count somebody else's scan");
     };
     console.log("\nportrait-folder scan single-writer");
 
@@ -502,22 +537,30 @@ try {
     cleanup.gm2Made = true;
     gm2Page = await (await browser.newContext({ viewport: VIEWPORT })).newPage();
     await joinAs(gm2Page, "ZZ PROBE GM2");
+    await spyWrites([page, gm2Page]);
 
     // SETTLE BEFORE SPYING. A GM's login runs the same portrait scan this leg
     // is about (cairn.js ready hook, activeGM-gated exactly as the onChange is),
-    // and joining GM2 makes GM2 the elected activeGM — so its scan writes
-    // custom-portrait-list once, ~2.5s after game.ready, entirely legitimately.
-    // The spy went on immediately after joinAs and counted that straggler, so
-    // the deliberate change below made two and both legs red: 0 and 2, reported
-    // as "two GMs raced" when one GM had written twice for two different and
-    // correct reasons. Observed directly before it was fixed — spy installed,
-    // NO folder change made, and GM2 still logged a write at t+2543ms.
+    // so when joining GM2 makes GM2 the elected activeGM its scan writes
+    // custom-portrait-list once, entirely legitimately. The spy went on
+    // immediately after joinAs and counted that straggler, so the deliberate
+    // change below made two and both legs red: 0 and 2, reported as "two GMs
+    // raced" when one GM had written twice for two different and correct
+    // reasons. Observed directly before it was fixed — spy installed, NO folder
+    // change made, and GM2 still logged a write at t+2543ms.
     //
-    // Waiting for quiet rather than sleeping a guessed number: the leg below
-    // measures a window, so the window has to start empty.
-    await settleWrites([page, gm2Page]);
-
+    // AND QUIET IS NOT DONE (2026-10-04, CT 123). The fix above waited for 5s of
+    // quiet, and the login scan is the ready hook's LAST phase: on CT 123 it
+    // wrote ~18s after game.ready, so the quiet passed while it was still
+    // walking. The change below then raced it, both writes landed outside the
+    // window, and the leg read 0 and 0 — reported, again, as "two GMs raced".
+    // So the settle waits for the EVENT: when GM2 is elected, its login write,
+    // then quiet. When GM1 stays elected there is nothing owed — GM2's ready
+    // hook returns before the scan — and `getDesignatedUser` breaks the role
+    // tie by user id, so which of the two it is changes with every fresh GM2.
     const activeName = await page.evaluate(() => game.users.activeGM?.name ?? null);
+    await settleWrites([page, gm2Page], { expectFrom: activeName === "ZZ PROBE GM2" ? gm2Page : null });
+
     const idlePage = activeName === "ZZ PROBE GM2" ? page : gm2Page;
     for (const p of [page, gm2Page]) {
       await p.evaluate(() => {
@@ -536,7 +579,18 @@ try {
     await idlePage.evaluate(async () => {
       await game.settings.set("air-bladder", "custom-portrait-folder", "zz-probe-b2-portraits");
     });
-    await page.waitForTimeout(4000);
+    // Count until the change's own write has LANDED, then a further quiet
+    // period for a racing second writer. Not a fixed window: on CT 123 the
+    // change's scan alone took 3.4s of the 4s this leg used to allow.
+    const countDeadline = Date.now() + 30000;
+    let firstAt = null;
+    while (Date.now() < countDeadline) {
+      await page.waitForTimeout(250);
+      let seen = 0;
+      for (const p of [page, gm2Page]) seen += await p.evaluate(() => globalThis.__b2SetSpy.count);
+      if (seen > 0) firstAt ??= Date.now();
+      if (firstAt && Date.now() - firstAt >= 5000) break;
+    }
     const counts = [];
     for (const p of [page, gm2Page]) {
       counts.push(await p.evaluate(() => {
@@ -554,6 +608,64 @@ try {
     counts[activeIdx] === 1
       ? ok("and it was the ACTIVE GM", `counts gm1=${counts[0]} gm2=${counts[1]}`)
       : fail("the writer was not the elected activeGM", `counts gm1=${counts[0]} gm2=${counts[1]}`);
+
+    // The race the settle above had been hiding, found by the replay that
+    // diagnosed it: a scan whose folder changes under it used to cache the OLD
+    // folder's images over the new one's (CT 123: new list at +3.4s, old over
+    // it at +7.1s). Deterministic here rather than timed: the scan's browse is
+    // HELD, the folder moves under it by shadowing the READ (no world write),
+    // then the browse is released. The control is the same scan with nothing
+    // moved, which must write — or a 0 below would prove nothing.
+    console.log("\nportrait scan superseded by a folder change");
+    const stale = await page.evaluate(async () => {
+      const gen = await import("/systems/air-bladder/module/character-generator.js");
+      const FP = foundry.applications.apps.FilePicker.implementation;
+      const ownBrowse = Object.hasOwn(FP, "browse");
+      const origBrowse = FP.browse;
+      const origGet = game.settings.get;
+      const origSet = game.settings.set;
+      let writes = 0;
+      game.settings.set = function (ns, key, ...rest) {
+        if (ns === "air-bladder" && key === "custom-portrait-list") writes++;
+        return origSet.call(this, ns, key, ...rest);
+      };
+      const restoreBrowse = () => { if (ownBrowse) FP.browse = origBrowse; else delete FP.browse; };
+      const run = async (moveFolder) => {
+        writes = 0;
+        let release;
+        const held = new Promise((r) => { release = r; });
+        let started;
+        const browsing = new Promise((r) => { started = r; });
+        FP.browse = async function (...args) { started(); await held; return origBrowse.apply(this, args); };
+        const scan = gen.refreshCustomPortraits();
+        await browsing;
+        if (moveFolder) {
+          game.settings.get = function (ns, key, ...rest) {
+            if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
+            if (ns === "air-bladder" && key === "custom-portrait-folder") return "zz-probe-b2-elsewhere";
+            return origGet.call(this, ns, key, ...rest);
+          };
+        }
+        release();
+        await scan;
+        game.settings.get = origGet;
+        restoreBrowse();
+        return writes;
+      };
+      try {
+        return { control: await run(false), superseded: await run(true) };
+      } finally {
+        game.settings.get = origGet;
+        game.settings.set = origSet;
+        restoreBrowse();
+      }
+    });
+    stale.control === 1
+      ? ok("a scan nobody superseded writes its list", "(control: the spy can see a write)")
+      : fail(`the control scan wrote ${stale.control} time(s)`, "the superseded leg below proves nothing");
+    stale.superseded === 0
+      ? ok("a scan whose folder changed under it writes nothing", "the old folder's images cannot land over the new list")
+      : fail(`a superseded scan wrote ${stale.superseded} time(s)`, "the stale list lands over the new folder's");
     // withSettings on the main page restores custom-portrait-folder (and the
     // list) after this block; the rescan that restore triggers targets the
     // ORIGINAL folder, so the probe directory stays deletable.

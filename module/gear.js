@@ -1,3 +1,5 @@
+import { t } from "./i18n-content.js";
+
 /**
  * Shared gear resolution for Air Bladder.
  *
@@ -44,7 +46,18 @@ export const CANONICAL_GEAR_PACKS = [
   "air-bladder.background-items",
 ];
 
-export const SPELL_PACKS = ["air-bladder.spellbooks", "air-bladder.more-spellbooks"];
+/**
+ * Where a by-NAME spell grant ("Spellbook (Shield)") resolves: the canon
+ * spellbooks, then the background-items pack, which holds the ONE granted
+ * spell Cairn lacks — the class backgrounds' Shield (BECMI). It lived in the
+ * More Spellbooks pack until 2026-09-14, when that pack was REMOVED from the
+ * repo (user ruling: "including it was a mistake" — 217 non-SRD spells from
+ * cairnrpg.com's extended list, none of them GLOG-worded, and two thirds of
+ * the GLOG random pool by accident). The spell branch of resolveGearItem
+ * filters the index by TYPE, so a background-items ITEM sharing a spell's
+ * name can never answer a spellbook grant.
+ */
+export const SPELL_PACKS = ["air-bladder.spellbooks", "air-bladder.background-items"];
 
 // Genuine spelling variants — NOT mere casing (the resolver is already
 // case-insensitive). Key: lowercased grant spelling → canonical pack item name.
@@ -109,6 +122,62 @@ export const RATIONS_RE = /\brations?\b/i;
  *  directly above Rations. */
 export const isLightGear = (name) =>
   LIGHT_SOURCE_RE.test(String(name ?? "")) || LIGHT_FUEL.has(String(name ?? "").trim().toLowerCase());
+
+/**
+ * A REST EATS A RATION (2026-10-03, user ask — a HOUSE RULE for every table,
+ * player characters only), and these three are the whole notion of "ration"
+ * the rule rests on. The same `RATIONS_RE` generation already bands and tags
+ * rations with, so a Warden's "Iron Rations" counts and no second notion is
+ * introduced.
+ *
+ * RATIONS ARE COUNTED BY USES. The shipped Rations item is ONE document with
+ * three uses, so "3 rations" is three uses; a stack of quantity N holds the
+ * open unit's uses plus N − 1 full units. An item with no uses counter, or
+ * none left, is not food the system can see — the Rest's confirm shows the
+ * count, so that state is never a surprise twice, and a quantity-only second
+ * arithmetic is exactly what this rule refuses to grow.
+ */
+export const rationItems = (actor) =>
+  (actor?.items ?? []).filter((i) => isRationName(i?.name));
+
+/**
+ * Is this stored item name food the Rest can eat?
+ *
+ * THE REGEX IS ENGLISH, AND SINCE THE REST IT DECIDES A RULE (review #33). It
+ * was written to sort a granted loadout, where an English miss cost a row's
+ * position; now it decides whether a player may Rest at all, and a Warden's
+ * own "Raciones" never matched — their row sat beside the shipped one (which
+ * displays "Raciones" through the overlay and still counts, because its STORED
+ * name is English) and the character was told they had no rations. The same
+ * week the `ranged` field was made a field rather than a name match on exactly
+ * this ground. So a stored name equal to the overlay's own translation of
+ * "Rations" counts too — the one translation this system knows for the word —
+ * which is a limit, stated: a Warden's "Comida" still does not.
+ * @param {String} name
+ * @return {Boolean}
+ */
+export const isRationName = (name) => {
+  const s = String(name ?? "").trim();
+  if (!s) return false;
+  if (RATIONS_RE.test(s)) return true;
+  const translated = t("item.name", "Rations");
+  return translated !== "Rations" && s.toLowerCase() === translated.toLowerCase();
+};
+
+/** The rations ONE item holds, by uses: the open unit's plus every full unit behind it. */
+export const rationsOn = (item) => {
+  const max = Math.max(0, Number(item?.system?.uses?.max) || 0);
+  if (max < 1) return 0;
+  const value = Math.max(0, Number(item?.system?.uses?.value) || 0);
+  const quantity = Math.max(1, Number(item?.system?.quantity) || 1);
+  return value + (quantity - 1) * max;
+};
+
+/** Every ration on the sheet, by uses. */
+export const rationsLeft = (actor) => rationItems(actor).reduce((n, i) => n + rationsOn(i), 0);
+
+/** The item a Rest eats from — the first in document order with a ration on it — or null. */
+export const rationToEat = (actor) => rationItems(actor).find((i) => rationsOn(i) >= 1) ?? null;
 
 /**
  * The six ordering bands a granted loadout is arranged into, lowest first.
@@ -333,7 +402,14 @@ export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
   for (const key of packs) {
     const pack = game.packs.get(key);
     if (!pack) continue;
-    const entry = (await pack.getIndex()).find((e) => e.name.toLowerCase() === lower);
+    // Spell names and gear names are TWO namespaces: a spell grant answers to a
+    // spellbook only, a gear grant to anything but. background-items holds
+    // both kinds since 2026-09-14 (the class backgrounds' Shield spellbook
+    // beside their one-off items) and armor ships a Shield of its own, so
+    // without this a plain "Shield" grant would depend on pack ORDER to find
+    // the armor. check:refs keys its duplicate-name gate the same way.
+    const entry = (await pack.getIndex()).find((e) => e.name.toLowerCase() === lower
+      && (spell ? e.type === "spellbook" : e.type !== "spellbook"));
     if (!entry) continue;
     const doc = await pack.getDocument(entry._id);
     if (doc) { found = doc; break; }
@@ -343,21 +419,38 @@ export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
     return null;
   }
 
+  return itemDataFromDocument(found, { quantity, uses, grantName: name });
+};
+
+/**
+ * A fresh owned-item payload built from an item DOCUMENT — the tail of
+ * `resolveGearItem`, factored out 2026-09-14 for the Barebones table reader,
+ * which hands over a row's own WORLD item rather than looking its name up in
+ * the shipped packs (character-generator.js resolveBarebonesResult). One
+ * definition, so a row's item and a named grant of the same thing arrive in
+ * the same shape — the scroll rule included.
+ *
+ * @param {Item} doc
+ * @param {{quantity?: number, uses?: number, grantName?: string}} [options]
+ *   `grantName` is the wording the grant used, which is what decides the scroll
+ *   question; it defaults to the document's own name.
+ */
+export const itemDataFromDocument = (doc, { quantity = 1, uses, grantName } = {}) => {
   // A "Scroll (X)" grant is the spell as a single-use petty scroll, not the
   // slot-taking book. Without this a background handing out a scroll silently
   // grants a full spellbook (and the sheet even labels it "Spellbook — X").
   // Under GLOG, EVERY spell grant is a scroll — "Spellbook (X)" included: found
   // magic is a scroll you copy into your grimoire, and permanent books are
   // treasure, never handed out (rulings 2 and 7, 2026-08-05).
-  if (found.type === "spellbook" && (isScrollGrant(name) || glogEnabled())) {
-    return spellScrollItem(found, { quantity, uses });
+  if (doc.type === "spellbook" && (isScrollGrant(grantName ?? doc.name) || glogEnabled())) {
+    return spellScrollItem(doc, { quantity, uses });
   }
 
   const item = {
-    name: found.name,
-    type: found.type,
-    img: found.img,
-    // toObject(), NOT deepClone. `found.system` is a TypeDataModel, and
+    name: doc.name,
+    type: doc.type,
+    img: doc.img,
+    // toObject(), NOT deepClone. `doc.system` is a TypeDataModel, and
     // foundry.utils.deepClone returns any non-plain object UNCHANGED — by
     // reference (common/utils/helpers.mjs:280-282, "Unsupported advanced
     // objects"). So this used to hand back the compendium document's own
@@ -365,9 +458,97 @@ export const resolveGearItem = async (name, { quantity = 1, uses } = {}) => {
     // resolved in a session aliased one object per pack entry, last write wins.
     // It was invisible until a grant asked for `uses`, because everything else
     // was writing the same value back.
-    system: found.system.toObject(),
+    system: doc.system.toObject(),
   };
   item.system.quantity = quantity;
   if (uses != null) item.system.uses = { value: uses, max: uses };
   return item;
 };
+
+/**
+ * The stack an arriving item may merge into — the ONE discriminator, shared by
+ * the cross-sheet drag-move (actor-sheet.js `_onDropItem`) and the offer
+ * delivery (item-offer.js), so the two can never disagree about what a stack
+ * is. A stack is only a stack when the flag-shaped discriminators agree:
+ * a spellbook and a spellscroll share name AND type (this file stores a
+ * scroll under the bare spell name), so a plain name+type test merged a
+ * dropped book into a scroll stack — the book was never created, and a
+ * cross-actor drop deleted the source scroll while bumping the target's book
+ * (review #9). A bound page and the loose book of the same spell are
+ * different things (the page is the book's), and a GRIMOIRE never stacks at
+ * all: each book carries its own pages, and quantity 2 on one document would
+ * make two libraries indistinguishable. Any future flag-style splitter joins
+ * this test rather than growing a new merge.
+ * @param {CairnActor} actor  the receiving actor
+ * @param {CairnItem|Object} itemLike  the arriving item or its plain data
+ * @returns {CairnItem|null}
+ */
+export const findMatchingStack = (actor, itemLike) =>
+  actor.items.find(
+    (it) => it.name === itemLike.name && it.type === itemLike.type
+      && !!it.system?.scroll === !!itemLike.system?.scroll
+      && !!it.system?.bound === !!itemLike.system?.bound
+      && !it.system?.grimoire && !itemLike.system?.grimoire
+  ) ?? null;
+
+/**
+ * What happens if `need` slots arrive on this actor? THREE verdicts.
+ *
+ * One test, because the same question was being spelled three different ways —
+ * the drop handler's strict projected check for a thing, its `isEncumbered()`
+ * check for everyone else, and the offer card's own arithmetic — and three
+ * spellings of one rule is three things to drift. It sits beside
+ * `findMatchingStack` for exactly that reason.
+ *
+ * THE THREE VERDICTS DIFFER IN WHO MAY BUY WHICH.
+ *
+ * - `"fits"` — nothing to decide.
+ * - `"overburden"` — a PERSON (a character, an npc or a hireling) would be left
+ *   with no free slot, which sets Hit Protection to 0 until something is
+ *   dropped or handed away. This is the case the rules OWE, and an informed
+ *   click may buy it: an accepted gift, generation, Fatigue. Ordinary
+ *   acquisition still refuses it.
+ * - `"full"` — a THING, a companion or a monster has no room. NOBODY may buy
+ *   this, on either route. "Overflow is owed, never merely allowed" is a rule
+ *   about a person being handed what the rules give them; a sack has no Hit
+ *   Protection to pay the cost with, so there is no cost to consent to — only
+ *   "it does not fit". It is also the only answer that keeps an offer from
+ *   disagreeing with the drop handler's own ContainerFull refusal.
+ *
+ * @param {CairnActor} actor
+ * @param {Number} need  slots the arriving item wants: bulky 2, weightless 0, else 1
+ * @returns {"fits"|"overburden"|"full"}
+ */
+export const capacityVerdict = (actor, need) => {
+  const used = actor?.system?.slotsUsed ?? 0;
+  const max = actor?.system?.slotsMax ?? 0;
+  // Weightless costs nothing and can never fill anything — the same exemption
+  // `createOwnedItem` already makes.
+  if (need <= 0) return "fits";
+  if (actor?.livesByPlayerRules) return used + need >= max ? "overburden" : "fits";
+  return used + need > max ? "full" : "fits";
+};
+
+/**
+ * Must this character drop something before taking a Fatigue instead of
+ * Critical Damage? Only when they are ALREADY overburdened.
+ *
+ * The gate on the Fatigue bargain, ruled three times on 2026-10-02/03: every
+ * press asked ("the Fatigue has to be paid for"); then only when the Fatigue
+ * would not fit — `capacityVerdict(actor, 1)`, so 9 of 10 asked; then, the
+ * same night, only when they are already overburdened (user: "it only prompts
+ * a character to drop something and requires them to do so if the player is
+ * already overburdened"), because asking at 9 of 10 was "an undesired
+ * situation". So a character at 9 of 10 takes the Fatigue without a word and
+ * lands overburdened, at 0 Hit Protection, which the ruling accepts.
+ *
+ * "Overburdened" is `isEncumbered()` — no free slot, so 10 of 10 counts — the
+ * one predicate HP 0 and every acquisition refusal already read.
+ * @param {CairnActor} actor
+ * @returns {Boolean}
+ */
+export const mustDropForFatigue = (actor) => actor?.isEncumbered?.() === true;
+
+/** Slots an item wants. Bulky 2, weightless 0, otherwise 1. */
+export const slotsNeeded = (itemLike) =>
+  (itemLike?.bulky ? 2 : itemLike?.weightless ? 0 : 1);

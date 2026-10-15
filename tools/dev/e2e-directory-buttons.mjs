@@ -5,7 +5,7 @@
  *
  * Since 2026-08-02 core's own Create Actor button is REMOVED (every creation
  * path must carry a complete workflow, and core's bare type-picker is not
- * one), three role buttons join Generate PC / Generate NPC — Create
+ * one), three role buttons join Create PC / Create NPC — Create
  * Container / Create Mount / Create Transport, each opening the shared
  * name+Type dialog (CairnActor.createThing) — and the folder "+" survives
  * because it routes through CairnActor.createDialog, which is the role
@@ -19,7 +19,7 @@
  *
  * The permission matrix: a Warden sees 8 buttons, an ACTOR_CREATE player 5
  * (no Monster, no Faction, no Import), a player without ACTOR_CREATE exactly
- * ONE — Generate PC, whose click is a socket relay (the generatePC action):
+ * ONE — Create PC, whose click is a socket relay (the generatePC action):
  * the active Warden's client runs the generator and stamps the requester
  * OWNER, because a player's own client cannot create an Actor at all. Core's
  * Create Actor is gone for all three. The count assertions were stale-red
@@ -29,7 +29,7 @@
  *
  * The player legs need TWO preconditions and this probe used to establish only
  * one. ACTOR_CREATE was granted; `allow-player-generate` — the Warden's switch
- * for the player-facing Generate PC button — was not, and the dev world keeps it
+ * for the player-facing Create PC button — was not, and the dev world keeps it
  * OFF by the user's own choice. A GM never notices (the directory hook reads
  * `isGM || setting`), so the probe was green when written and went red the day
  * somebody turned the switch off in a world they play in. Six legs reported a
@@ -55,7 +55,22 @@ import { VIEWPORT, joinAsGM, joinAs, watchErrors, dismissChrome, watchdog } from
 const browser = await chromium.launch();
 const page = await browser.newContext({ viewport: VIEWPORT }).then((c) => c.newPage());
 const errors = watchErrors(page);
-watchdog(300000, "dev:directory-buttons");
+watchdog(300000, "dev:directory-buttons", () => browser.close());
+// The Warden's page gets the same navigation log Alice's has below: a
+// "context destroyed" thrown from a GM-side evaluate means THIS page moved,
+// and the note says when (2026-09-12, after two throws at different legs).
+page.on("framenavigated", (frame) => {
+  if (frame === page.mainFrame()) console.log(`  note  the Warden's page navigated: ${frame.url()}`);
+});
+// AND A CRASH LISTENER, BECAUSE THE NAVIGATION LOG ACQUITTED THE NAVIGATION.
+// The 2026-09-12 sweep threw "Execution context was destroyed, most likely
+// because of a navigation" from a GM-side evaluate and the log above printed
+// NOTHING — only the three join hops at the top. So the page did not move; it
+// died, and Playwright's message named the likelier of its two causes. Alice's
+// page has carried this listener since the day it was written and the Warden's
+// did not, which is the whole reason one death was legible and the other was a
+// guess. A renderer that runs out of memory under a 112-gate sweep now says so.
+page.on("crash", () => console.log("  note  the Warden's page CRASHED (renderer died)"));
 await joinAsGM(page);
 await dismissChrome(page);
 
@@ -70,7 +85,7 @@ const fail = (m, d = "") => { console.error(`  FAIL  ${m}${d ? `  ${d}` : ""}`);
 // silently stopped being injected.
 // Seven since 2026-09-02 (261abcd1): players got their own Import from
 // Kettlewright, riding the SAME allow-player-generate switch and relay shape
-// as Generate PC.
+// as Create PC.
 const GM_BUTTONS = 9;
 const PLAYER_BUTTONS = 7;
 
@@ -244,9 +259,16 @@ try {
     select.dispatchEvent(new Event("change"));
     out.otherRehidden = form.elements.kindOther.hidden === true;
     out.namePrefilled = form.elements.thingName.value;
+    // BY ID DIFFERENCE, never by name. This read `getName("Heavy Destrier")`,
+    // and the 2026-09-12 sweep found a leftover of that name in the world: the
+    // leg read ITS statblock (identical — same pack document), reported its
+    // missing compendiumSource as the product's, deleted it, and left the
+    // clone it had just minted behind for the next run to trip on. The probe
+    // was wrong before the code was; the stale-state class exactly.
+    const priorIds = new Set(game.actors.map((x) => x.id));
     form.closest("dialog").querySelector('button[data-action="ok"]')?.click();
-    await until(() => !!game.actors.getName("Heavy Destrier"));
-    const a = game.actors.getName("Heavy Destrier");
+    await until(() => game.actors.some((x) => !priorIds.has(x.id) && x.name === "Heavy Destrier"));
+    const a = game.actors.find((x) => !priorIds.has(x.id) && x.name === "Heavy Destrier");
     out.minted = !!a;
     if (a) {
       out.role = a.system.role;
@@ -400,8 +422,15 @@ try {
     // worth writing. A count read too early shows "nothing was created" whether
     // the fix works or not, and the negative control proved exactly that: with
     // the fix reverted the probe still passed.
+    // `createActorInteractive`, not `generateCharacter` (review #26). The
+    // dialog moved out of the generators on 2026-09-11 so that twenty probe
+    // call sites would stop hanging on a modal — which left this leg asking a
+    // now-silent function for its picker, and asserting that a function which
+    // no longer creates anything created nothing. It passed for neither
+    // reason. The invariant is unchanged and still worth holding: dismissing
+    // the creation dialog resolves null and mints nobody.
     const CG = game.cairn.characterGenerator;
-    const pending = CG.generateCharacter();
+    const pending = CG.createActorInteractive("character");
     await new Promise((res) => setTimeout(res, 1200));
     const dlg = [...document.querySelectorAll(".application.dialog, dialog.application")].pop();
     const closeBtn = dlg?.querySelector('[data-action="close"]');
@@ -430,7 +459,7 @@ try {
     ? ok("the content-source picker opens with a dismiss control")
     : fail("no content-source picker with a [data-action=close] appeared — the cancel check below proves nothing");
   cancel.resolvedNull
-    ? ok("dismissing the picker resolves generateCharacter() to null")
+    ? ok("dismissing the picker resolves createActorInteractive() to null")
     : fail(`dismissing the picker resolved to ${cancel.resolved}, not null — a character was generated`);
   cancel.after === cancel.before
     ? ok(`dismissing the picker created no actor (${cancel.before} before and after)`)
@@ -458,7 +487,7 @@ try {
   const priorPerms = await page.evaluate(() => game.settings.get("core", "permissions"));
   // The player legs need TWO preconditions, and only one of them was ever
   // established. `allow-player-generate` is the Warden's switch for the
-  // player-facing Generate PC button (`allowGen` in cairn.js's directory hook is
+  // player-facing Create PC button (`allowGen` in cairn.js's directory hook is
   // `isGM || setting`, so a GM never notices it is off) — and the dev world
   // keeps it OFF, which is the user's choice and not a bug. Every leg from here
   // down is about that button: the 5-button count, the bare player's ONE button,
@@ -513,9 +542,9 @@ try {
       : fail("Alice holds ACTOR_CREATE", "grant it in the dev world — every player leg below is vacuous");
     withCreate.allowGen
       ? ok("and player generation is switched on for her", "established by this run, restored at the end")
-      : fail("and player generation is switched on for her", "allow-player-generate did not reach her client — every Generate PC leg below is vacuous");
+      : fail("and player generation is switched on for her", "allow-player-generate did not reach her client — every Create PC leg below is vacuous");
     withCreate.buttons.length === PLAYER_BUTTONS
-      && !["Generate Monster", "Generate Faction"].some((l) => withCreate.buttons.includes(l))
+      && !["Create Monster", "Create Faction"].some((l) => withCreate.buttons.includes(l))
       ? ok(`an ACTOR_CREATE player sees ${PLAYER_BUTTONS} buttons, none of the Warden's`, `(${withCreate.buttons.join(", ")})`)
       : fail("ACTOR_CREATE player buttons", JSON.stringify(withCreate.buttons));
     !withCreate.coreCreate
@@ -543,10 +572,10 @@ try {
     // exactly the relay-backed pair and nothing that would need ACTOR_CREATE.
     // Red witness: pre-relay code renders zero buttons here.
     !bare.canCreate && bare.buttons.length === 2
-      && bare.buttons.includes("Generate PC") && bare.buttons.includes("Import from Kettlewright")
+      && bare.buttons.includes("Create PC") && bare.buttons.includes("Import from Kettlewright")
       && !bare.coreCreate
       ? ok("without ACTOR_CREATE she sees exactly the two relay-backed buttons",
-        "Generate PC + Import from Kettlewright")
+        "Create PC + Import from Kettlewright")
       : fail("without ACTOR_CREATE she sees exactly the two relay-backed buttons", JSON.stringify(bare));
 
     /* --- 5b. the offer greys without a Warden (2026-09-02) --------------- */
@@ -717,12 +746,25 @@ try {
       //
       // So answer whatever is actually on screen. Both are real worlds, the
       // relay must work in both, and neither needs a world setting written.
+      // ONE dialog with ONE affirmative button since 2026-09-11. It used to be
+      // a button per content source (`data-action="2e"`), or a bare yes/no
+      // confirm, and this loop looked for exactly those two. The empty-sheet
+      // feature replaced both with `promptCreation` — Cancel and Create, with
+      // the source as a DROPDOWN — so neither selector has matched since, and
+      // these three legs went red and stayed red without anyone running them
+      // (found in review #26, by running them). The content source is read off
+      // the select if there is one, so the leg still reports which edition it
+      // asked for.
       let picked = null;
       const tPick = Date.now();
       while (Date.now() - tPick < 6000 && !picked) {
-        const btn = document.querySelector('dialog button[data-action="2e"]')
-          ?? document.querySelector('dialog button[data-action="yes"]');
-        if (btn) { picked = btn.dataset.action; btn.click(); break; }
+        const btn = document.querySelector('dialog button[data-action="create"]');
+        if (btn) {
+          const sel = document.querySelector('dialog select[name="choice"]');
+          picked = sel ? sel.value : "create";
+          btn.click();
+          break;
+        }
         await sleep(150);
       }
       const t0 = Date.now();
@@ -811,7 +853,9 @@ try {
     await alicePage.context().close();
   }
 } catch (e) {
-  fail("threw", `${e.name}: ${e.message}`);
+  // The stack names the leg; "Execution context was destroyed" without it is
+  // a Playwright guess about a page it does not name (2026-09-12).
+  fail("threw", `${e.name}: ${e.message}\n${String(e.stack ?? "").split("\n").slice(1, 4).join("\n")}`);
 } finally {
   console.log(`\nconsole errors: ${errors.length}`);
   for (const e of errors.slice(0, 8)) console.log(`  ${e}`);

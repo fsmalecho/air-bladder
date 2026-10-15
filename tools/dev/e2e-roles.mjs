@@ -89,6 +89,7 @@ const READ = `(sheet) => {
     deprived:  vis('.deprived-check'),
     restBtn:   vis('#rest-button'),
     dieOfFate: vis('#die-of-fate-button'),
+    improvised:   vis('.improvised-row'),
     gold:      vis('input[name="system.gold"]'),
     roleSelect: vis('.role-select'),
     career:    vis('input[name="system.profession"]'),
@@ -201,9 +202,24 @@ try {
   !asThing.hp && !asThing.str && !asThing.armor && !asThing.deprived
     ? ok("HP, STR, Armor, Deprived all gone")
     : bad("HP, STR, Armor, Deprived all gone", JSON.stringify(asThing));
-  !asThing.restBtn && !asThing.dieOfFate
-    ? ok("Rest and Die of Fate gone", "a crate does not rest")
-    : bad("Rest and Die of Fate gone", JSON.stringify(asThing));
+  // The two stack buttons AND the Improvised Attack row, which is a different gate
+  // in a different place since 2026-10-02: the buttons go with the sheet's
+  // `{{#unless system.isThing}}` block, while the row is withheld by
+  // `canImprovise` (`isOwner && !isThing`) inside the items list. A crate loses all
+  // three, and it has to be MEASURED that it loses all three, because the moment
+  // the row left that block it stopped being covered by the buttons' gate.
+  !asThing.restBtn && !asThing.dieOfFate && !asThing.improvised
+    ? ok("Rest, Die of Fate and the Improvised Attack row gone", "a crate does not rest, and has no fists")
+    : bad("Rest, Die of Fate and the Improvised Attack row gone", JSON.stringify(asThing));
+  // THE POSITIVE HALF, and it is what makes the leg above mean anything. Both
+  // snapshots are taken with the Items tab open (a person role and a container
+  // are both in ITEMS_FIRST_ROLES), so "no row" on the crate is the gate and not
+  // a tab that happened to be hidden -- which is exactly how this leg could pass
+  // for the wrong reason.
+  asPerson.improvised && !asThing.improvised
+    ? ok("the row is there on a person and gone on a thing", "same tab, same probe, different gate")
+    : bad("the row is there on a person and gone on a thing",
+      `person=${asPerson.improvised} thing=${asThing.improvised}`);
   asThing.banners.length === 0
     ? ok("no Dead/Paralyzed/Delirious banner", "derived conditions suppressed")
     : bad("no Dead/Paralyzed/Delirious banner", asThing.banners.join(" | "));
@@ -583,9 +599,13 @@ try {
     // Parked Connections UI (2026-08-09): the tab this count sits on renders
     // only under the in-page settings shadow. The count logic is unchanged.
     const origGet = game.settings.get;
-    game.settings.get = function (ns, key) {
+    game.settings.get = function (ns, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it will update by
+      // id, and a value handed back here makes it CREATE a duplicate instead.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
       if (key === "connections-ui-enabled") return true;
-      return origGet.call(this, ns, key);
+      return origGet.call(this, ns, key, ...rest);
     };
     try {
     const pc = await Cls.create({ name: "ZZ Roles Count PC", type: "character" });
@@ -743,9 +763,13 @@ try {
     // own leg BELOW, without the shadow, which is what proves the day-rate
     // control outlived the parking.
     const origGet = game.settings.get;
-    game.settings.get = function (ns, key) {
+    game.settings.get = function (ns, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it will update by
+      // id, and a value handed back here makes it CREATE a duplicate instead.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
       if (key === "connections-ui-enabled") return true;
-      return origGet.call(this, ns, key);
+      return origGet.call(this, ns, key, ...rest);
     };
     try {
     const pc = await Cls.create({ name: "ZZ Roles Dir PC", type: "character" });
@@ -946,9 +970,13 @@ try {
     // only with the UI restored. The graph-membership and refusal legs are
     // document methods and never consult the flag.
     const origGet = game.settings.get;
-    game.settings.get = function (ns, key) {
+    game.settings.get = function (ns, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it will update by
+      // id, and a value handed back here makes it CREATE a duplicate instead.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
       if (key === "connections-ui-enabled") return true;
-      return origGet.call(this, ns, key);
+      return origGet.call(this, ns, key, ...rest);
     };
     try {
 
@@ -1294,9 +1322,13 @@ try {
       // identically without the shadow. `prepareData` re-derives the tab flag
       // — her client loaded this PC parked.
       const origGet = game.settings.get;
-      game.settings.get = function (ns, key) {
+      game.settings.get = function (ns, key, ...rest) {
+        // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+        // get(ns, key, {document: true}) for the Setting document it will update by
+        // id, and a value handed back here makes it CREATE a duplicate instead.
+        if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
         if (key === "connections-ui-enabled") return true;
-        return origGet.call(this, ns, key);
+        return origGet.call(this, ns, key, ...rest);
       };
       try {
       pc.prepareData();

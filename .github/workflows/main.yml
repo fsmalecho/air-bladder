@@ -86,6 +86,14 @@ jobs:
       # hostage to someone else's outage; it stays a pre-tag step on the
       # developer's machine.
       - run: npm run check:manifest
+      # The release ARTIFACT's own shape, over the files this workflow is about
+      # to zip (added 2026-09-19, after a user's "Update All" left quarantined
+      # copies of the system behind and the install had to be redone by hand).
+      # It runs here, after build:packs, because `packs/` is most of what ships
+      # and the checks that matter most — case collisions, names Windows cannot
+      # write or DELETE, a pack built but never declared — are only true of a
+      # built tree. The same gate re-runs against the finished zip below.
+      - run: npm run check:package
       - run: npm run check:fields
       - run: npm run check:refs
       - run: npm run check:traits
@@ -129,16 +137,50 @@ jobs:
       # file that had not existed for releases without anyone noticing.
       - run: zip -r ./system.zip README.md README.es.md LICENSE.txt system.json art/ css/ fonts/ icons/ lang/ logo/ module/ packs/ templates/
 
+      # And again over the archive itself, which is the only thing a user ever
+      # receives. The tree pass above cannot see what `zip` actually wrote — the
+      # `template.json` that sat in the line above for releases after the file
+      # stopped existing was skipped in silence, and nothing noticed. This pass
+      # reads the archive's own central directory: its top level must be exactly
+      # the list in that line, and every permission bit, name and path length is
+      # re-checked as shipped. `check:package` reads the same line, so a
+      # directory added to one and not the other fails here.
+      - run: node tools/dev/package-audit.mjs --zip ./system.zip
+
+      # The release notes ride in the TAG. `npm run release` writes CHANGELOG.md's
+      # section for the version as the body of the annotated tag (RELEASE.md), the
+      # mirror carries the tag OBJECT to GitHub — every tag on the mirror lists a
+      # peeled `^{}` entry, which only an annotated tag has — and this reads the
+      # body back, so the release is created with its notes in the same call that
+      # attaches the assets. Nothing to paste afterwards. The tags are present
+      # because the checkout above fetches the whole history (check:translations
+      # already depends on that). A tag cut before the changelog existed (0.1.22
+      # and earlier) has a one-line message and an empty body, which is the same
+      # empty body those releases were created with; a rebuild of any release
+      # through workflow_dispatch leaves the body alone regardless
+      # (omitBodyDuringUpdate below), so notes edited by hand on the release page
+      # are never blanked.
+      - name: Read the release notes from the tag
+        run: |
+          git tag -l --format='%(contents:body)' "$RELEASE_TAG" > release-notes.md
+          if grep -q '[^[:space:]]' release-notes.md; then
+            echo "release notes: $(wc -l < release-notes.md) lines from the body of tag $RELEASE_TAG"
+          else
+            echo "release notes: tag $RELEASE_TAG carries none (the release body stays as it is)"
+          fi
+
       # Create/update the release with the built files
       - name: Update Release with Files
         id: create_version_release
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true # Set this to false if you want to prevent updating existing releases
-          # No `name`/`body` inputs: neither trigger carries them, and the action falls back
-          # to the tag for the name. The omit flags then stop an update from blanking notes
-          # written by hand on the release page.
+          # No `name` input: the action falls back to the tag for the name. The body is
+          # the tag's own (read above). The omit flags then stop an update — a rebuild
+          # through workflow_dispatch — from blanking notes edited by hand on the
+          # release page, or from re-imposing the tag's over them.
           omitNameDuringUpdate: true
+          bodyFile: release-notes.md
           omitBodyDuringUpdate: true
           draft: false
           # `prerelease: false` applies to NEWLY created releases only. Without the omit
@@ -152,3 +194,53 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: "./system.json, ./system.zip"
           tag: ${{ env.RELEASE_TAG }}
+
+  # ---------------------------------------------------------------------------
+  # Tell the Foundry Marketplace the release exists.
+  #
+  # A SEPARATE JOB, `needs: build`, and both halves of that are deliberate.
+  #
+  # `needs: build` because Foundry FETCHES the manifest URL to validate the
+  # submission, so the release and its assets have to exist first. This cannot
+  # be folded into `npm run release` for the same reason — that only pushes the
+  # tag, and the assets do not exist for another minute or two.
+  #
+  # SEPARATE rather than one more step on `build`, so the signal stays precise.
+  # If foundryvtt.com is down, or the token has expired, the release itself is
+  # already published and green and only this job reds — which reads as "it
+  # shipped, the Marketplace was not told", recoverable with one command
+  # (`npm run publish:foundry X.Y.Z`). Folding it into `build` would paint a
+  # perfectly good release red and say nothing about which half failed. It is
+  # also the reason `check:warden` is kept out of this workflow entirely: a
+  # release should not be hostage to someone else's outage. The difference is
+  # that this runs AFTER publishing, so it cannot block anything.
+  #
+  # It FAILS rather than skips when the secret is missing. A silent skip is how
+  # 0.1.22 shipped with empty release notes — a step nobody's checklist held.
+  marketplace:
+    needs: build
+    runs-on: ubuntu-latest
+    # TAG PUSHES ONLY. `workflow_dispatch` exists to rebuild an existing
+    # release's assets, which is not a reason to re-announce it — a rebuild of
+    # 0.1.10 would otherwise submit 0.1.10 to the Marketplace today.
+    if: github.event_name == 'push'
+    # Narrower than the workflow default: this job writes nothing to the
+    # repository, it only reads the checkout and POSTs to foundryvtt.com.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      # No `npm ci`: tools/release-foundry.mjs imports only node builtins and
+      # uses global fetch, so the job needs no dependency install at all.
+      - name: Announce the release to the Foundry Marketplace
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          # Repository secret. The script refuses with an explanatory message if
+          # it is unset or lacks the `fvttp_` prefix, and never prints its value.
+          FOUNDRY_RELEASE_TOKEN: ${{ secrets.FOUNDRY_RELEASE_TOKEN }}
+        run: node tools/release-foundry.mjs

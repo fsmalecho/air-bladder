@@ -28,8 +28,10 @@ export const SETTINGS_NS = "air-bladder";
 export const SETTING_KEYS = [
   // General
   "use-panic", "use-cairn-dice-notation", "use-item-icons", "show-grant-tags",
-  "show-grant-tags-print", "show-omens",
-  "use-warden-title", "change-log", "auto-record-scars", "enable-glog-magic",
+  "show-grant-tags-print", "show-traits", "show-omens", "show-watch-clock",
+  "weather-log", "use-warden-title", "change-log", "auto-record-scars",
+  "enable-glog-magic", "enable-vald-calendar",
+  "exploding-damage-dice", "fatigue-for-critical-damage", "maneuver-on-max-damage",
   // Character Generation
   "content-source-2e", "content-source-custom", "content-source-barebones",
   "barebones-failed-career", "show-generate-header",
@@ -50,6 +52,7 @@ export const SETTING_KEYS = [
   // a stored `role: "npc"` that a real NPC also carries once it has run. Do not
   // reason about any new marker from that sentence; reason about the migration.
   "custom-portrait-folder", "custom-portrait-list", "age-formula",
+  "pc-ability-dice", "pc-hp-formula", "pc-gold-dice",
   "disabled-backgrounds",
   // Internal but CONFIGURATION, not a marker: the parked-Connections flag
   // (2026-08-09) must ride the namespace migration — losing it would re-park
@@ -87,7 +90,25 @@ export const migrateSettingsNamespace = async () => {
     const old = store.find((s) => s.key === `cairn.${key}`);
     if (!old || has(`${SETTINGS_NS}.${key}`)) continue;
     try {
-      await game.settings.set(SETTINGS_NS, key, JSON.parse(old.value));
+      // `old.value` IS ALREADY PARSED — do not parse it again. `Setting`'s
+      // `value` is a `JSONField`, whose `initialize` runs `JSON.parse`
+      // (common/data/fields.mjs), and `Setting#_initialize` then assigns
+      // `this._castType()` (setting.mjs:31-34). For a key under the
+      // UNREGISTERED `cairn` namespace `this.config` is undefined, so
+      // `_castType` returns the value untouched at its `typeof type !==
+      // "function"` line (:74).
+      //
+      // A second `JSON.parse` therefore ran over a live value. Booleans and
+      // Numbers survived by accident (`JSON.parse(false)` stringifies back to
+      // "false"); STRINGS AND ARRAYS THREW. Four of the keys above are one or
+      // the other — `custom-portrait-folder`, `age-formula`,
+      // `custom-portrait-list`, `disabled-backgrounds` — and every one of them
+      // was added to `SETTING_KEYS` after this line was written, when every
+      // listed key really was a Boolean or a Number. Because this migration is
+      // deliberately not marker-gated and `has()` stays false for a key that
+      // never lands, the failure repeated on EVERY GM load, forever, with the
+      // Warden's value silently replaced by the default.
+      await game.settings.set(SETTINGS_NS, key, old.value);
       moved.push(key);
     } catch (e) {
       console.warn(`Air Bladder | could not migrate setting "${key}":`, e);
@@ -110,21 +131,32 @@ export const migrateSettingsNamespace = async () => {
  * client, so each client sweeps its own windows. One helper, not five copies
  * of the loop — the fifth copy is where the drift starts.
  */
-const rerenderActorSheets = () => {
+const rerenderSheetsOf = (cls) => {
   for (const app of foundry.applications.instances.values()) {
-    if (app.document instanceof Actor && app.rendered) app.render();
+    if (app.document instanceof cls && app.rendered) app.render();
   }
 };
+const rerenderActorSheets = () => rerenderSheetsOf(Actor);
+/** The same fan for ITEM sheets — needed the day an item sheet first read a
+ *  no-reload setting live (the GLOG flags, review #30). */
+const rerenderItemSheets = () => rerenderSheetsOf(Item);
 
 /**
- * Internal CONFIGURATION keys: in SETTING_KEYS because they must ride the
- * namespace migration, but Warden-invisible by design — caches and flags no
- * settings UI ever shows. Everything else in SETTING_KEYS is Warden-facing and
- * must belong to exactly one group below, which `npm run dev:settings` gates:
- * a setting in neither list is registered, migrated, and unreachable.
+ * Internal CONFIGURATION keys: Warden-invisible by design — caches and flags no
+ * settings UI ever shows. The three that predate the namespace move are ALSO in
+ * SETTING_KEYS, because they must ride the namespace migration;
+ * `vald-weather-today` is not and must not be, because it dates from after the
+ * move, so there is no "cairn.<key>" value to carry and listing it would iterate
+ * a key that cannot exist (the marker rule above). "Internal" does not imply
+ * "migrated" (review #27): a new internal key joins SETTING_KEYS only if a
+ * world could hold it under the old namespace, and none can any more.
+ * Everything else in SETTING_KEYS is Warden-facing and must belong to exactly
+ * one group below, which `npm run dev:settings` gates: a setting in neither
+ * list is registered, migrated, and unreachable.
  */
 export const INTERNAL_SETTING_KEYS = [
   "custom-portrait-list", "disabled-backgrounds", "connections-ui-enabled",
+  "vald-weather-today",
 ];
 
 /**
@@ -163,8 +195,8 @@ export const SETTING_GROUPS = [
     icon: "fa-solid fa-gears",
     keys: [
       "use-panic", "use-cairn-dice-notation", "use-item-icons", "show-grant-tags",
-      "show-grant-tags-print", "show-omens", "use-warden-title", "change-log",
-      "auto-record-scars",
+      "show-grant-tags-print", "show-traits", "show-omens", "show-watch-clock",
+      "weather-log", "use-warden-title", "change-log", "auto-record-scars",
     ],
   },
   {
@@ -177,7 +209,12 @@ export const SETTING_GROUPS = [
       "content-source-2e", "content-source-custom", "content-source-barebones",
       "show-generate-header", "allow-player-generate",
       "allow-player-randomization", "show-generation-rolls",
-      "custom-portrait-folder", "age-formula",
+      "custom-portrait-folder",
+      // The four dice settings together, in the order the dice are ROLLED —
+      // which is also the order the Roll Character checklist lists its own rows
+      // (STR/DEX/WIL, then HP, then Gold, then Age). This array's order IS the
+      // Warden's order.
+      "pc-ability-dice", "pc-hp-formula", "pc-gold-dice", "age-formula",
     ],
     // The phrase is the SOURCE AS THE LABEL NAMES IT, which is not always the
     // source's own name: the two 2e labels distinguish canon from custom, and
@@ -213,21 +250,61 @@ export const SETTING_GROUPS = [
     button: "CAIRN.Settings.GroupHacksButton",
     hint: "CAIRN.Settings.GroupHacksHint",
     icon: "fa-solid fa-flask",
-    keys: ["enable-glog-magic", "barebones-failed-career"],
+    keys: [
+      "enable-glog-magic", "enable-vald-calendar", "barebones-failed-career",
+      // The three optional combat rules (2026-10-02). Standalone since
+      // 2026-10-03: they sat under a "Crawler Combat Mode" master for a day,
+      // and the user took the master away — each is off by default and none
+      // is ever greyed.
+      "exploding-damage-dice", "fatigue-for-critical-damage", "maneuver-on-max-damage",
+    ],
     // The failed career is meaningless unless Barebones sheets are offered —
     // and that master checkbox lives in the Character Generation menu, not
     // here, so this app greys the row from the STORED value at render instead
     // of following a checkbox live (settings-menus.js handles both shapes).
     // Down to one carrier: the omen/bond lending settings went 2026-08-09.
-    subOptions: { master: "content-source-barebones", keys: ["barebones-failed-career"] },
+    // A LIST since 2026-10-02, when Crawler Combat Mode needed a second
+    // master; it went again on 2026-10-03, and the list form stays because it
+    // costs nothing and a group may still declare more than one.
+    subOptions: [
+      { master: "content-source-barebones", keys: ["barebones-failed-career"] },
+    ],
   },
 ];
 
 /**
+ * The three PC dice tiers as a `choices` object, SHARED by `pc-ability-dice`
+ * and `pc-gold-dice` so the two dropdowns are authored once and cannot offer
+ * different dice (user ruling 2026-10-02: "the same tiers as for abilities").
+ *
+ * THE LABELS CARRY THEIR DICE AS A LITERAL ("Default (3d6)"), and that is
+ * forced rather than chosen. `registerSettings()` runs on `init`, and `i18nInit`
+ * is a LATER hook (cairn.js), so `game.i18n.format` does not work here and the
+ * label cannot be composed from `Cairn.pcDiceTiers` at registration. Core
+ * localizes a `choices` label at RENDER, which is why a bare key works and a
+ * pre-formatted string would not.
+ *
+ * So the dice are duplicated between that map and these strings — precisely the
+ * review #18 shape, where a formula corrected in one place goes on being
+ * advertised by the other. It is not removable, so it is GATED: `dev:pc-dice`
+ * asserts each rendered option label contains `Cairn.pcDiceTiers[key]`.
+ *
+ * And the three keys are written out LITERALLY rather than derived from the
+ * map's keys, because `i18n:source` treats a key nothing references as an
+ * ERROR — a key built by string concatenation is invisible to it, so all three
+ * labels would be reported unused and the gate would red.
+ */
+const PC_DICE_CHOICES = {
+  default: "CAIRN.Settings.PcDice.Default",
+  adventurer: "CAIRN.Settings.PcDice.Adventurer",
+  crawler: "CAIRN.Settings.PcDice.Crawler",
+};
+
+/**
  * The registration blocks below are kept roughly in group order for the
  * reader's sake only — General, then Character Generation, then Inventory &
- * Encumbrance, with the two Hacks settings still sitting in the blocks they
- * grew up in. Nothing positional depends on it (see SETTING_GROUPS).
+ * Encumbrance, with the Hacks settings still sitting in the blocks they grew
+ * up in. Nothing positional depends on it (see SETTING_GROUPS).
  */
 export const registerSettings = () => {
   // Not a setting anyone sets: the completion marker for the role migration.
@@ -457,6 +534,61 @@ export const registerSettings = () => {
     onChange: rerenderActorSheets,
   });
 
+  // Rolled flavor off the sheet (user ask 2026-09-07, label wording theirs).
+  // Off hides the trait rows, the trait sentence and the AGE row on every
+  // PERSON sheet — character, npc AND hireling, one shared bio block, ruled
+  // in planning — and drops the printed page's Traits section, age riding
+  // inside the sentence. ONE switch, both surfaces: show-omens' ruling, and
+  // deliberately not the grant-tags split. PRONOUNS stay: they are never
+  // rolled (the standing ruling) and are not this switch's business. Stored
+  // traits and age are never touched and return when this goes back on;
+  // generation, imports and full re-rolls keep WRITING them — display only.
+  // General, beside show-omens, for show-omens' own reason: traits ARE
+  // rolled at generation, but this is a table-display question, not a
+  // parameter of the character being made. Same read-live fan.
+  game.settings.register(SETTINGS_NS, "show-traits", {
+    name: "CAIRN.Settings.ShowTraits.label",
+    hint: "CAIRN.Settings.ShowTraits.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true,
+    requiresReload: false,
+    onChange: rerenderActorSheets,
+  });
+
+  // The watch clock in the left column (2026-09-10, user ask). A day in Cairn
+  // is three watches and the travel tables already price journeys in them, so
+  // this is CORE Cairn and is deliberately NOT behind the Vald hack — gating a
+  // 2e unit behind a setting-specific switch would be a category error.
+  //
+  // WORLD scope, not client, on show-omens' own reasoning: whether the table
+  // tracks watches at all is the Warden's call and the answer must be the same
+  // for everyone. No reload — each client renders or closes its own clock, the
+  // rerenderActorSheets fan shape applied to a different surface.
+  game.settings.register(SETTINGS_NS, "show-watch-clock", {
+    name: "CAIRN.Settings.ShowWatchClock.label",
+    hint: "CAIRN.Settings.ShowWatchClock.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true,
+    requiresReload: false,
+    onChange: async (value) => {
+      // Dynamic, because settings.js is imported at init and watch-clock.js
+      // reaches for `game.time`, which does not exist that early.
+      const { renderWatchClock, closeWatchClock } = await import("./watch-clock.js");
+      try {
+        if (value) await renderWatchClock();
+        else await closeWatchClock();
+      } catch (err) {
+        // Setting._onUpdate does not await onChange, so a throw here is an
+        // anonymous unhandled rejection — the glog precedent.
+        console.error("air-bladder | the watch clock failed to follow its setting:", err);
+      }
+    },
+  });
+
   // `show-features-section` was registered here and is GONE (2026-08-09, user
   // ruling): the Features list it toggled was removed outright — a
   // fork-inherited UI nobody here uses. The `system.features` field SURVIVES,
@@ -566,9 +698,158 @@ export const registerSettings = () => {
       // and without this fan an open sheet keeps its now-dead Cast controls
       // until an unrelated redraw (the review #13 rule that rerenderActorSheets
       // exists for). Both directions, and on every client the onChange reaches.
+      // ITEM sheets too (review #30): the Grimoire box, its Pages field and the
+      // spellbook's GLOG box read this setting live since 2026-09-13, and the
+      // actor-only fan left an open Grimoire sheet offering a live, submittable
+      // hack control on a hack that had just been switched off.
       rerenderActorSheets();
+      rerenderItemSheets();
     },
   });
+
+  // The Vald calendar and its four seasons (2026-09-10, user ask). Vald is one
+  // setting among many, so it is a HACK: with this off the world keeps
+  // Foundry's own calendar and the Dashboard shows a plain day count.
+  //
+  // THE OPPOSITE OF enable-glog-magic ABOVE, and the contrast is the point.
+  // GLOG converts the world one way with no rollback. This converts NOTHING:
+  // `core.time` is a fixed count of seconds that a calendar merely READS, so
+  // switching the hack REINTERPRETS the clock rather than rewriting it, and
+  // switching back restores the old reading exactly. That is why there is no
+  // onChange, no marker and no sweep — and why the hint can promise
+  // reversibility out loud where GLOG's has to warn.
+  //
+  // requiresReload is not laziness. The calendar is installed into CONFIG.time
+  // at init (module/game-time.js), so flipping it live would need
+  // game.time.initializeCalendar() plus a re-render of the clock, the
+  // Dashboard band and anything holding game.time.components — and
+  // Setting._onUpdate does not await onChange, so a write in here would race
+  // the reload prompt. One reload gives every client one consistent state at
+  // one moment. use-panic and use-item-icons set the precedent.
+  //
+  // ONE key, never a calendar/weather pair: a pair would need a master and a
+  // `subOptions` entry for what is one decision about one calendar.
+  game.settings.register(SETTINGS_NS, "enable-vald-calendar", {
+    name: "CAIRN.Settings.EnableValdCalendar.label",
+    hint: "CAIRN.Settings.EnableValdCalendar.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    // OFF by default, the auto-record-scars precedent: a system update must
+    // never change what a Warden's table already sees.
+    default: false,
+    requiresReload: true,
+  });
+
+  // ---- The optional combat rules (2026-10-02, user ask) --------------------
+  // Three rules, each off by default, the GLOG pattern: mainline stays clean
+  // Cairn 2e at defaults and a table that wants something else switches it on.
+  //
+  // NO MASTER (2026-10-03, user). For a day they sat under "Crawler Combat
+  // Mode", which greyed them while off and carried rules of its own: an
+  // overburdened PC was Deprived, PCs were made with 6 Hit Protection, and a
+  // Rest rolled for it. All three were reversed, and with nothing left for the
+  // master to do the user removed it: "there is no need for Crawler Combat
+  // Mode to exist at all or act as a gate". The keys lost their `crawler-`
+  // prefix with it — nothing had shipped.
+  //
+  // PLAYER CHARACTERS ONLY, all three: `type === "character"`, the
+  // auto-record-scars precedent (damage.js), which is the one other automated
+  // sheet write here and is gated exactly this way. Each is read at ROLL or
+  // CARD-BUILD time, so none needs a reload.
+  //
+  // Read live per roll through `combatDamageFormula` (utils.js) at the three
+  // PC damage call sites.
+  game.settings.register(SETTINGS_NS, "exploding-damage-dice", {
+    name: "CAIRN.Settings.ExplodingDamageDice.label",
+    hint: "CAIRN.Settings.ExplodingDamageDice.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false,
+    requiresReload: false,
+  });
+
+  // Read when the save CARD is built, and recorded on it: what a card offered
+  // is frozen at the moment of the roll, so switching this off later does not
+  // retract a choice already on screen.
+  game.settings.register(SETTINGS_NS, "fatigue-for-critical-damage", {
+    name: "CAIRN.Settings.FatigueForCriticalDamage.label",
+    hint: "CAIRN.Settings.FatigueForCriticalDamage.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false,
+    requiresReload: false,
+  });
+
+  // Read at ROLL time, through `combatDamageFormula` in utils.js — the ONE gate
+  // this and the exploding option share, so the two cannot disagree about which
+  // rolls qualify — which marks the card; the line itself is drawn per viewer
+  // at render. No reload needed.
+  //
+  // A LINE, NOT A CHOICE, AND MELEE OR RANGED (the night of 2026-10-03, user:
+  // "They get the damage AND they are offered a maneuver"). For a day this was
+  // `maneuver-on-max-melee`: melee only, and the card offered Explode the Die /
+  // Use a Maneuver!, a maneuver forgoing the damage. Both went, and the key and
+  // label lost "melee" with them (a key says what its label says; nothing had
+  // shipped). ANY die: the d6 floor of 2026-10-02 was reversed on 2026-10-03.
+  game.settings.register(SETTINGS_NS, "maneuver-on-max-damage", {
+    name: "CAIRN.Settings.ManeuverOnMaxDamage.label",
+    hint: "CAIRN.Settings.ManeuverOnMaxDamage.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false,
+    requiresReload: false,
+  });
+
+  // Today's weather, as the Warden called it. INTERNAL — it is a record of
+  // something that happened at the table, not a preference anybody configures,
+  // so it never appears in a menu and is exempt from the membership gate.
+  //
+  // Stored as {day, text} against the ABSOLUTE day number, which is what makes
+  // yesterday's weather go stale with no clearing step and no midnight hook.
+  //
+  // THE `onChange` IS LOAD-BEARING, and this is the contrast with the switch
+  // above. `enable-vald-calendar` deliberately has none: it is read once at
+  // `init` and needs a reload anyway. This one is read by three surfaces that
+  // are already on screen when it changes — the watch clock, the calendar
+  // window and the Dashboard's time band — and a world setting reaches other
+  // clients through its own change handler or not at all. Without it the new
+  // line appears on the Warden's screen alone, until something unrelated
+  // happens to re-render.
+  game.settings.register(SETTINGS_NS, "vald-weather-today", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { day: 0, text: "" },
+    onChange: () => {
+      Hooks.callAll("cairnWeatherChanged");
+    },
+  });
+
+  // A journal line every time the weather is rolled or set. OFF by default,
+  // and that default is not timidity: switching it on makes this system create
+  // a document in somebody's world, which an update must never start doing on
+  // its own.
+  game.settings.register(SETTINGS_NS, "weather-log", {
+    name: "CAIRN.Settings.WeatherLog.label",
+    hint: "CAIRN.Settings.WeatherLog.hint",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false,
+    requiresReload: false,
+  });
+
+  // WHICH journal holds the log is NOT a setting, and that is deliberate. It
+  // carries `flags.air-bladder.weatherLog` and is found by it, because awaiting
+  // `game.settings.set` does not guarantee the next `get` sees the new value —
+  // so an id kept here would be briefly missing after it was written, and a
+  // second line of weather inside that window would start a second journal.
+  // The same reasoning applies to the two calendar-event journals. See
+  // `module/weather-log.js` and `module/calendar-events.js`.
 
   // ---- Character Generation ------------------------------------------------
   // Which editions a Warden offers when generating a character. Both on means
@@ -678,9 +959,12 @@ export const registerSettings = () => {
   // No reload: onChange fires on EVERY client (the settings-fanout primitive
   // the custom-portrait folder scan also rides), so each connected player's
   // directory re-renders itself the moment the Warden flips it — the whole
-  // point of a mid-session switch. The pop-out directory is a second,
-  // independent ActorDirectory application (the render hook already handles
-  // its DOM separately), so the sweep covers both.
+  // point of a mid-session switch. ONE render, not a loop over every
+  // ActorDirectory instance: core forwards a docked tab's render to its
+  // rendered popout (sidebar-tab.mjs:114-117), so rendering both directly drew
+  // a popped-out directory TWICE per flip — the same shape review #22 fixed in
+  // the userConnected fan one handler away (cairn.js). `ui.actors.render()`
+  // covers docked and popout together, once each.
   game.settings.register(SETTINGS_NS, "allow-player-generate", {
     name: "CAIRN.Settings.AllowPlayerGenerate.label",
     scope: "world",
@@ -688,11 +972,7 @@ export const registerSettings = () => {
     type: Boolean,
     default: true,
     requiresReload: false,
-    onChange: () => {
-      for (const app of foundry.applications.instances.values()) {
-        if (app instanceof foundry.applications.sidebar.tabs.ActorDirectory && app.rendered) app.render();
-      }
-    },
+    onChange: () => ui.actors.render(),
   });
 
   // The Warden's switch for the SHEET's randomization surface as seen by
@@ -829,6 +1109,66 @@ export const registerSettings = () => {
     config: false,
     type: String,
     default: Cairn.characterGenerator2e.biography.age,
+    requiresReload: false,
+  });
+
+  // A PLAYER CHARACTER's other three generation dice (2026-10-02, user ask),
+  // which with `age-formula` above makes every die in character generation the
+  // Warden's. Abilities and gold are TIERS; Hit Protection is free text.
+  //
+  // DROPDOWNS FOR TWO OF THE THREE, on purpose, and not the age formula's
+  // shape: a closed set of three project-authored constants has nothing to
+  // validate and cannot throw at roll time. The accepted cost is that a fourth
+  // tier needs a code change. HP is free text because the ask was "1d6 or a set
+  // value that the warden provides", which no tier can express.
+  //
+  // PLAYER CHARACTERS ONLY, and structurally so — `generateNpc` reads
+  // `npcGenerator.*`, a hireling's statblock comes off its career, a monster
+  // uses weighted picks. Nothing here had to be gated to achieve that.
+  //
+  // `scope: "world"` is right for the socket relay as well as the obvious
+  // reason: the `generatePC` broker runs `createCharacter` on the WARDEN's
+  // client for a player who lacks ACTOR_CREATE, so a client-scoped setting
+  // would be read from the wrong user.
+  //
+  // No `onChange` and no reload. Read at ROLL time — and the Roll Character
+  // checklist builds its tooltips when the dialog OPENS, so those are current
+  // every time. (The sheet's age die is composed in `_prepareContext` and does
+  // stay stale on an already-open sheet until the next render; that predates
+  // this change and the age probe re-renders before each read for it.)
+  game.settings.register(SETTINGS_NS, "pc-ability-dice", {
+    name: "CAIRN.Settings.PcAbilityDice.label",
+    hint: "CAIRN.Settings.PcAbilityDice.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    choices: PC_DICE_CHOICES,
+    default: "default",
+    requiresReload: false,
+  });
+
+  game.settings.register(SETTINGS_NS, "pc-hp-formula", {
+    name: "CAIRN.Settings.PcHpFormula.label",
+    hint: "CAIRN.Settings.PcHpFormula.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    // NO `choices` — its absence is what makes this render as a text box rather
+    // than a select (settings-menus.js builds a StringField from whatever is
+    // here). `Cairn.pcHpFormula` is the ONE copy of the default, which
+    // `effectivePcHpFormula` also falls back to.
+    default: Cairn.pcHpFormula,
+    requiresReload: false,
+  });
+
+  game.settings.register(SETTINGS_NS, "pc-gold-dice", {
+    name: "CAIRN.Settings.PcGoldDice.label",
+    hint: "CAIRN.Settings.PcGoldDice.hint",
+    scope: "world",
+    config: false,
+    type: String,
+    choices: PC_DICE_CHOICES,
+    default: "default",
     requiresReload: false,
   });
 

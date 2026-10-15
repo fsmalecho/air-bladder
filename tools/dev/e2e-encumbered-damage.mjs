@@ -544,6 +544,21 @@ const scar = await page.evaluate(async () => {
   r.victimActor = victim.id;
   r.attackerActor = mine.id;
   r.coreDrawFlavor = game.i18n.format("TABLE.DrawFlavor", { number: 1, name: "Scars" });
+  // PER VIEWER (review #27): the scar line was stored in the acting client's
+  // language while the row beneath it is swept per viewer — one card, two
+  // languages. A shadow installed AFTER the card exists, then one re-render.
+  if (card) {
+    const real = game.i18n.localize.bind(game.i18n);
+    try {
+      game.i18n.localize = (k, ...a) => (k === "CAIRN.ScarFlavor" ? "ZZ-SCAR-LINE" : real(k, ...a));
+      await ui.chat.updateMessage(card);
+      await new Promise((res) => setTimeout(res, 600));
+      r.scarPerViewer = document.querySelector(`[data-message-id="${card.id}"] .flavor-text`)?.textContent ?? "";
+    } finally {
+      game.i18n.localize = real;
+      await ui.chat.updateMessage(card);
+    }
+  }
 
   // The scar BANNER on the damage card itself.
   const dmgCard = game.messages.contents.slice().reverse()
@@ -700,16 +715,54 @@ const autoScar = await page.evaluate(async () => {
     r.pcEnabled = pc.victim.system.scarEnabled === true;
     // The draw is DETERMINISTIC — the roll is the constant damage (3) — so the
     // recorded value can be asserted against the exact table row, in the same
-    // English source text the checklist stores.
+    // English source text the checklist stores. THE CHECKLIST'S table, not the
+    // damage flow's (review #30): two shipped tables are named Scars, the
+    // sheet's boxes carry `tables-2e`'s labels, and for a month this leg
+    // asserted the `utils` prose the flow wrote and never looked at a box —
+    // so "lands CHECKED on the sheet" was green over a scar no box matched.
     const { resultText, findCompendiumItem } = await import("/systems/air-bladder/module/compendium.js");
-    const scarsTable = await findCompendiumItem("air-bladder.utils", "Scars");
-    const expectedRow = scarsTable?.results.find((x) => x.range[0] <= 3 && 3 <= x.range[1]);
+    const checklist = await findCompendiumItem("air-bladder.tables-2e", "Scars");
+    const expectedRow = checklist?.results.find((x) => x.range[0] <= 3 && 3 <= x.range[1]);
     r.expectedName = expectedRow ? resultText(expectedRow) : null;
     // Ledger silence: a fixed window, because nothing announces "no card is
-    // coming" (the expect-none shape dev:changelog uses).
+    // coming" (the expect-none shape dev:changelog uses). Measured BEFORE the
+    // sheet legs below, whose legacy tick is a hand edit that rightly posts.
     await sleep(1500);
     r.pcLedgerCards = game.messages.contents
       .filter((m) => !preRun.has(m.id) && isLedger(m)).length;
+    // THE BOX ITSELF, on the rendered sheet.
+    const boxFor = (sheet, name) => [...(sheet.element?.querySelectorAll(".scar-check") ?? [])].find((o) => o.value === name) ?? null;
+    await pc.victim.sheet.render(true);
+    let box = null;
+    for (let i = 0; i < 40 && !box; i++) { box = boxFor(pc.victim.sheet, r.expectedName); if (!box) await sleep(100); }
+    r.pcBoxFound = !!box;
+    r.pcBoxChecked = !!box?.checked;
+    await pc.victim.sheet.close();
+    // LEGACY: a world that recorded the utils prose before the fix. The sheet
+    // recognises the prose for the same damage row as that box SELECTED, and
+    // the next tick anywhere replaces the prose with the box's own label —
+    // instead of dropping every recorded scar, which is what a tick did.
+    const utilsTable = await findCompendiumItem("air-bladder.utils", "Scars");
+    const proseRow = utilsTable?.results.find((x) => x.range[0] <= 3 && 3 <= x.range[1]);
+    r.legacyProse = proseRow ? resultText(proseRow) : null;
+    const legacy = await ActorImpl.create({
+      name: "ZZ AutoScar Legacy", type: "character", system: { scarEnabled: true, scars: [r.legacyProse] },
+    });
+    made.push(legacy);
+    await legacy.sheet.render(true);
+    let legacyBox = null;
+    for (let i = 0; i < 40 && !legacyBox; i++) { legacyBox = boxFor(legacy.sheet, r.expectedName); if (!legacyBox) await sleep(100); }
+    r.legacyBoxChecked = !!legacyBox?.checked;
+    const otherRow = checklist?.results.find((x) => x.range[0] === 1);
+    r.otherName = otherRow ? resultText(otherRow) : null;
+    const otherBox = boxFor(legacy.sheet, r.otherName);
+    if (otherBox) {
+      otherBox.checked = true;
+      otherBox.dispatchEvent(new Event("change", { bubbles: true }));
+      for (let i = 0; i < 40 && (legacy.system.scars ?? []).includes(r.legacyProse); i++) await sleep(100);
+    }
+    r.legacyAfterTick = [...(legacy.system.scars ?? [])];
+    await legacy.sheet.close();
 
     // ON + monster: card yes, sheet untouched — the type gate, not the schema.
     const mon = await strike("ZZ AutoScar Monster", "npc", { role: "monster" });
@@ -1012,6 +1065,8 @@ try {
     ran: true, gmIsGM: gmBoth.isGM, aliceIsGM: alBoth.isGM,
     aliceSawCard: alBoth.present,
     gmText: gmBoth.text, aliceText: alBoth.text, aliceHiddenOnlyText: alHiddenOnly.text,
+    expectWeaponLine: await alicePage.evaluate(() =>
+      game.i18n.format("CAIRN.RollingDmgWithWeapon", { weapon: "ZZ Probe Mace" })),
     gmStrong: gmBoth.strongText, gmStrongWeight: gmBoth.strongWeight,
     aliceStrong: alBoth.strongText,
     injectedText: alInjected.text, injectedTags: alInjected.injectedTags,
@@ -1237,9 +1292,14 @@ const untargeted = await page.evaluate(async () => {
     ? (() => { const c = getComputedStyle(anchor.querySelector("i"), "::before").content;
       return c && c !== "none" && c !== '""' ? c : null; })()
     : null;
-  // The attack line must NOT appear: there is no target to name, so the card
-  // keeps the weapon sentence it was rolled with.
+  // The attack line must NOT appear -- there is no target to name -- and the
+  // weapon sentence underneath is REBUILT from `data-weapon` in this viewer's
+  // language rather than left as the roller composed it (review #28). The
+  // expected string is formatted HERE, from the same key, so the leg survives a
+  // translation instead of pinning an English literal.
   r.labelText = (row?.querySelector(".dmg-label")?.textContent ?? "").trim();
+  r.expectWeaponLine = game.i18n.format("CAIRN.RollingDmgWithWeapon", { weapon: "ZZ Probe Sling" });
+  r.storedLabelSentinel = "ZZ untargeted probe";
 
   // A card in the LEGACY shape — the wrapper with a plain child div, before
   // .dmg-label existed. This is what is actually sitting in the user's log.
@@ -1444,7 +1504,40 @@ const breakdown = await page.evaluate(async () => {
   // HP and STR must render exactly as they did. The keying was sold as a
   // translatability fix with no visual consequence, and nothing else watches for
   // that promise being broken.
+  // BY ID DIFFERENCE, not by recency. The per-viewer block below used to take
+  // the newest message carrying the flag, so once cards accumulate in the dev
+  // world a run in which this `hit` posted nothing would silently rebuild a
+  // PREVIOUS run's card and report green (review #29). Same shape as the
+  // `dev:directory-buttons` leftover that read the wrong Heavy Destrier.
+  const before = new Set(game.messages.contents.map((m) => m.id));
   r.overflow = await hit("ZZ Overflow Foe", 0, 2, 6);
+
+  // PER VIEWER (review #28). The body was composed once, on the WARDEN's
+  // client, and stored — and Apply-damage is Warden-only, so that is every
+  // detail card that has ever existed. The attribution line above it was
+  // already rebuilt per viewer, which left a Spanish player reading a Spanish
+  // attacker over English "Damage:" and "HP:" lines.
+  //
+  // The dashboard probe's measurement, and the status bar's beside it: shadow
+  // one key AFTER the card exists, force one re-render, and read the DOM. The
+  // stored content must NOT move — a rebuild that writes back to the message
+  // would be a per-viewer edit fighting every other client.
+  {
+    const m = game.messages.contents
+      .find((x) => !before.has(x.id) && x.getFlag("air-bladder", "damageCard"));
+    const real = game.i18n.localize.bind(game.i18n);
+    try {
+      game.i18n.localize = (k, ...a) => (k === "CAIRN.HitProtection" ? "ZZ-HP-LABEL" : real(k, ...a));
+      if (m) await ui.chat.updateMessage(m);
+      await sleep(600);
+      const el = document.querySelector(`[data-message-id="${m?.id}"] .message-content`);
+      r.perViewer = {
+        hasFlag: !!m?.getFlag("air-bladder", "damageCard"),
+        rendered: (el?.textContent ?? "").includes("ZZ-HP-LABEL"),
+        storedStillEnglish: !String(m?.content ?? "").includes("ZZ-HP-LABEL"),
+      };
+    } finally { game.i18n.localize = real; }
+  }
   // Compared against the PRE-FIX CONCATENATION rather than against a literal, and
   // that is the point: a chat message's content is parsed and re-serialized, so
   // the bare ">" in "=>" comes back as "&gt;" — a literal expectation fails while
@@ -1510,6 +1603,27 @@ try {
     // originator, so naming the authors is what tells a real missing-guard
     // regression apart from a stray extra session of the same user.
     r.markAuthors = bars().map((m) => m.author?.name ?? m.user?.name ?? "?");
+    // PER VIEWER (review #27): the bar's line was stored in the ACTING
+    // client's language, so a Spanish player read an English bar in chat under
+    // a Spanish one on the sheet. Measured the dashboard probe's way — a
+    // language shadow installed AFTER the card exists, then one re-render.
+    {
+      const m = bars()[0];
+      const real = game.i18n.localize.bind(game.i18n);
+      try {
+        game.i18n.localize = (k, ...a) => (k === "CAIRN.CriticalDamageBanner" ? "ZZ-CRIT-LINE" : real(k, ...a));
+        if (m) await ui.chat.updateMessage(m);
+        await sleep(600);
+        const el = document.querySelector(`[data-message-id="${m?.id}"] .status-banner span`);
+        r.perViewer = {
+          rendered: el?.textContent ?? "",
+          storedStillEnglish: !String(m?.content ?? "").includes("ZZ-CRIT-LINE"),
+        };
+      } finally {
+        game.i18n.localize = real;
+        if (m) await ui.chat.updateMessage(m);
+      }
+    }
 
     // 2. A NO-OP must post nothing. This is the transition rule, and the leg a
     //    naive "post whenever the value is truthy" implementation fails.
@@ -1693,6 +1807,222 @@ try {
   status.error = `${e.name}: ${e.message}`;
 }
 
+const rebuilt = await (async () => {
+  const alicePage = await browser.newPage({ viewport: VIEWPORT });
+  await joinAs(alicePage, "Alice");
+
+  const posted = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const utils = await import("/systems/air-bladder/module/utils.js");
+    const tpl = "systems/air-bladder/templates/chat/dmg-roll-card.html";
+    const out = {};
+
+    // One damage ROLL card carrying both the quality badge and a targets list,
+    // so the badge and the Apply tooltip are measured on the same card. The
+    // target id is deliberately not a real token: `nameDamageTargets` finds
+    // nothing nameable and takes the branch that rebuilds the weapon sentence,
+    // which leaves the badge and the tooltip as the things under test.
+    // BOTH halves of the badge. The template renders `.dmg-quality` only
+    // `{{#if quality}}` — the sentence is what makes the row exist and
+    // `qualityKind` is only the datum on it — so passing the kind alone builds
+    // a card with no badge at all and the leg reads null for the wrong reason.
+    const flavor = await foundry.applications.handlebars.renderTemplate(tpl, {
+      label: "ZZ stored label", weapon: "ZZ Probe Axe",
+      quality: "ZZ stored impaired", qualityKind: "impaired",
+      panic: false, targets: "zzznosuchtoken",
+    });
+    const dmgRoll = await new Roll("1d6").evaluate();
+    out.dmg = (await dmgRoll.toMessage({ flavor }, { rollMode: "publicroll" })).id;
+    // The template must now write data-panic on EVERY card, "0" included, so
+    // that its absence can mean "posted before the attribute existed".
+    out.panicAttr = String(flavor).match(/data-panic="([^"]*)"/)?.[1] ?? null;
+
+    // The d20 save card, twice: the shape `_rollStrSave` posts, once PUBLIC and
+    // once under the chat dropdown's Private GM Roll.
+    // FAILED, so the card carries the Mark Critical Damage button. That button
+    // is the sharpest thing on this card and the clearest single token of "the
+    // result leaked": the public control asserts it is THERE and the private
+    // leg asserts it is not.
+    const card = { kind: "save", ability: "STR", formula: "d20cs<=10", rolled: 4, failed: true, crit: true };
+    const mk = async (mode) => {
+      const roll = await new Roll("1d6").evaluate();
+      const msg = await roll.toMessage({
+        flavor: utils.d20CardFlavor(card.kind, card.ability),
+        content: utils.d20CardBody(card),
+        flags: { "air-bladder": { d20Card: card } },
+      }, { rollMode: mode });
+      return msg.id;
+    };
+    out.d20Public = await mk("publicroll");
+    out.d20Private = await mk("gmroll");
+
+    // Die of Fate, exactly as the sheet posts it.
+    const fate = await new Roll("1d6").evaluate();
+    out.fate = (await fate.toMessage({
+      flavor: game.i18n.localize("CAIRN.DieOfFate"),
+      flags: { "air-bladder": { rollFlavor: "dieOfFate" } },
+    }, { rollMode: "publicroll" })).id;
+
+    await sleep(400);
+    // The Warden's own read: the Apply tooltip, under a sentinel installed
+    // AFTER the card was composed. The button is REMOVED from a player's copy,
+    // so the Warden is the only reader this line ever has.
+    const real = game.i18n.localize.bind(game.i18n);
+    try {
+      game.i18n.localize = (k, ...a) => (k === "CAIRN.ApplyDamage" ? "ZZ-APPLY-TIP" : real(k, ...a));
+      await ui.chat.updateMessage(game.messages.get(out.dmg));
+      await sleep(400);
+      const btn = document.querySelector(`[data-message-id="${out.dmg}"] .apply-dmg[data-targets]`);
+      out.tooltipRendered = btn?.dataset?.tooltip ?? null;
+    } finally { game.i18n.localize = real; }
+    out.tooltipStored = String(game.messages.get(out.dmg)?.flavor ?? "");
+    return out;
+  });
+
+  const seen = await alicePage.evaluate(async (ids) => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const real = game.i18n.localize.bind(game.i18n);
+    // THE SENTINEL GOES THROUGH `localize`, INCLUDING FOR THE d20 LINE.
+    // `d20CardFlavor` builds its sentence with `game.i18n.format("CAIRN.Save",
+    // {key: game.i18n.localize(ability)})`, so the natural sentinel is on
+    // `CAIRN.Save` — but a shadow installed on `game.i18n.format` did not take
+    // effect here (measured: the leg read the real "STR save" with the shadow
+    // in place, while the `localize` shadow beside it worked on the same page
+    // and in the same window). Shadowing the ABILITY key instead exercises the
+    // identical path through one function that is known to be shadowable, and
+    // it is arguably the better probe anyway: the ABILITY KEY travelling in the
+    // flag rather than a composed sentence is the actual design claim.
+    const SENTINELS = {
+      "CAIRN.DamageQuality.BadgeImpaired": "ZZ-IMPAIRED",
+      "CAIRN.DieOfFate": "ZZ-FATE",
+      STR: "ZZ-ABIL",
+    };
+    const out = {};
+    try {
+      game.i18n.localize = (k, ...a) => (SENTINELS[k] ?? real(k, ...a));
+      for (const id of Object.values(ids)) {
+        const m = game.messages.get(id);
+        if (m) await ui.chat.updateMessage(m);
+      }
+      await sleep(700);
+      const el = (id, sel) => document.querySelector(`[data-message-id="${id}"] ${sel}`);
+      out.quality = el(ids.dmg, ".dmg-quality")?.textContent?.trim() ?? null;
+      out.d20PublicFlavor = el(ids.d20Public, ".flavor-text")?.textContent?.trim() ?? null;
+      out.d20PublicBody = el(ids.d20Public, ".message-content")?.textContent ?? "";
+      out.fateFlavor = el(ids.fate, ".flavor-text")?.textContent?.trim() ?? null;
+      // The private card. Present in her log at all (core keeps a whispered ROLL
+      // visible), but its content must be core's substitution.
+      out.privatePresent = !!document.querySelector(`[data-message-id="${ids.d20Private}"]`);
+      out.privateBody = el(ids.d20Private, ".message-content")?.textContent ?? "";
+      out.privateFlavor = el(ids.d20Private, ".flavor-text")?.textContent?.trim() ?? "";
+      out.privateHasCrit = !!el(ids.d20Private, ".mark-critical-damage");
+      out.publicHasCrit = !!el(ids.d20Public, ".mark-critical-damage");
+      // She must not have the Warden's control on the damage card either.
+      out.aliceHasApply = !!el(ids.dmg, ".apply-dmg");
+      // STORED, read from the documents rather than the DOM: no rebuild may
+      // write its sentinel back to the message.
+      out.storedClean =
+        !String(game.messages.get(ids.dmg)?.flavor ?? "").includes("ZZ-IMPAIRED")
+        && !String(game.messages.get(ids.d20Public)?.flavor ?? "").includes("ZZ-ABIL")
+        && !String(game.messages.get(ids.fate)?.flavor ?? "").includes("ZZ-FATE");
+    } finally { game.i18n.localize = real; }
+    return out;
+  }, posted);
+
+  await page.evaluate(async (ids) => {
+    for (const id of Object.values(ids)) await game.messages.get(id)?.delete();
+  }, posted);
+  await alicePage.close();
+  return { posted, seen };
+})();
+
+/* ---------------------------------------------------------------------------
+ * EVERY FATIGUE FILLS A SLOT (2026-10-03, user ruling).
+ *
+ * For a day a house rule made the first Fatigue free — carried as though it
+ * were petty, with a Petty chip on its row and a "clear a costed one first"
+ * rule for the − control and the trash can. The user withdrew it ("remove the
+ * rule about making the Fatigue petty if the PC is only carrying one"), so a
+ * Fatigue is an ordinary item to the slot count again, as Cairn has it. These
+ * legs hold that, and are the red-first witness against the free-first build:
+ * it reads 9 items + 1 Fatigue as 9 and chips one row.
+ * ------------------------------------------------------------------------- */
+const fatigueSlots = await page.evaluate(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const res = { made: [] };
+  const Cls = CONFIG.Actor.documentClass;
+  const FAT = "Fatigue";
+  const mk = async (name, type, role) => {
+    const a = await Cls.create({ name, type, ...(role ? { system: { role } } : {}) });
+    res.made.push(a.id);
+    return a;
+  };
+  const fill = async (a, items, fatigues) => {
+    const data = [];
+    for (let i = 0; i < items; i++) data.push({ name: `ZZ Thing ${i}`, type: "item" });
+    for (let i = 0; i < fatigues; i++) data.push({ name: FAT, type: "item" });
+    if (data.length) await a.createEmbeddedDocuments("Item", data);
+    return { used: a.system.slotsUsed, max: a.system.slotsMax, enc: a.isEncumbered() };
+  };
+
+  res.nine1 = await fill(await mk("ZZ Fat Nine1", "character"), 9, 1);
+  res.alone = await fill(await mk("ZZ Fat Alone", "character"), 0, 1);
+  // Every actor type, as the coin rule is: an npc and a hireling count a
+  // Fatigue exactly as a character does.
+  res.npc = await fill(await mk("ZZ Fat NPC", "npc", "npc"), 9, 1);
+  res.hire = await fill(await mk("ZZ Fat Hire", "npc", "hireling"), 9, 1);
+
+  // NO PETTY CHIP on any Fatigue row, read off the rendered sheet: the chip is
+  // what a player saw of the withdrawn rule.
+  const sheetActor = await mk("ZZ Fat Rows", "character");
+  await sheetActor.createEmbeddedDocuments("Item", [
+    { name: FAT, type: "item" }, { name: FAT, type: "item" }, { name: FAT, type: "item" }]);
+  await sheetActor.sheet.render(true);
+  for (let i = 0; i < 30 && !(sheetActor.sheet.element instanceof HTMLElement); i++) await sleep(100);
+  sheetActor.sheet.element?.querySelector('[data-action="tab"][data-tab="items"]')?.click();
+  await sleep(400);
+  const fatigueRows = () => [...sheetActor.sheet.element.querySelectorAll(".fatigue-row")];
+  res.rowCount = fatigueRows().length;
+  res.chips = fatigueRows()
+    .filter((row) => [...row.querySelectorAll(".cairn-item-tag")]
+      .some((t) => t.textContent.trim() === game.i18n.localize("CAIRN.Weightless")))
+    .map((row) => row.dataset.itemId);
+
+  // CLEARING: the − control removes one Fatigue, and the trash can removes THE
+  // ROW IT IS ON — no redirect to some other Fatigue any more. The confirm is
+  // answered by shadowing it: this leg is about which document goes, and the
+  // dialog has its own coverage elsewhere.
+  const DialogV2 = foundry.applications.api.DialogV2;
+  const origConfirm = DialogV2.confirm;
+  DialogV2.confirm = async () => true;
+  try {
+    sheetActor.sheet.element?.querySelector('[data-action="removeFatigue"]')?.click();
+    for (let i = 0; i < 40 && sheetActor.items.filter((x) => x.system.isFatigue).length > 2; i++) await sleep(150);
+    await sleep(400);
+    res.afterMinus = sheetActor.items.filter((x) => x.system.isFatigue).length;
+
+    // The trash can on the LAST Fatigue row in document order — the one the
+    // withdrawn rule would have spared in favour of another.
+    await sleep(200);
+    const ids = sheetActor.items.filter((x) => x.system.isFatigue).map((x) => x.id);
+    const pressed = ids.at(-1);
+    sheetActor.sheet.element?.querySelector(`[data-item-id="${pressed}"]`)
+      ?.querySelector('[data-action="itemDelete"]')?.click();
+    for (let i = 0; i < 40 && sheetActor.items.filter((x) => x.system.isFatigue).length > 1; i++) await sleep(150);
+    await sleep(400);
+    res.afterTrash = {
+      left: sheetActor.items.filter((x) => x.system.isFatigue).length,
+      pressedGone: !sheetActor.items.get(pressed),
+    };
+  } finally {
+    DialogV2.confirm = origConfirm;
+    await sheetActor.sheet.close();
+  }
+
+  for (const id of res.made) { try { await game.actors.get(id)?.delete(); } catch { /* gone */ } }
+  return res;
+});
+
 await browser.close();
 
 let bad = 0;
@@ -1812,6 +2142,8 @@ check("it names the victim's actor", scar.speakerActor === scar.victimActor,
   `speaker.actor=${scar.speakerActor} (expected the victim ${scar.victimActor}; the viewer's own character is ${scar.attackerActor})`);
 check("flavor is ours, not core's", !!scar.flavor && scar.flavor !== scar.coreDrawFlavor,
   `flavor "${scar.flavor}" (core would say "${scar.coreDrawFlavor}", which claims somebody drew it)`);
+check("...and it re-renders in THIS viewer's language (review #27)", scar.scarPerViewer === "ZZ-SCAR-LINE",
+  `rendered "${scar.scarPerViewer}" under a localize shadow — the stored line would read as the acting client composed it`);
 check("control: bare draw() still misattributes", scar.controlSpeakerToken !== scar.victimToken,
   `bare draw() speaker.token=${scar.controlSpeakerToken} - if this equalled the victim the leg above would prove nothing`);
 
@@ -1846,8 +2178,18 @@ check("flavor above core's 14px too", scar.flavorPx > 14,
 console.log("\nauto-record-scars (Warden switch, default off)");
 check("switch on: the PC's card posted", autoScar.pcCard, "no draw means the legs below prove nothing");
 check("the drawn scar is CHECKED on the sheet",
-  autoScar.pcScars.length === 1 && autoScar.pcScars[0] === autoScar.expectedName,
-  `system.scars=${JSON.stringify(autoScar.pcScars)} (damage 3 draws "${autoScar.expectedName}" — the roll is the constant damage, so the row is exact)`);
+  autoScar.pcScars.length === 1 && autoScar.pcScars[0] === autoScar.expectedName
+  && autoScar.pcBoxFound && autoScar.pcBoxChecked,
+  `system.scars=${JSON.stringify(autoScar.pcScars)} box found=${autoScar.pcBoxFound} checked=${autoScar.pcBoxChecked} `
+  + `(damage 3 is the checklist's "${autoScar.expectedName}" — the roll is the constant damage, so the row is exact; `
+  + "for a month the flow wrote the OTHER Scars table's prose and no box ever matched)");
+check("a legacy prose scar reads as its box, and a tick converts it",
+  autoScar.legacyBoxChecked
+  && autoScar.legacyAfterTick.includes(autoScar.expectedName)
+  && autoScar.legacyAfterTick.includes(autoScar.otherName)
+  && !autoScar.legacyAfterTick.includes(autoScar.legacyProse),
+  `box checked=${autoScar.legacyBoxChecked} after tick=${JSON.stringify(autoScar.legacyAfterTick)} — a world that recorded `
+  + "the utils prose keeps its scar and the next tick writes the label; before, one tick anywhere dropped it");
 check("scarEnabled came on with it", autoScar.pcEnabled,
   "without it the recorded scar sits invisible behind the sheet's opt-in checkbox");
 check("the ledger stayed silent", autoScar.pcLedgerCards === 0,
@@ -1914,9 +2256,14 @@ check("Alice is told the visible one",
 // is not a leg that passes because nothing was resolved.
 check("and NOT the hidden one", attack.ran && !attack.aliceText?.includes("ZZ Unseen Foe"),
   `"${attack.aliceText}" - a token the Warden took off the board must not be named in a card the whole table reads`);
-check("nothing nameable falls back to the weapon",
-  attack.aliceHiddenOnlyText === "ZZ weapon sentence",
-  `"${attack.aliceHiddenOnlyText}" - with only a hidden target, she gets the original sentence, not a half-written one`);
+// REBUILT, not merely left alone (review #28). With only a hidden target there
+// is nobody to name, so the attack line must not be half-written -- but the
+// weapon sentence beneath it was composed in the ROLLER's language and stored,
+// and this is the branch that used to return before repairing it.
+check("nothing nameable rebuilds the weapon line",
+  attack.aliceHiddenOnlyText === attack.expectWeaponLine
+  && attack.aliceHiddenOnlyText !== "ZZ weapon sentence",
+  `"${attack.aliceHiddenOnlyText}" vs expected "${attack.expectWeaponLine}" - with only a hidden target she gets the weapon sentence in HER language, not the roller's stored one and not a half-written attack line`);
 
 // The target's name is BOLD. Asserted on the <strong>'s OWN text, so a <strong>
 // wrapped round the whole sentence would not satisfy it, and on the computed
@@ -1981,8 +2328,14 @@ check("its own tooltip", untargeted.anchorTooltip === "Apply damage — choose w
   `"${untargeted.anchorTooltip}" — a different tooltip from the targeted card's, because the rule is meant to be readable from the card`);
 check("and it draws a glyph", !!untargeted.anchorGlyph,
   `renders ${untargeted.anchorGlyph ?? "NOTHING"}`);
-check("the weapon sentence stands", untargeted.labelText === "ZZ untargeted probe",
-  `"${untargeted.labelText}" — no target to name, so the attack line must not half-write one`);
+// `offerUntargetedApply` builds its anchor with NO data-targets on purpose, so
+// this is the card the rewrite used to skip entirely -- and applying the damage
+// later never adds the attribute, so nothing ever repaired it. The stored
+// sentinel going away is the half that reds if the rebuild is dropped.
+check("the weapon sentence is rebuilt",
+  untargeted.labelText === untargeted.expectWeaponLine
+  && untargeted.labelText !== untargeted.storedLabelSentinel,
+  `"${untargeted.labelText}" vs expected "${untargeted.expectWeaponLine}" — no target to name, so the attack line must not half-write one, but the weapon sentence is still rebuilt in THIS viewer's language`);
 check("a LEGACY-shaped card gains one too", untargeted.legacyGainsAnchor,
   "the wrapper with a plain child div, before .dmg-label existed — what is actually sitting in the log");
 
@@ -2039,6 +2392,13 @@ check("no armour drops the bracket", /Damage<\/strong>: 6</.test(breakdown.bare)
   `"${(breakdown.bare.match(/Damage<\/strong>:[^<]*/) ?? [""])[0]}" — ruled, not an oversight: armor 0 implies dmg === damage, so the bracket carries nothing`);
 check("an absorbed hit KEEPS it", /Damage<\/strong>: 0 \(3 damage − 3 armor\)/.test(breakdown.absorbed),
   `"${(breakdown.absorbed.match(/Damage<\/strong>:[^<]*/) ?? [""])[0]}" — this is why the drop rule is armor-based and not result-based; a bare "Damage: 0" reads like a broken card`);
+// The card carries its NUMBERS and rebuilds its words, rather than carrying its
+// words. Both halves: the rebuild reaches the DOM, and the stored copy is left
+// exactly as posted.
+check("the detail card rebuilds per viewer",
+  breakdown.perViewer?.hasFlag === true && breakdown.perViewer?.rendered === true
+  && breakdown.perViewer?.storedStillEnglish === true,
+  `${JSON.stringify(breakdown.perViewer)} — the body was composed on the Warden's client and stored, so every player read the Warden's language (review #28)`);
 check("a spaced U+2212, not a hyphen", /−/.test(breakdown.armored) && !/6 damage - 2/.test(breakdown.armored),
   '"6-0" read as a range; the minus lives inside the key so a translator can change it');
 // The promise this half was sold on, asserted against the OLD construction posted
@@ -2057,6 +2417,9 @@ check("the two-client leg ran", status.ran && !status.aliceIsGM,
 check("marking critical posts ONE bar",
   JSON.stringify(status.afterMark) === JSON.stringify(["critical"]),
   `${JSON.stringify(status.afterMark)} by ${JSON.stringify(status.markAuthors)}, active users ${JSON.stringify(status.activeUsers)} — one card per connected client is what a missing userId guard looks like, and the authors say WHICH clients thought they were the originator`);
+check("the bar's line re-renders in THIS viewer's language, stored as composed (review #27)",
+  !!status.perViewer?.rendered.includes("ZZ-CRIT-LINE") && status.perViewer?.storedStillEnglish === true,
+  JSON.stringify(status.perViewer));
 // Real behaviour, but it is FOUNDRY's diff that produces it, not our guard:
 // setting a field to the value it already holds drops it from `changed`, so
 // _preUpdate never stashes and the outer `!== undefined` skips. Witnessed —
@@ -2124,6 +2487,96 @@ check("an unconcealed creature's cards stay public",
   `${status.visibleCardCount} card(s), none whispered=${status.visibleNoneWhispered}`);
 check("and Alice sees all of them", status.aliceSeesVisible === status.visibleCardCount,
   `${status.aliceSeesVisible}/${status.visibleCardCount} — knowing what happened to a creature on the board is not Warden-only`);
+
+/* ---------------------------------------------------------------------------
+ * FOUR MORE STORED CARDS REBUILT PER VIEWER — AND THE ONE THAT MUST NOT BE.
+ *
+ * Review #28 added four per-viewer rebuilds and gated two of them. The quality
+ * badge and the whole d20 save card shipped with NO probe at all: deleting
+ * `localizeDamageQuality` from the hook, dropping `data-quality` from the
+ * template, or removing the `d20Card` flag from either producer left every gate
+ * green (review #29). Two more of the same class were found by the sweep the
+ * rule asks for and are gated here too — the Apply-damage TOOLTIP, composed by
+ * the template one line under sentences that were already being rebuilt, and
+ * Die of Fate, the last stored card in `module/` that was neither rebuilt nor
+ * read by exactly one person.
+ *
+ * EVERY REBUILD LEG IS ITS OWN CONTROL. The sentinel is installed on ALICE's
+ * client after the card exists, so the string cannot have been composed with
+ * it: if the rebuild does not run she reads the Warden's stored English, and
+ * each leg asserts BOTH that she reads the sentinel AND that the stored content
+ * still does not contain it. A rebuild that wrote back to the message would
+ * fail the second half.
+ *
+ * THE LAST LEG IS THE OPPOSITE ASSERTION, and it is the reason this section
+ * exists at all. `ChatMessage#visible` is true for a whispered message when
+ * `isRoll` (chat-message.mjs:101-104), so the render hook FIRES on clients that
+ * may not read the result — core has already replaced the card with "rolled
+ * privately" (`#renderRollContent`, :475-481). A rebuild that writes the flag
+ * back into `.message-content` hands every player the die, the Success/Fail and
+ * the Critical Damage button. Its control is the leg above it: the identical
+ * card posted PUBLIC must still show all three, or "she cannot see it" would
+ * pass on a build where nothing rendered at all.
+ * ------------------------------------------------------------------------- */
+
+console.log("\nfour more stored cards, rebuilt per viewer");
+check("the template writes data-panic on every card",
+  rebuilt.posted.panicAttr === "0",
+  `data-panic="${rebuilt.posted.panicAttr}" — its ABSENCE has to mean "older than the attribute", or `
+  + "relabelWeaponLine rewrites a pre-fb5db539 panic card with the non-panic key and drops its (Panic)");
+check("the quality badge is rebuilt in the reader's language",
+  rebuilt.seen.quality === "ZZ-IMPAIRED",
+  `Alice reads "${rebuilt.seen.quality}" — composed on the Warden's client, so without the rebuild `
+  + "she reads his Impaired under an attack line already in hers");
+check("the Apply-damage tooltip is rebuilt in the reader's language",
+  rebuilt.posted.tooltipRendered === "ZZ-APPLY-TIP"
+  && !rebuilt.posted.tooltipStored.includes("ZZ-APPLY-TIP"),
+  `tooltip="${rebuilt.posted.tooltipRendered}" — the template localizes it into the STORED flavor, and `
+  + "the button is removed from a player's copy, so the Warden reads whatever language the roller had");
+check("...and only the Warden has that button at all", rebuilt.seen.aliceHasApply === false,
+  "the rebuild must not resurrect a Warden-only control on a player's copy");
+check("the d20 save card is rebuilt in the reader's language",
+  (rebuilt.seen.d20PublicFlavor ?? "").includes("ZZ-ABIL"),
+  `Alice reads "${rebuilt.seen.d20PublicFlavor}"`);
+check("Die of Fate is rebuilt in the reader's language",
+  rebuilt.seen.fateFlavor === "ZZ-FATE",
+  `Alice reads "${rebuilt.seen.fateFlavor}" — it ships on both sheets, so a player is as often the composer`);
+check("no rebuild writes its sentinel back to the stored message",
+  rebuilt.seen.storedClean === true,
+  "a per-viewer rebuild that edited the document would be one client's language fighting every other's");
+/* The leak, and its control. */
+check("control: a PUBLIC d20 card really does show the result",
+  rebuilt.seen.publicHasCrit && rebuilt.seen.d20PublicBody.includes("4"),
+  `body="${rebuilt.seen.d20PublicBody.trim()}" crit=${rebuilt.seen.publicHasCrit} — without this, "she cannot `
+  + 'see the private one" passes on a build where nothing rendered');
+check("a PRIVATE d20 roll stays private",
+  rebuilt.seen.privatePresent
+  && !rebuilt.seen.privateHasCrit
+  && !/\b4\b/.test(rebuilt.seen.privateBody)
+  && rebuilt.seen.privateFlavor !== rebuilt.seen.d20PublicFlavor,
+  `present=${rebuilt.seen.privatePresent} crit=${rebuilt.seen.privateHasCrit} `
+  + `body="${rebuilt.seen.privateBody.trim()}" flavor="${rebuilt.seen.privateFlavor}" — a whispered ROLL is `
+  + "still `visible`, so the hook fires on her client over core's 'rolled privately' substitution");
+
+console.log("every Fatigue fills a slot");
+check("9 items + 1 Fatigue is 10 slots, and overburdened",
+  fatigueSlots.nine1?.used === 10 && fatigueSlots.nine1?.enc === true,
+  `used=${fatigueSlots.nine1?.used}/${fatigueSlots.nine1?.max} encumbered=${fatigueSlots.nine1?.enc} — the withdrawn free-first rule read this as 9`);
+check("a lone Fatigue costs one slot",
+  fatigueSlots.alone?.used === 1 && fatigueSlots.alone?.enc === false,
+  `used=${fatigueSlots.alone?.used}`);
+check("...on an npc and a hireling too",
+  fatigueSlots.npc?.used === 10 && fatigueSlots.hire?.used === 10,
+  `npc=${fatigueSlots.npc?.used} hireling=${fatigueSlots.hire?.used}`);
+check("NO Fatigue row wears the Petty chip",
+  fatigueSlots.rowCount === 3 && (fatigueSlots.chips ?? []).length === 0,
+  `rows=${fatigueSlots.rowCount} chipped=${JSON.stringify(fatigueSlots.chips)} — the chip was the withdrawn rule's face`);
+check("the − control clears one Fatigue",
+  fatigueSlots.afterMinus === 2,
+  `left=${fatigueSlots.afterMinus}`);
+check("...and the trash can deletes the row it is on",
+  fatigueSlots.afterTrash?.left === 1 && fatigueSlots.afterTrash?.pressedGone === true,
+  `left=${fatigueSlots.afterTrash?.left} pressed row gone=${fatigueSlots.afterTrash?.pressedGone} — no redirect to another Fatigue`);
 
 if (errors.length) { bad++; console.log("Console errors:\n" + errors.join("\n")); }
 console.log(bad === 0 ? "\nencumbered-damage e2e passed" : `\nencumbered-damage e2e FAILED — ${bad}`);

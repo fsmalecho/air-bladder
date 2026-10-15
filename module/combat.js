@@ -46,7 +46,7 @@
  *    label, with the DEX it was tested against stated nowhere.
  */
 
-import { t } from "./i18n-content.js";
+import { t, speakerDisplayName } from "./i18n-content.js";
 
 /**
  * Who makes the DEX save — i.e. who acts with the party (user ruling
@@ -152,10 +152,28 @@ export class CairnCombat extends Combat {
           total: roll.total,
           dex,
         }),
-        flags: { "core.initiativeRoll": true },
+        // The outcome and the save's numbers ride flags so the render hook
+        // can colour the total AND rebuild the flavor per viewer
+        // (markInitiativeOutcome below) — display is per viewer, the fact is
+        // stored once. The stored flavor above stays the roller's-language
+        // bake for clients without the hook; cards from before saveTotal
+        // existed keep it unrebuilt.
+        flags: {
+          "core.initiativeRoll": true,
+          "air-bladder.save": pass ? "pass" : "fail",
+          "air-bladder.saveTotal": roll.total,
+          "air-bladder.saveDex": dex,
+        },
       }, messageOptions);
+      // "public", never the roll-mode dropdown (user ruling 2026-09-06): the
+      // save's outcome IS the turn order, table information by definition — a
+      // Warden's dropdown left on "Private GM Roll" gave players a wall of
+      // "Warden privately rolled some dice ???" while the tracker visibly
+      // re-sorted. A hidden combatant's card keeps the GM whisper: the token
+      // is concealed, so its save is too. An explicit messageMode argument
+      // still wins — that is a caller saying so, not a dropdown leaking in.
       const chatData = await roll.toMessage(messageData, {
-        messageMode: messageMode ?? (combatant.hidden ? "gm" : undefined),
+        messageMode: messageMode ?? (combatant.hidden ? "gm" : "public"),
         create: false,
       });
       if (messages.length) chatData.sound = null; // one sound for the set
@@ -374,6 +392,56 @@ export class CairnCombatTracker extends foundry.applications.sidebar.tabs.Combat
     }
   }
 }
+
+/**
+ * Colour a save card's total by its outcome — pass green, fail red (user ask
+ * 2026-09-06: "acts before the enemies" should read as a success at a glance).
+ * Display-only, added per viewer at render off the stored flag; the classes
+ * are styled in cairn.css with PINNED colours, because a chat tile is
+ * parchment in both client themes (the whisper-token doctrine there).
+ *
+ * The FLAVOR is rebuilt per viewer too (review #23 finding 8, the GLOG cast
+ * card's pattern): the stored flavor baked the roller's language and the raw
+ * combatant name at roll time, while the header (`localizeSpeakerName`) and
+ * the tracker translate per viewer — so an es client read "Mule" in the
+ * flavor under "Mula" above it, for exactly the FRIENDLY non-character
+ * combatants the a3150a99 ruling made public. Rebuilt from the numbers in
+ * the flag; a pre-rebuild card (no saveTotal) keeps its baked line.
+ *
+ * HIDDEN STAYS HIDDEN (review #30). `rollInitiative` whispers a hidden
+ * combatant's save to the Warden (`messageMode: "gm"` above), and a whispered
+ * message that carries a Roll is still `visible` to everyone
+ * (chat-message.mjs:101-104), so this hook FIRES on every player's client —
+ * after core has already written "rolled privately" into `.flavor-text` and
+ * `?` into `.dice-total`. Without the gate below, this function wrote the
+ * concealed creature's name, its d20 total, its DEX and its outcome straight
+ * over that substitution, on the one card whose whole point was the whisper.
+ * The `isContentVisible` test is the same one `localizeD20Card` asks first
+ * (utils.js, review #29); this was its sibling in the same hook, missed.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ */
+export const markInitiativeOutcome = (message, html) => {
+  if (!message?.isContentVisible) return;
+  const outcome = message.getFlag("air-bladder", "save");
+  if (outcome !== "pass" && outcome !== "fail") return;
+  html.querySelector(".dice-total")?.classList.add(outcome === "pass" ? "cairn-save-pass" : "cairn-save-fail");
+  // The numbers are NUMBERS: a message's flags are player-authorable and never
+  // server-sanitized, and game.i18n.format interpolates raw, so a crafted
+  // saveTotal string would land as markup in `innerHTML` below (review #24
+  // finding 2). Coercing both — the generation card's own rule — closes it and
+  // still keeps a pre-rebuild card (no saveTotal flag) on its baked line:
+  // Number(undefined) is NaN, which the finite gate refuses.
+  const total = Number(message.getFlag("air-bladder", "saveTotal"));
+  const dex = Number(message.getFlag("air-bladder", "saveDex"));
+  if (!Number.isFinite(total) || !Number.isFinite(dex)) return;
+  const flavor = html.querySelector(".flavor-text");
+  if (!flavor) return;
+  flavor.innerHTML = game.i18n.format(outcome === "pass" ? "CAIRN.Initiative.Pass" : "CAIRN.Initiative.Fail", {
+    name: foundry.utils.escapeHTML(speakerDisplayName(message, message.speaker?.alias ?? "")),
+    total, dex,
+  });
+};
 
 /**
  * Put the tracker's rows back in the order the render meant.

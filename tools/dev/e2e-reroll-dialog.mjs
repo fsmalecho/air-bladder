@@ -60,6 +60,14 @@
  *      granted copy never accumulates, and a LEGACY untagged grant still
  *      swaps — the name-matcher stays, but only for refs no tagged claim
  *      already satisfies.
+ *   9. REVIEW #26. THE ENTER KEY. Ticking a row and pressing Enter must cancel,
+ *      not re-deal. #21 made Cancel the default button and that bought
+ *      autofocus alone: every DialogV2 button defaults to `type="submit"`, so
+ *      implicit submission fired the FIRST submit button — the re-roll — and
+ *      dealt background, name, gear, bonds, two abilities, HP, gold, age,
+ *      traits and portrait. Measured with a REAL keypress, which is the only
+ *      way: `form.requestSubmit()` sets no submitter, so a scripted version of
+ *      this leg passes against the broken build.
  * Exits non-zero on any failed assertion or console error.
  */
 
@@ -98,6 +106,13 @@ try {
       genRolls: game.settings.get(NS, "show-generation-rolls"),
       grantTags: game.settings.get(NS, "show-grant-tags"),
     };
+    // The Warden's generation dice decide what a seeded re-roll lands on
+    // (18/18/18 is 3d6 at its maximum; Crawler's 2d6 + 3 tops out at 15), so
+    // they are SET to their registered defaults, never assumed: the 0.1.24
+    // battery redded the partial leg on a dev world a Warden had been testing
+    // them in (2026-10-04).
+    const PC_DICE = ["pc-ability-dice", "pc-hp-formula", "pc-gold-dice"];
+    const diceWas = Object.fromEntries(PC_DICE.map((k) => [k, game.settings.get(NS, k)]));
     const origUniform = CONFIG.Dice.randomUniform;
     let emptyOmens = null;
     try {
@@ -105,6 +120,10 @@ try {
       await game.settings.set(NS, "barebones-failed-career", true);
       await game.settings.set(NS, "show-generation-rolls", true);
       await game.settings.set(NS, "show-grant-tags", true);
+      for (const k of PC_DICE) {
+        const initial = game.settings.settings.get(`${NS}.${k}`).default;
+        if (diceWas[k] !== initial) await game.settings.set(NS, k, initial);
+      }
 
       // A 2e character generated FROM a chosen background — the chosen-
       // provenance path, and Fieldwarden's two bonds make the bond re-deal
@@ -193,6 +212,29 @@ try {
         const f = dialogState(dlg);
         out.gatedOff = { name: f.name, gear: f.gear, bonds: f.bonds };
         await closeDialog(dlg);
+      }
+
+      // ---- 1b. show-traits OFF removes the age and traits rows ------------
+      // The omen row's exact precedent (it is conditional on omenVisible):
+      // a Warden who hid rolled flavor is not offered a re-roll of it. STR
+      // proves the list itself survived. Read-shadowed, restored in finally.
+      {
+        const origGetT = game.settings.get;
+        game.settings.get = function (ns, key, ...rest) {
+          // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+          // get(ns, key, {document: true}) for the Setting document it updates by id,
+          // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+          if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
+          if (key === "show-traits") return false;
+          return origGetT.call(this, ns, key, ...rest);
+        };
+        try {
+          dlg = await openDialog(sheet);
+          out.rowsTraitsOff = dlg ? [...dlg.querySelectorAll(".reroll-row")].map((row) => row.dataset.part) : null;
+          if (dlg) await closeDialog(dlg);
+        } finally {
+          game.settings.get = origGetT;
+        }
       }
 
       // ---- 2b. Rolled (flag false) and legacy (flag absent) → all checked -
@@ -597,6 +639,9 @@ try {
       await game.settings.set(NS, "barebones-failed-career", was.failedCareer);
       await game.settings.set(NS, "show-generation-rolls", was.genRolls);
       await game.settings.set(NS, "show-grant-tags", was.grantTags);
+      for (const k of PC_DICE) {
+        if (game.settings.get(NS, k) !== diceWas[k]) await game.settings.set(NS, k, diceWas[k]);
+      }
       const plantedIds = new Set(made.map((a) => a.id));
       for (const a of made) { try { await a.delete(); } catch { /* already gone */ } }
       // The probe's own chat cards go with its actors.
@@ -628,6 +673,12 @@ try {
       && r.notes2e?.pick?.includes("choose instead of rolling")
       ? ok("both notes render (questions scope + pick-instead)")
       : fail(`notes: ${JSON.stringify(r.notes2e)}`);
+
+    Array.isArray(r.rowsTraitsOff)
+      && !r.rowsTraitsOff.includes("age") && !r.rowsTraitsOff.includes("traits")
+      && r.rowsTraitsOff.includes("STR")
+      ? ok("show-traits OFF removes the age and traits rows (STR row survives)")
+      : fail(`show-traits OFF rows: ${JSON.stringify(r.rowsTraitsOff)}`);
 
     const wantBb = ["name", "background", "gear", "failedCareer", "keepsake",
       "STR", "DEX", "WIL", "hp", "gold", "age", "traits", "portrait"];
@@ -800,6 +851,54 @@ try {
       ? ok("a legacy untagged grant still swaps — the name-matcher covers refs no tag claims")
       : fail(`legacy: ${JSON.stringify(LG)}`);
   }
+
+  /* ---- 9. THE ENTER KEY (review #26) --------------------------------------
+   * Outside the big evaluate, because this can only be measured with a REAL
+   * keypress: the whole defect is what the BROWSER does with Enter, and
+   * `form.requestSubmit()` from script sets no submitter at all, so a scripted
+   * version of this leg is green against the broken build. Confirmed by
+   * running it that way first.
+   *
+   * `default: true` autofocuses Cancel and does nothing else, so before the
+   * fix Enter fired the first SUBMIT button — reroll — and re-dealt the
+   * character. Ticking rows is why this dialog opens, so focus is inside the
+   * form whenever the user commits.
+   * ---------------------------------------------------------------------- */
+  await page.evaluate(async () => {
+    const D = foundry.applications.api.DialogV2;
+    window.__enterSpy = { dispatched: null };
+    const orig = D.prototype._onSubmit;
+    window.__restoreEnterSpy = () => { D.prototype._onSubmit = orig; };
+    D.prototype._onSubmit = function (target, event) {
+      window.__enterSpy.dispatched = target?.dataset?.action ?? "(none)";
+      return orig.call(this, target, event);
+    };
+    const actor = await CONFIG.Actor.documentClass.create({ name: "ZZ Enter Probe", type: "character" });
+    window.__enterActorId = actor.id;
+    await actor.sheet.render(true);
+    await new Promise((res) => setTimeout(res, 900));
+    // Ask only. `_promptRerollParts` applies nothing, so a green run leaves
+    // the character alone whichever button wins.
+    actor.sheet._promptRerollParts().then((p) => { window.__enterSpy.parts = p; });
+  });
+  await page.waitForSelector('.reroll-row input[type="checkbox"]', { timeout: 15000 });
+  await page.click('.reroll-row input[name="STR"]');
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(700);
+  const E = await page.evaluate(() => {
+    const out = { ...window.__enterSpy };
+    window.__restoreEnterSpy?.();
+    [...foundry.applications.instances.values()]
+      .filter((a) => a instanceof foundry.applications.api.DialogV2).forEach((d) => d.close());
+    game.actors.get(window.__enterActorId)?.delete();
+    return out;
+  });
+  E.dispatched === "cancel"
+    ? ok("Enter with a row ticked CANCELS the checklist — it does not re-deal")
+    : fail(`Enter dispatched "${E.dispatched}" (want "cancel")`);
+  E.parts === null
+    ? ok("…and the checklist resolves null, so nothing is re-rolled")
+    : fail(`Enter resolved parts: ${JSON.stringify(E.parts)}`);
 } catch (e) {
   fail(`${e.name}: ${e.message}`);
 } finally {

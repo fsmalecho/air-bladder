@@ -164,6 +164,145 @@ check("turns read bucket-sorted, unrolled LAST", roll.bucketSorted
   `positions=${JSON.stringify(roll.order)} mine=${roll.mine} unrolled=${roll.unrolled} — null sorts -Infinity, visibly unrolled rather than quietly passed`);
 
 /* ---------------------------------------------------------------------------
+ * 1b. The save card is TABLE information (user ruling 2026-09-06): the
+ *     Warden's roll-mode dropdown must not hide it — a Roll All under
+ *     "Private GM Roll" showed players only "Warden privately rolled some
+ *     dice ???" — and the total wears its outcome, green for a pass, red
+ *     for a fail. Hidden combatants keep their GM whisper (section 1's leg).
+ * ------------------------------------------------------------------------- */
+console.log("\nthe save card is public and marked");
+const card = await page.evaluate(async (ids) => {
+  const r = {};
+  const combat = game.combats.get(ids.combatId);
+  const was = game.settings.get("core", "messageMode");
+  const a = await Actor.implementation.create({
+    name: "ZZ Init Private", type: "character",
+    system: { abilities: { DEX: { value: 20, max: 20 } } },
+  });
+  r.actorId = a.id;
+  try {
+    await game.settings.set("core", "messageMode", "gm");
+    const [c] = await combat.createEmbeddedDocuments("Combatant", [{ actorId: a.id, name: a.name }]);
+    const before = new Set(game.messages.contents.map((m) => m.id));
+    await combat.rollInitiative([c.id]);
+    const msg = game.messages.contents.find((m) => !before.has(m.id) && m.speaker?.alias === "ZZ Init Private");
+    r.whisper = msg ? msg.whisper.length : "no card";
+    r.blind = msg?.blind ?? "no card";
+    r.init = combat.combatants.get(c.id)?.initiative;
+    // The card is the evidence; the combatant must not join section 2's cast.
+    await c.delete();
+  } finally {
+    await game.settings.set("core", "messageMode", was);
+  }
+  // The rendered outcome classes, read off the GM's own chat log.
+  await new Promise((res) => setTimeout(res, 600));
+  const totalOf = (alias) => {
+    const rows = [...document.querySelectorAll("#chat .chat-message, #chat-log .chat-message, ol.chat-log > li.chat-message")];
+    const row = rows.reverse().find((el) => el.textContent.includes(alias));
+    return row?.querySelector(".dice-total")?.className ?? "no row";
+  };
+  r.passClasses = totalOf("ZZ Init Pass");
+  r.failClasses = totalOf("ZZ Init Fail");
+  r.privateClasses = totalOf("ZZ Init Private");
+  return r;
+}, roll.ids);
+roll.ids.actorIds.push(card.actorId);
+
+check("the roll-mode dropdown cannot hide a save (gm mode → public card)",
+  card.whisper === 0 && card.blind === false && card.init === 1,
+  `whisper=${card.whisper} blind=${card.blind} init=${card.init} — initiative is table information by ruling`);
+check("a passed save's total wears the pass mark, a failed one the fail mark",
+  /cairn-save-pass/.test(card.passClasses) && /cairn-save-fail/.test(card.failClasses)
+  && /cairn-save-pass/.test(card.privateClasses),
+  `pass="${card.passClasses}" fail="${card.failClasses}" private="${card.privateClasses}"`);
+
+/* ---------------------------------------------------------------------------
+ * 1c. The save card's flavor follows the VIEWER (review #23 finding 8): the
+ *     baked flavor froze the roller's language and the raw combatant name, so
+ *     an es client read "Mule" in the flavor under "Mula" in the header. The
+ *     render hook rebuilds it per viewer off numbers stored in the flag; a
+ *     character's name NEVER localizes (the 2026-08-04 gate). The overlay is
+ *     shadowed in-page and RESTORED — never a world write.
+ * ------------------------------------------------------------------------- */
+console.log("\nthe save card's flavor follows the viewer");
+const flavorLeg = await page.evaluate(async (ids) => {
+  const r = {};
+  const i18n = await import("/systems/air-bladder/module/i18n-content.js");
+  const scene = game.scenes.get(ids.sceneId);
+  const combat = game.combats.get(ids.combatId);
+  // A FRIENDLY npc: party-side by disposition, so it saves — the combatant
+  // class the finding is about (a PC's name never translates either way).
+  const mule = await Actor.implementation.create({
+    name: "ZZ Init Mule", type: "npc",
+    system: { abilities: { DEX: { value: 20, max: 20 } } },
+    prototypeToken: { disposition: 1 },
+  });
+  r.actorId = mule.id;
+  const [tok] = await scene.createEmbeddedDocuments("Token", [await mule.getTokenDocument({ x: 1150, y: 100 })]);
+  const [c] = await combat.createEmbeddedDocuments("Combatant", [{
+    actorId: mule.id, tokenId: tok.id, sceneId: scene.id }]);
+  const before = new Set(game.messages.contents.map((m) => m.id));
+  await combat.rollInitiative([c.id]);
+  const msg = game.messages.contents.find((m) => !before.has(m.id) && m.speaker?.alias === "ZZ Init Mule");
+  const passMsg = game.messages.contents.find((m) => m.speaker?.alias === "ZZ Init Pass"
+    && m.getFlag("air-bladder", "save"));
+  if (!msg) { r.err = "no mule card"; return r; }
+  const flavorOf = async (m) => {
+    const html = await m.renderHTML();
+    return html.querySelector(".flavor-text")?.textContent ?? "no flavor";
+  };
+  r.plain = await flavorOf(msg);
+  try {
+    i18n._setOverlay({ "monster.name": { "ZZ Init Mule": "ZZ Mula", "ZZ Init Pass": "ZZ WRONG" } });
+    r.shadowed = await flavorOf(msg);
+    r.pcShadowed = passMsg ? await flavorOf(passMsg) : "no pass card";
+  } finally {
+    i18n._setOverlay(null);
+  }
+  r.restored = await flavorOf(msg);
+  // The card is the evidence; neither the row nor the token joins section 2.
+  await c.delete();
+  await tok.delete();
+  return r;
+}, roll.ids);
+roll.ids.actorIds.push(flavorLeg.actorId);
+
+check("the mule's card bakes its plain name (precondition)",
+  !flavorLeg.err && /ZZ Init Mule/.test(flavorLeg.plain),
+  flavorLeg.err ?? `plain="${flavorLeg.plain}"`);
+check("under an overlay the flavor takes the viewer's name for a friendly npc",
+  /ZZ Mula/.test(flavorLeg.shadowed ?? "") && !/ZZ Init Mule/.test(flavorLeg.shadowed ?? ""),
+  `shadowed="${flavorLeg.shadowed}"`);
+check("a character's flavor name never localizes",
+  /ZZ Init Pass/.test(flavorLeg.pcShadowed ?? "") && !/ZZ WRONG/.test(flavorLeg.pcShadowed ?? ""),
+  `pc="${flavorLeg.pcShadowed}"`);
+check("the overlay shadow is restored — the flavor reads plain again",
+  /ZZ Init Mule/.test(flavorLeg.restored ?? ""), `restored="${flavorLeg.restored}"`);
+
+// The flavor is rebuilt per viewer from `saveTotal`/`saveDex`
+// (markInitiativeOutcome) and written to innerHTML; a message's flags are
+// player-authorable and never server-sanitized, and game.i18n.format is raw
+// substitution. So a flag carrying markup must not reach the card as a live
+// attribute. Asserted on the parsed element (a src-less img, never appended)
+// so the leg is deterministic and adds no console error; the live firing was
+// observed by hand during review #24. Finding 2.
+const saveXss = await page.evaluate(async () => {
+  const msg = new ChatMessage.implementation({
+    flavor: "zz seed",
+    speaker: { alias: "ZZ Init Hostile" },
+    flags: { "air-bladder": {
+      save: "pass",
+      saveTotal: '<img onerror="window.__zzSaveXss = 1">',
+      saveDex: 3,
+    } },
+  });
+  const el = await msg.renderHTML();
+  return { hasOnerror: !!el.querySelector(".flavor-text [onerror]") };
+});
+check("a hostile saveTotal flag cannot inject into the save card",
+  !saveXss.hasOnerror, `onerror-attr=${saveXss.hasOnerror}`);
+
+/* ---------------------------------------------------------------------------
  * 2. The tracker prints words, dividers, and a roll button — never numbers.
  * ------------------------------------------------------------------------- */
 console.log("\nthe tracker speaks Cairn");

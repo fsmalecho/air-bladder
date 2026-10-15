@@ -2,7 +2,7 @@
 /**
  * LICENSE.txt must not shrink back to a bare MIT file.
  *
- * Air Bladder ships six licensing regimes, and until 2026-07-30 the root
+ * Air Bladder ships seven licensing regimes, and until 2026-07-30 the root
  * LICENSE.txt was 21 lines of unqualified MIT covering all of them — naming Yochai
  * Gal as a copyright holder OF THE SOFTWARE when his contribution is game text
  * under CC BY-SA, and purporting to grant sublicensing over Jon Aspeheim's CC BY
@@ -16,7 +16,7 @@
  * file should look like every other licence file. Both produce exactly the shape
  * this rejects.
  *
- * Four checks, all offline:
+ * The first four checks, all offline:
  *
  *   1. LICENSE.txt does not OPEN as a bare licence template.
  *   2. Every licence named in README's "Credits & licenses" is named in
@@ -34,6 +34,14 @@
  *      the moment someone follows it, an unnamed directory never does. What
  *      ships is read from the workflow, not from a list kept here, because a
  *      second list drifts exactly as LICENSE.txt drifted from README.
+ *
+ * Added since, each in its own section below and each because a published claim
+ * had nothing holding it: the gallery counts and their category counts, the
+ * CC BY §3(a)(1)(B) modification indications, and — 2026-09-12, a user ruling —
+ * the rule that CAIRN'S GAME TEXT IS CC BY-SA WHEREVER IT SITS. That last one
+ * is the general answer to a question two reviews had each answered for one
+ * more file; see its own comment for why a list of carve-outs was the wrong
+ * shape.
  *
  * Scope, stated plainly: it checks the two files agree on WHICH licences apply.
  * It cannot check the licences are correct, and a regime added to README under a
@@ -60,6 +68,11 @@ const readme = read("README.md");
 const LICENCES = [
   { name: "MIT", re: /\bMIT\b/ },
   { name: "CC BY-SA 4.0", re: /CC BY-SA 4\.0/ },
+  // Lydia Comer's galleries since 2026-09-07 (review #27: the relicence landed and
+  // this list did not follow it, so a reword dropping the NC term would have
+  // passed check 2 green -- the one term that decides whether the system may
+  // ever go paid). The CC BY-SA pattern above does NOT match "CC BY-NC-SA 4.0".
+  { name: "CC BY-NC-SA 4.0", re: /CC BY-NC-SA 4\.0/ },
   { name: "CC BY 4.0", re: /CC BY 4\.0/ },
   { name: "CC BY 3.0", re: /CC BY 3\.0/ },
   { name: "OFL 1.1", re: /OFL 1\.1|Open Font License,? Version 1\.1|Open Font License 1\.1/ },
@@ -73,7 +86,7 @@ console.log("\nLICENSE.txt vs README.md");
 const firstLine = licence.split("\n").find((l) => l.trim() !== "")?.trim() ?? "";
 if (/^(MIT|Apache|BSD|GNU|ISC|The MIT)\b/i.test(firstLine)) {
   fail(`LICENSE.txt opens with "${firstLine}" — it reads as a single-licence file. `
-    + "Six regimes ship here and MIT covers the code only; see README.md.");
+    + "Seven regimes ship here and MIT covers the code only; see README.md.");
 } else {
   ok(`LICENSE.txt opens as a multi-licence notice ("${firstLine}")`);
 }
@@ -121,9 +134,18 @@ if (!failed) ok(`both files name the same ${LICENCES.length} regimes`);
 // LICENSE.txt naming one that is missing now fails loudly below instead.
 const workflow = readFileSync(join(ROOT, ".github/workflows/main.yml"), "utf8");
 const zipLine = workflow.split("\n").find((l) => l.includes("zip -r ./system.zip"));
-const shippedDirs = zipLine
-  ? zipLine.replace(/^.*zip -r \.\/system\.zip/, "").trim().split(/\s+/).filter((p) => p.endsWith("/"))
+const shippedArgs = zipLine
+  ? zipLine.replace(/^.*zip -r \.\/system\.zip/, "").trim().split(/\s+/).filter(Boolean)
   : [];
+const shippedDirs = shippedArgs.filter((p) => p.endsWith("/"));
+// THE FILES SHIP TOO, and this gate could not see them. `shippedDirs` was the
+// only list, filtered on a trailing slash, so check 4 below asked its question
+// of nine directories and silently skipped the four FILE arguments — while its
+// own comment says the question is "is everything that ships named". README.md
+// and README.es.md rode every release that way, named by no clause, under a
+// LICENSE.txt whose MIT grant says "these and only these". A check that cannot
+// fail on a whole category of input reads exactly like a check that passed.
+const shippedFiles = shippedArgs.filter((p) => !p.endsWith("/"));
 
 const topLevel = new Set(readdirSync(ROOT));
 for (const dir of shippedDirs) topLevel.add(dir.replace(/\/$/, ""));
@@ -140,6 +162,44 @@ for (const p of [...paths].sort()) {
   missing++;
 }
 if (!missing) ok(`all ${paths.size} referenced paths exist (${[...paths].sort().join(", ")})`);
+
+/* 3b. …and a path that does NOT ship is declared as repo-only --------------- */
+
+// Check 3 asks whether a referenced path exists IN THE REPO. Nobody asked
+// whether it exists in the thing a user actually receives (review #26).
+// LICENSE.txt ships inside system.zip and is the only licence document an
+// installer gets, and four of its pointers lead out of that zip entirely.
+//
+// None of the four carries an attribution obligation — every path that does
+// (the CREDITS files, the per-gallery license.txt, fonts/OFL.txt,
+// logo/README.md) ships — so this is not a breach today. It is the gap that
+// makes one possible: a future clause delegating an attribution to a `docs/`
+// or `tools/` path would pass check 3, ship, and point at nothing.
+//
+// Named individually rather than by top-level root, so a NEW unshipped
+// reference fails even though a sibling is allowed.
+// The bare roots appear as their own entries because the extractor above
+// matches a first segment plus whatever follows, including nothing.
+const REPO_ONLY = new Set([
+  "docs/", "src/packs/", "tools/",
+  "src/packs/macros/",            // the four Warden macros, also compiled into packs/
+  "tools/import/system-docs.mjs", // named as the generator of the docs journal
+  "tools/import/vald.mjs",        // named as the fetcher of the Vald SRD text
+  "docs/provenance.md",           // the authorship record, pointed at for provenance
+]);
+let unshipped = 0;
+for (const p of [...paths].sort()) {
+  const root = `${p.split("/")[0]}/`;
+  if (shippedDirs.includes(root) || shippedFiles.includes(p)) continue;
+  if (REPO_ONLY.has(p)) continue;
+  fail(`LICENSE.txt points at "${p}", which is NOT in the release zip and is not declared repo-only. `
+    + "If it carries an attribution, ship it; if it is provenance only, add it to REPO_ONLY here "
+    + "and make sure LICENSE.txt says where to find it.");
+  unshipped++;
+}
+if (!unshipped) {
+  ok(`every path LICENSE.txt names either ships or is declared repo-only (${REPO_ONLY.size} repo-only)`);
+}
 
 /* 4. Every SHIPPED path is named by some clause ----------------------------- */
 
@@ -158,12 +218,30 @@ if (!zipLine) {
     + "this check cannot tell what ships");
 } else {
   const named = [...paths].map((p) => p.split("/")[0]);
-  const unnamed = shippedDirs.filter((dir) => !named.includes(dir.replace(/\/$/, "")));
+  // A shipped FILE is named by a clause when it appears INSIDE the clause
+  // section, not merely somewhere in the file. The distinction is load-bearing:
+  // LICENSE.txt's own preamble points at README.md for the credits, so a test
+  // against the whole text called README.md "named" on the strength of a
+  // cross-reference that grants nothing — a green for the wrong reason, which
+  // is the failure this whole check exists to end. `paths` (check 3) is built
+  // from the whole text on purpose: there the question is whether a pointer
+  // rots, and a pointer in the preamble is still a pointer.
+  const clauses = licence.slice(
+    licence.indexOf("What ships under which licence"),
+    licence.indexOf("Permission is hereby granted"),
+  );
+  const namesFile = (f) => new RegExp(`(^|\\s)${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$|[.,])`, "m")
+    .test(clauses);
+  const unnamed = [
+    ...shippedDirs.filter((dir) => !named.includes(dir.replace(/\/$/, ""))),
+    ...shippedFiles.filter((f) => f !== "LICENSE.txt" && !namesFile(f)),
+  ];
   if (unnamed.length) {
     fail(`the release zip ships ${unnamed.join(", ")}, which LICENSE.txt names in no clause — `
       + 'and its MIT clause says "these and only these", so an unnamed path is excluded, not implied');
   } else {
-    ok(`every shipped directory is named by a clause (${shippedDirs.length} checked)`);
+    ok(`every shipped path is named by a clause `
+      + `(${shippedDirs.length} dirs + ${shippedFiles.length} files checked)`);
   }
 }
 
@@ -312,13 +390,14 @@ if (statedArtists === undefined) {
   ok(`LICENSE.txt's contributor count matches CREDITS.md (${creditedArtists.length})`);
 }
 
-/* --- 6. the Lydia Comer gallery is PAIRED, and stated at its true size ------ */
+/* --- 6. the Lydia Comer galleries are PAIRED, and stated at their true size - */
 
-// This one is not a public licence: an all-rights-reserved grant to this system
-// alone. So the thing to hold is narrower than attribution -- it is that the
+// TWO SETS since 2026-09-05 (CC BY-NC-SA 4.0 since 2026-09-07, both; the logo beside them stays the
+// all-rights-reserved grant): `characters` in portraits/ + tokens/, `monsters`
+// in portraits-monsters/ + tokens-monsters/. The thing to hold is that the
 // shipped tree still matches what the manifest and the notices claim, because
-// every consumer of this gallery (the picker, the portrait die, the paired-token
-// lookup) trusts the manifest and none of them can see the disk.
+// every consumer of these galleries (the picker, the portrait die, the
+// paired-token lookup) trusts the manifest and none of them can see the disk.
 //
 // The PAIRING is the load-bearing half. A portrait with no token is not a
 // missing file, it is an actor whose sheet shows the square and whose token on
@@ -333,47 +412,135 @@ if (statedArtists === undefined) {
 // container format is not this gate's business and should not be able to break
 // it again the next time the shipped format changes.
 const IMAGE = /\.(jpe?g|png|webp|gif|avif)$/i;
-const lydiaPortraits = readdirSync(join(ROOT, "art", "lydia-comer", "portraits")).filter((f) => IMAGE.test(f));
-const lydiaTokens = new Set(readdirSync(join(ROOT, "art", "lydia-comer", "tokens")).filter((f) => IMAGE.test(f)));
 const lydiaManifest = JSON.parse(read("module/lydia-manifest.json"));
 const stem = (f) => f.replace(/\.[^.]+$/, "");
-const lydiaTokenStems = new Set([...lydiaTokens].map(stem));
-
 const lydiaProblems = [];
-for (const p of lydiaPortraits) if (!lydiaTokenStems.has(stem(p))) lydiaProblems.push(`portraits/${p} has no paired token`);
-for (const t of lydiaTokens) if (!lydiaPortraits.some((p) => stem(p) === stem(t))) lydiaProblems.push(`tokens/${t} has no paired portrait`);
-if (lydiaManifest.pairs?.length !== lydiaPortraits.length) {
-  lydiaProblems.push(`module/lydia-manifest.json lists ${lydiaManifest.pairs?.length} pairs, disk holds ${lydiaPortraits.length}`);
-}
-for (const { portrait, token } of lydiaManifest.pairs ?? []) {
-  if (!lydiaPortraits.includes(portrait)) lydiaProblems.push(`manifest names portraits/${portrait}, which is not on disk`);
-  if (!lydiaTokens.has(token)) lydiaProblems.push(`manifest names tokens/${token}, which is not on disk`);
+const lydiaCounts = {};
+const LYDIA_SETS = { characters: ["portraits", "tokens"], monsters: ["portraits-monsters", "tokens-monsters"] };
+// A missing FOLDER is a finding, not a crash: readdirSync throwing here took
+// the whole gate down with a raw stack while every other check went unrun.
+const readImages = (dir) => {
+  try { return readdirSync(join(ROOT, "art", "lydia-comer", dir)).filter((f) => IMAGE.test(f)); }
+  catch { return null; }
+};
+for (const [setName, [pDir, tDir]] of Object.entries(LYDIA_SETS)) {
+  const portraits = readImages(pDir);
+  const tokens = readImages(tDir);
+  if (portraits === null || tokens === null) {
+    lydiaProblems.push(`${setName}: folder missing on disk (${portraits === null ? pDir : tDir})`);
+    continue;
+  }
+  const tokenStems = new Set(tokens.map(stem));
+  for (const p of portraits) if (!tokenStems.has(stem(p))) lydiaProblems.push(`${pDir}/${p} has no paired token`);
+  for (const t of tokens) if (!portraits.some((p) => stem(p) === stem(t))) lydiaProblems.push(`${tDir}/${t} has no paired portrait`);
+  const set = lydiaManifest.sets?.[setName];
+  if (set?.pairs?.length !== portraits.length) {
+    lydiaProblems.push(`module/lydia-manifest.json lists ${set?.pairs?.length} ${setName} pairs, disk holds ${portraits.length}`);
+  }
+  for (const { portrait, token } of set?.pairs ?? []) {
+    if (!portraits.includes(portrait)) lydiaProblems.push(`manifest names ${pDir}/${portrait}, which is not on disk`);
+    if (!tokens.includes(token)) lydiaProblems.push(`manifest names ${tDir}/${token}, which is not on disk`);
+  }
+  lydiaCounts[setName] = portraits.length;
 }
 // Named rather than inlined so the pass message can COUNT them. It said "4
 // sites" from a literal, and went stale the moment two more were added -- this
-// gate reporting a stale number about staleness.
+// gate reporting a stale number about staleness. Each entry names the SET its
+// captured number states — two galleries, two counts, and a site that states
+// both carries two entries with two patterns.
 const LYDIA_COUNT_SITES = [
-  ["LICENSE.txt", /hold (\d+)\s+creatures/],
-  ["README.md", /(\d+) creatures drawn for this system/],
-  ["README.es.md", /(\d+) criaturas dibujadas para este sistema/],
-  ["art/lydia-comer/CREDITS.md", /^(\d+) creatures, \d+ files\./m],
-  // Both READMEs state it a second time, up in the feature list. Two statements
-  // of one number in one file is the ordinary way a count goes stale.
-  // The anchor deliberately stops at the countable phrase: the 2026-08-10
-  // tightening pass folded the three gallery bullets into one and dropped the
-  // "A gallery of" lead-in, which is exactly how the 0.1.15 workflow failed
-  // at the tag — the gate anchored on wording, not on the fact it checks.
-  ["README.md", /(\d+) monsters drawn for Air Bladder/],
-  ["README.es.md", /(\d+) monstruos dibujados para Air Bladder/],
+  ["LICENSE.txt", /hold (\d+) creatures and \d+ characters/, "monsters"],
+  ["LICENSE.txt", /hold \d+ creatures and (\d+) characters/, "characters"],
+  // The landing page states both counts too and was checked by NOTHING until
+  // 2026-09-12, when a seven-drawing delivery moved the character count and
+  // every gated site reported it while this one sat on the old number. Exactly
+  // the gap review #26 closed for the Aspeheim and tlomdev galleries, one file
+  // further along: a count is only as honest as the list that walks it.
+  ["site/index.html", /The (\d+) creatures and \d+ characters offered/, "monsters"],
+  ["site/index.html", /The \d+ creatures and (\d+) characters offered/, "characters"],
+  ["README.md", /(\d+) creatures and \d+ characters \(source:/, "monsters"],
+  ["README.md", /\d+ creatures and (\d+) characters \(source:/, "characters"],
+  ["README.es.md", /(\d+) criaturas y \d+ personajes \(fuente:/, "monsters"],
+  ["README.es.md", /\d+ criaturas y (\d+) personajes \(fuente:/, "characters"],
+  ["art/lydia-comer/CREDITS.md", /^(\d+) characters and \d+ creatures, \d+ files\./m, "characters"],
+  ["art/lydia-comer/CREDITS.md", /^\d+ characters and (\d+) creatures, \d+ files\./m, "monsters"],
+  // Both READMEs state the numbers a second time, up in the feature list. Two
+  // statements of one number in one file is the ordinary way a count goes
+  // stale. The anchor deliberately stops at the countable phrase: the
+  // 2026-08-10 tightening pass folded the three gallery bullets into one and
+  // dropped the "A gallery of" lead-in, which is exactly how the 0.1.15
+  // workflow failed at the tag — the gate anchored on wording, not on the
+  // fact it checks.
+  ["README.md", /(\d+) monsters and \d+ characters by/, "monsters"],
+  ["README.md", /\d+ monsters and (\d+) characters by/, "characters"],
+  ["README.es.md", /(\d+) monstruos y \d+ personajes de/, "monsters"],
+  ["README.es.md", /\d+ monstruos y (\d+) personajes de/, "characters"],
 ];
-for (const [file, pattern] of LYDIA_COUNT_SITES) {
+for (const [file, pattern, setName] of LYDIA_COUNT_SITES) {
   const m = read(file).match(pattern);
   if (!m) lydiaProblems.push(`${file}: the count sentence this gate anchors on is gone (${pattern})`);
-  else if (Number(m[1]) !== lydiaPortraits.length) lydiaProblems.push(`${file}: says ${m[1]}, disk holds ${lydiaPortraits.length}`);
+  else if (Number(m[1]) !== lydiaCounts[setName]) lydiaProblems.push(`${file}: says ${m[1]} ${setName}, disk holds ${lydiaCounts[setName]}`);
 }
 lydiaProblems.length === 0
-  ? ok(`the Lydia Comer gallery is fully paired and stated at its true size (${lydiaPortraits.length} creatures, ${LYDIA_COUNT_SITES.length} sites)`)
-  : fail(`Lydia Comer gallery:\n        ${lydiaProblems.join("\n        ")}`);
+  ? ok(`the Lydia Comer galleries are fully paired and stated at their true size (${lydiaCounts.characters} characters + ${lydiaCounts.monsters} creatures, ${LYDIA_COUNT_SITES.length} sites)`)
+  : fail(`Lydia Comer galleries:\n        ${lydiaProblems.join("\n        ")}`);
+
+/* 7b. The two OTHER galleries state counts too, and nothing compared them ---
+ *
+ * Jon Aspeheim's 80 and tlomdev's 368 are stated across several sites inside CC
+ * BY and CC BY-SA attributions — the very reason the two galleries above are
+ * gated — and were checked by nothing at all (review #26). Both were correct on
+ * the day this landed, which is exactly what the game-icons and Lydia counts
+ * were before they drifted. Same shape as LYDIA_COUNT_SITES: disk is the
+ * authority, prose is compared to it, and a reword fails loudly rather than
+ * matching nothing.
+ */
+const IMG_RE = /\.(webp|png|jpe?g|svg)$/i;
+const countImages = (dir) => {
+  const abs = join(ROOT, dir);
+  if (!existsSync(abs)) return 0;
+  let n = 0;
+  for (const e of readdirSync(abs, { withFileTypes: true })) {
+    if (e.isDirectory()) n += countImages(`${dir}/${e.name}`);
+    else if (IMG_RE.test(e.name)) n += 1;
+  }
+  return n;
+};
+
+const galleryProblems = [];
+// Aspeheim ships PAIRED portraits and tokens, and the published number is the
+// number of pairs — so the pairing is asserted rather than assumed.
+const aspPortraits = countImages("art/jon-aspeheim/portraits");
+const aspTokens = countImages("art/jon-aspeheim/tokens");
+if (aspPortraits !== aspTokens) {
+  galleryProblems.push(`jon-aspeheim: ${aspPortraits} portraits but ${aspTokens} tokens — these galleries pair`);
+}
+// tlomdev is one set counted whole, subfolders included: the Kettlewright
+// portraits are the same artist's work under the same clause.
+const tlomdevCount = countImages("art/tlomdev");
+
+const GALLERY_COUNT_SITES = [
+  ["README.md", /(\d+) character portraits by \[Jon Aspeheim\]/, () => aspPortraits, "Aspeheim portraits"],
+  ["README.md", /The (\d+) paired portrait\/token images/, () => aspPortraits, "Aspeheim portraits"],
+  ["README.es.md", /(\d+) retratos de personaje/, () => aspPortraits, "Aspeheim portraits"],
+  ["site/index.html", /(\d+) character portraits by/, () => aspPortraits, "Aspeheim portraits"],
+  ["README.md", /(\d+) creature & NPC tokens by \[tlomdev\]/, () => tlomdevCount, "tlomdev tokens"],
+  ["README.md", /The (\d+) black-and-white token drawings/, () => tlomdevCount, "tlomdev tokens"],
+  ["art/tlomdev/CREDITS.md", /(\d+) drawings\./, () => tlomdevCount, "tlomdev tokens"],
+  ["README.es.md", /(\d+) tokens de criaturas y PNJ/, () => tlomdevCount, "tlomdev tokens"],
+  ["README.es.md", /Los (\d+) dibujos de token/, () => tlomdevCount, "tlomdev tokens"],
+  ["LICENSE.txt", /(\d+) token drawings in the Tlomdev picker gallery/, () => tlomdevCount, "tlomdev tokens"],
+  ["docs/provenance.md", /\| `art\/tlomdev\/` \| (\d+) \|/, () => tlomdevCount, "tlomdev tokens"],
+  ["docs/provenance.md", /across (\d+) files, published as a paid asset pack/, () => tlomdevCount, "tlomdev tokens"],
+];
+for (const [file, pattern, want, label] of GALLERY_COUNT_SITES) {
+  const m = read(file).match(pattern);
+  if (!m) galleryProblems.push(`${file}: the ${label} count sentence this gate anchors on is gone (${pattern})`);
+  else if (Number(m[1]) !== want()) galleryProblems.push(`${file}: says ${m[1]} ${label}, disk holds ${want()}`);
+}
+galleryProblems.length === 0
+  ? ok(`the Aspeheim and tlomdev counts match disk (${aspPortraits} paired portraits + ${tlomdevCount} tokens, ${GALLERY_COUNT_SITES.length} sites)`)
+  : fail(`gallery counts:\n        ${galleryProblems.join("\n        ")}`);
 
 /* 8. The tlomdev modification indication is a LICENCE TERM, not a courtesy --- */
 
@@ -407,6 +574,45 @@ for (const [file, pattern] of MOD_SITES) {
   modMissing++;
 }
 if (!modMissing) ok(`the §3(a)(1)(B) modification indications (tlomdev, Aspeheim) are present at all ${MOD_SITES.length} sites`);
+
+/* ---------------------------------------------------------------------- */
+/*  Cairn's game text is CC BY-SA wherever it sits                          */
+/* ---------------------------------------------------------------------- */
+
+// USER RULING, 2026-09-12: "The Cairn game text is always CC BY-SA 4.0."
+//
+// This ends a class rather than fixing an instance, and the class had already
+// cost two reviews a round each. #27 found module/npc-careers-2e.json — the
+// SRD's hirelings, sitting under module/, which the Code clause claims with the
+// words "these and only these" — and answered it by carving out that one file.
+// #28 then found the same question one directory over: five rules tooltips in
+// lang/en.json whose wording is Cairn's, byte-identical to the Player's Guide
+// journal this repo ships and itself declares CC BY-SA. A carve-out list loses
+// to the next file that gets added; the general rule cannot, so the general
+// rule is what the documents now state and what this gate holds.
+//
+// WHAT CAN REGRESS is nobody adding text — the rule covers text added later by
+// construction, which is the point of it — but somebody tidying the sentence
+// away while the Code clause's path list stays put. That is exactly the shape
+// LICENSE.txt was already found in once, and it reads as deliberate to a fork:
+// a path named under MIT with no statement that Cairn's words inside it are
+// not. So the three canonical surfaces are pinned. Not site/index.html, whose
+// Code entry makes no claim about paths and so cannot contradict this.
+const TEXT_RULE_SITES = [
+  ["LICENSE.txt", /CAIRN'S GAME TEXT IS ALWAYS CC BY-SA 4\.0, WHEREVER IT SITS/],
+  ["LICENSE.txt", /this clause follows Cairn's text wherever it is written/],
+  ["README.md", /Cairn's text is CC BY-SA 4\.0 wherever it sits/],
+  ["README.es.md", /El texto de Cairn es CC BY-SA 4\.0 esté donde esté/],
+];
+let ruleMissing = 0;
+for (const [file, pattern] of TEXT_RULE_SITES) {
+  if (pattern.test(read(file))) continue;
+  fail(`${file}: the rule that Cairn's game text is CC BY-SA wherever it sits is missing `
+    + `or reworded (${pattern}). It is a user ruling, not a form of words — if it must be `
+    + `rephrased, update this gate in the same commit.`);
+  ruleMissing++;
+}
+if (!ruleMissing) ok(`Cairn's text is stated CC BY-SA wherever it sits at all ${TEXT_RULE_SITES.length} sites`);
 
 console.log(`\n${failed ? "LICENCE CHECK FAILED" : "Licence check passed."}`);
 process.exit(failed ? 1 : 0);

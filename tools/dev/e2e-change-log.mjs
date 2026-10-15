@@ -45,14 +45,35 @@ import {
 const dog = watchdog(300000, "dev:changelog");
 
 const results = [];
+/**
+ * Every main-frame navigation the Warden's page made, in order.
+ *
+ * A leg that dies with "Execution context was destroyed, most likely because
+ * of a navigation" says nothing about WHAT navigated, and Playwright's guess
+ * is the least useful half of the sentence. A Foundry client navigates for
+ * exactly one interesting reason — it stopped being logged in — and the
+ * destination says which: a bounce to `/join` is an eviction (another session
+ * claimed this user) or a server restart, and neither is a defect in the
+ * feature the leg was testing. Recorded on 2026-09-12 after this probe went
+ * red once at the end of an 83-minute sweep and green alone straight after,
+ * with nothing but Playwright's guess to go on.
+ */
+const navigations = [];
+
 const leg = async (name, fn) => {
   try {
     await fn();
     results.push({ name, ok: true });
     console.log(`  ok    ${name}`);
   } catch (e) {
-    results.push({ name, ok: false, err: e.message });
-    console.log(`  FAIL  ${name}: ${e.message}`);
+    const destroyed = /Execution context was destroyed|Target (page|closed)|Navigation to/i.test(e.message);
+    const where = destroyed && navigations.length
+      ? ` — the Warden's page NAVIGATED during this leg (${navigations.join(" -> ")}). `
+        + "That is a lost session, not a change-log defect: another client claiming this same user, "
+        + "or the server restarting under the run. Re-run this probe alone before believing the leg."
+      : "";
+    results.push({ name, ok: false, err: e.message + where });
+    console.log(`  FAIL  ${name}: ${e.message}${where}`);
   }
 };
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
@@ -90,6 +111,11 @@ const run = async () => {
   const alice = await aliceCtx.newPage();
   const gmErrors = watchErrors(gm);
   const aliceErrors = watchErrors(alice);
+  // Main frame only: Foundry's own iframes (the editor, a popped-out sheet)
+  // navigate all the time and none of that costs us an execution context.
+  gm.on("framenavigated", (f) => {
+    if (f === gm.mainFrame()) navigations.push(f.url().replace(FOUNDRY_URL, ""));
+  });
 
   let created = { witness: null, hidden: null, npc: null };
   const preRunMessages = [];
@@ -294,17 +320,31 @@ const run = async () => {
           dlg.querySelector("button[data-action='yes']").click();
         }, { id: actorId, sel: buttonSel });
 
+      // A REST EATS A RATION (2026-10-03, house rule, PCs): the witness needs
+      // one on the sheet or the button opens the one-button refusal, whose only
+      // button is `ok` and not the `yes` the click-through presses. Planted
+      // BEFORE the snapshot, silently, so the plant's own card is not counted.
+      await gm.evaluate((id) => game.actors.get(id).createEmbeddedDocuments("Item",
+        [{ name: "Rations", type: "item", system: { uses: { value: 3, max: 3 } } }],
+        { abNoStatusCard: true }), created.witness);
       since = await messageIds(gm);
-      await leg("Rest names itself on the card (real button flow)", async () => {
+      await leg("Rest names itself on the card (real button flow) and logs the ration on the SAME card", async () => {
         await gm.evaluate((id) => game.actors.get(id).update(
           { "system.hp.value": 1 }, { abNoStatusCard: true }), created.witness);
         await clickThroughConfirm(alice, created.witness, "#rest-button");
         const logs = await logsSince(gm, since);
+        // ONE card. The Rest is a single actor write carrying the ration's diff
+        // in `items`, which never reaches the item-side ledger path (measured:
+        // a parent-carried embedded diff fires no preUpdateItem and no
+        // descendant callback) — so a spend-then-heal pair, two cards for one
+        // press, is what this count refuses.
         assert(logs.length === 1, `expected 1 card, got ${logs.length}`);
         assert(logs[0].content.includes('class="change-log-action"'), "no action header on the Rest card");
         const restLabel = await gm.evaluate(() => game.i18n.localize("CAIRN.Rest"));
         assert(logs[0].content.includes(`>${restLabel}<`), `header does not read "${restLabel}"`);
-        assert(logs[0].items === 1, `expected the HP line alone, got ${logs[0].items}`);
+        assert(logs[0].items === 2, `expected the HP line AND the ration's uses line, got ${logs[0].items}`);
+        const usesLine = await gm.evaluate(() => game.i18n.format("CAIRN.ChangeLog.Uses", { name: "Rations", from: 3, to: 2 }));
+        assert(logs[0].content.includes(usesLine), `no "${usesLine}" on the Rest card`);
       });
 
       since = await messageIds(gm);
@@ -519,6 +559,40 @@ const run = async () => {
         }, created.npc);
         const logs = await logsSince(gm, since, { expectNone: true });
         assert(logs.length === 0, `regeneration posted ${logs.length} ledger card(s)`);
+      });
+
+      // ---- per-viewer rebuild (review #30) ---------------------------------
+      // The ledger is whispered to the OWNERS and every Warden, so it has
+      // readers in every language at the table; it stored the acting client's
+      // rendering. The flag carries kinds and values; each client renders.
+      // The sentinel goes on the WARDEN'S client AFTER Alice composed the
+      // card, so the stored content cannot carry it: the rendered card must,
+      // the stored content must not.
+      since = await messageIds(gm);
+      await leg("the ledger is rebuilt in the READER's language, off a flag", async () => {
+        await alice.evaluate((id) => game.actors.get(id).update({ "system.gold": 61 }), created.witness);
+        const logs = await logsSince(gm, since);
+        assert(logs.length === 1, `expected exactly 1 card, got ${logs.length}`);
+        const r = await gm.evaluate(async (mid) => {
+          const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+          const real = game.i18n.localize.bind(game.i18n);
+          try {
+            game.i18n.localize = (k, ...a) => (k === "CAIRN.Gold" ? "ZZ-GOLD" : real(k, ...a));
+            await ui.chat.updateMessage(game.messages.get(mid));
+            await sleep(500);
+            const el = document.querySelector(`[data-message-id="${mid}"] .change-log`);
+            const m = game.messages.get(mid);
+            return {
+              rendered: el?.textContent ?? "",
+              stored: String(m?.content ?? ""),
+              flagged: Array.isArray(m?.getFlag("air-bladder", "changeLog")?.entries),
+            };
+          } finally { game.i18n.localize = real; }
+        }, logs[0].id);
+        assert(r.flagged, "the card carries no changeLog flag");
+        assert(r.rendered.includes("ZZ-GOLD"), `the Warden reads "${r.rendered.trim()}" — the stored language, not his own`);
+        assert(!r.stored.includes("ZZ-GOLD"), "the rebuild wrote its sentinel back into the stored message");
+        assert(r.rendered.includes("61"), `the rebuilt line lost its value: "${r.rendered.trim()}"`);
       });
 
       // ---- audience (negative) --------------------------------------------

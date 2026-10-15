@@ -95,8 +95,19 @@ const ok = (l, d = "") => console.log(`  ok    ${l.padEnd(56)} ${d}`);
 const fail = (l, d = "") => { console.log(`  FAIL  ${l.padEnd(56)} ${d}`); failures++; };
 const check = (cond, l, d = "") => (cond ? ok(l, d) : fail(l, d));
 
-watchdog(420000, "grimoire probe");
+// 900s, not 420s, and the browser is closed on the way out.
+//
+// This is the longest probe here — 112 legs, two raw-socket plants and a great
+// many chat cards — and 420s was comfortable for it ALONE and not comfortable
+// inside the full before-tagging sweep, where it came in at 421 seconds and
+// reported itself as a hang one second over the line (2026-09-12). A ceiling
+// that a healthy run can cross is not a hang detector, it is a load meter, and
+// the message it prints ("treating as a hang, not a slow run") is then exactly
+// wrong. The cleanup matters as much as the number: `process.exit` runs no
+// teardown, so a fired watchdog used to leave a Warden client connected to the
+// dev world for every probe that followed.
 const browser = await chromium.launch();
+watchdog(900000, "grimoire probe", () => browser.close());
 const gm = await browser.newPage({ viewport: VIEWPORT });
 const gmErrors = watchErrors(gm);
 await gm.goto(FOUNDRY_URL);
@@ -138,6 +149,10 @@ try {
     // assume the world's value — and never write it.
     const origGet = game.settings.get;
     game.settings.get = function (scope, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it updates by id,
+      // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, scope, key, ...rest);
       if (scope === game.system.id && key === "enable-glog-magic") return false;
       return origGet.call(this, scope, key, ...rest);
     };
@@ -311,6 +326,13 @@ try {
       i18n._setOverlay({ "item.name": {
         "ZZ Grim Tome": "ZZ-TOMO", "ZZ Spell Beta": "ZZ-BETA-ES",
       } });
+      // Snapshot the DialogV2 ids BEFORE the click and find the one that is
+      // NEW: an earlier transmute confirm (ZZ Spell Alpha) can still be closing
+      // when this fires, and a find-by-constructor-name grabbed that lingering
+      // dialog's English text instead — the recorded "a closing DialogV2
+      // lingers" race. Id-difference is the fix.
+      const before = new Set([...foundry.applications.instances.values()]
+        .filter((x) => x.constructor.name === "DialogV2").map((x) => x.id));
       [...a.sheet.element.querySelectorAll("[data-item-id]")]
         .find((r) => r.textContent.includes("ZZ Spell Beta"))
         ?.querySelector('[data-action="pageTransmute"]')?.click();
@@ -318,7 +340,8 @@ try {
       for (let i = 0; i < 60 && !dlg; i++) {
         await sleep(100);
         dlg = [...foundry.applications.instances.values()]
-          .find((x) => x.constructor.name === "DialogV2" && x.element?.querySelector(".dialog-content"));
+          .find((x) => x.constructor.name === "DialogV2" && !before.has(x.id)
+            && x.element?.querySelector(".dialog-content"));
       }
       out.ask = dlg?.element?.querySelector(".dialog-content")?.textContent
         ?.replace(/\s+/g, " ").trim() ?? null;
@@ -541,11 +564,25 @@ try {
     CONFIG.Dice.randomUniform = () => seq[Math.min(i++, seq.length - 1)];
     try {
       const msgsBefore = game.messages.size;
+      // Snapshot the open windows BEFORE the call opens one, and accept only a
+      // dialog that is NOT in the snapshot. `DialogV2.wait` resolves in its
+      // submit handler BEFORE the close begins (dialog.mjs:409-418), and
+      // `ApplicationV2#close` awaits the fade transition — up to 1000ms — BEFORE
+      // it deletes the window from `instances` (application.mjs:1016,1021). So
+      // the previous cast's dialog is still in the map, select and all, when
+      // this poll starts, and under sweep load it was what the first iteration
+      // found: its selects were set, ITS button clicked (a second submit on an
+      // already-resolved dialog, a no-op), and the NEW dialog sat unanswered —
+      // "never resolved after the cast click (20s)", on the fourth cast in a
+      // row, green alone (0.1.23 pre-tag sweep, 2026-09-13). The DOM form of
+      // the same trap is recorded on dev:changelog's Restore leg.
+      const before = new Set(foundry.applications.instances.keys());
       const p = castFromGrimoire(a);
       // Answer the dialog: pick Alpha, invest 2 dice.
       for (let t = 0; t < 40; t++) {
         const dlg = [...foundry.applications.instances.values()]
-          .find((x) => x.constructor.name === "DialogV2" && x.element?.querySelector('select[name="page"]'));
+          .find((x) => !before.has(x.id) && x.constructor.name === "DialogV2"
+            && x.element?.querySelector('select[name="page"]'));
         if (dlg) {
           const pageSel = dlg.element.querySelector('select[name="page"]');
           const alphaId = a.items.find((x) => x.name === "ZZ Spell Alpha").id;
@@ -554,7 +591,21 @@ try {
           const options = diceSel.options.length;
           diceSel.value = diceVal;
           dlg.element.querySelector('[data-action="cast"]').click();
-          const publicCard = await p;
+          // BOUNDED. The dialog-never-appeared path below has always had a
+          // ceiling (40 × 150ms) but this await had none, so a cast that never
+          // settles stopped the whole probe dead — no leg, no message, nothing
+          // to read but a watchdog line 15 minutes later blaming "a hang" it
+          // could not locate (2026-09-12: 54 of 112 legs, alone, on a run that
+          // had passed 112 an hour earlier). An unbounded await inside a
+          // page.evaluate is a probe that can only ever report silence. This
+          // turns the same event into a named red on the leg that caused it.
+          const publicCard = await Promise.race([
+            p,
+            new Promise((r) => setTimeout(() => r("__cast-timeout__"), 20000)),
+          ]);
+          if (publicCard === "__cast-timeout__") {
+            return { error: "castFromGrimoire never resolved after the cast click (20s)" };
+          }
           // The whisper is the newest message.
           await new Promise((r) => setTimeout(r, 300));
           const msgs = [...game.messages].slice(-(game.messages.size - msgsBefore));
@@ -680,11 +731,14 @@ try {
   // [4,4] again: sum 8, so [sum*10] must land on 80 in whatever language.
   const castL = await seedCast(gm, [0.4, 0.4]);
   check(!castL.error && castL.rollTotal === 8, "seeded [4,4] under the caster's overlay", castL.error ?? "");
-  check(castL.publicContent.includes("ZZ Spell Alpha")
-    && !castL.publicContent.includes("ZZ-CASTER-NAME")
-    && !castL.publicContent.includes("ZZ-CASTER-DESC"),
+  // A cast that reported an error carries no card; the legs under it must red
+  // in their own words rather than throw past every leg that follows.
+  const castLContent = castL.publicContent ?? "";
+  check(castLContent.includes("ZZ Spell Alpha")
+    && !castLContent.includes("ZZ-CASTER-NAME")
+    && !castLContent.includes("ZZ-CASTER-DESC"),
     "the STORED card is English, though the caster's own client is not",
-    castL.publicContent);
+    castLContent);
   check(castL.flag?.name === "ZZ Spell Alpha" && castL.flag?.desc === castLangSetup.desc
     && castL.flag?.dice === 2 && castL.flag?.sum === 8,
     "and it carries the English source plus the dice, which is what a viewer rebuilds from",
@@ -746,6 +800,44 @@ try {
     `${viewerLeg.storedFlavor} -> ${viewerLeg.flavor}`);
   check(viewerLeg.h3Again === "ZZ-VIEWER-NAME" && viewerLeg.cards === 1,
     "and re-rendering is idempotent: one card, same name");
+
+  /* ------------------------------- 6b. a hostile desc flag cannot inject --- */
+  // The card body is rebuilt from `glogCast.desc` on EVERY viewer's client
+  // (localizeGlogCastCard), and a message's flags are player-authorable and
+  // NOT server-sanitized the way its `content` HTMLField is. So a card whose
+  // stored content is a benign shell but whose FLAG carries markup must come
+  // out with the dangerous attributes stripped — an `on*` handler and the
+  // `data-action` an injected control would dispatch through (the two
+  // cleanDescription is built to strip, utils.js). Asserted on the parsed
+  // element, never appended and with no loadable src, so the leg is
+  // deterministic and adds no console error; the live firing was observed by
+  // hand during review #24. Finding 1 (shipped 0.1.17-0.1.19, the player->GM
+  // XSS class the htmlFields control exists to wall off).
+  const castXss = await gm.evaluate(async () => {
+    const msg = new ChatMessage.implementation({
+      content: '<div class="grimoire-cast-card">seed</div>',
+      speaker: { alias: "ZZ Grim Caster" },
+      flags: { "air-bladder": { glogCast: {
+        name: "ZZ Spell Alpha",
+        desc: 'benign prose <img onerror="window.__zzGlogXss = 1">'
+          + '<span data-action="itemCreate">z</span>',
+        dice: 2, sum: 7, alias: "ZZ Grim Caster",
+      } } },
+    });
+    const el = await msg.renderHTML();
+    const effect = el.querySelector(".grimoire-cast-effect");
+    return {
+      hasOnerror: !!el.querySelector(".grimoire-cast-card [onerror]"),
+      hasDataAction: !!el.querySelector(".grimoire-cast-card [data-action]"),
+      keepsProse: (effect?.textContent ?? "").includes("benign prose"),
+    };
+  });
+  check(!castXss.hasOnerror && !castXss.hasDataAction,
+    "a hostile desc flag is stripped before the cast card renders it",
+    `onerror-attr=${castXss.hasOnerror} data-action=${castXss.hasDataAction}`);
+  check(castXss.keepsProse,
+    "and the benign description text survives the clean",
+    `effect kept prose=${castXss.keepsProse}`);
 
   /* --------------------------------------- 8. the Fatigue button, full pack */
   const fatigue = await gm.evaluate(async ({ casterId, whisperId }) => {
@@ -1130,6 +1222,10 @@ try {
     const origGet = game.settings.get;
     const ns = game.system.id;
     game.settings.get = function (scope, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it updates by id,
+      // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, scope, key, ...rest);
       if (scope === ns && key === "enable-glog-magic") return false;
       return origGet.call(this, scope, key, ...rest);
     };
@@ -1163,6 +1259,10 @@ try {
     const origGet = game.settings.get;
     const ns = game.system.id;
     game.settings.get = function (scope, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it updates by id,
+      // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, scope, key, ...rest);
       if (scope === ns && key === "enable-glog-magic") return true;
       return origGet.call(this, scope, key, ...rest);
     };
@@ -1216,6 +1316,10 @@ try {
     const origGet = game.settings.get;
     const ns = game.system.id;
     game.settings.get = function (scope, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it updates by id,
+      // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, scope, key, ...rest);
       if (scope === ns && key === "enable-glog-magic") return true;
       return origGet.call(this, scope, key, ...rest);
     };

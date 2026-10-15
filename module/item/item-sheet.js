@@ -4,6 +4,7 @@ import { t } from "../i18n-content.js";
 import { TRANSPORT_KINDS } from "../icons.js";
 import { bindEditorClickAwaySave, cleanDescription, formatCount, sourceLabel } from "../utils.js";
 import { pickArt } from "../art-picker.js";
+import { glogEnabled } from "../glog.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -326,6 +327,23 @@ export class CairnItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     // submitOnChange saved it. DocumentSheetV2 already computes a unique id per
     // window as `rootId`, so this is now an alias rather than a hand-rolled one.
     context.idp = context.rootId;
+
+    // GLOG's two flags are HACK controls and show only while the hack is on
+    // (user ruling 2026-09-13, after an Air Bladder offered to become a
+    // Grimoire in a world with GLOG off). The spellbook's GLOG box shows on
+    // every spellbook while the hack is on — a Warden hand-writing a GLOG
+    // spell ticks it — but the Grimoire box shows ONLY on an item that already
+    // IS one: a Grimoire is found, made or taken, never declared by ticking a
+    // box on a rope (docs/glog-magic.md sends a Warden to the Reliquary), and
+    // a mis-tick made that rope the character's one permitted book.
+    context.glogEnabled = glogEnabled();
+    context.showGrimoire = context.glogEnabled && !!this.item.system?.grimoire;
+    // A spellbook that is neither a scroll nor under GLOG has FOUR counters —
+    // two rows — where the spellbook grid declares three counter rows for the
+    // five or six it was laid out for; without this the third row sat empty
+    // above the tabs on every shipped spellbook in a default world (review
+    // #30). The item sheet's `.plain-item` variant is the same shape.
+    context.spellbookCompact = !context.glogEnabled && !this.item.system?.scroll;
 
     // Content localization, on EVERY sheet including an editable one.
     //

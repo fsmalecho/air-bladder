@@ -1,4 +1,5 @@
-import { findTableItems } from "./compendium.js";
+import { findTableItems, resultText, MARKETPLACE_PACK, compendiumInfoFromString } from "./compendium.js";
+import { Cairn } from "./config.js";
 import { iconForTransport, TRANSPORT_KINDS } from "./icons.js";
 import { atConnectionLimit, maxConnections, connectedOwnershipShape, OWNERSHIP_SYNC_FLAG } from "./connections.js";
 import { actorDisplayName, localizeNameDesc, t } from "./i18n-content.js";
@@ -30,8 +31,13 @@ const playerMarketClosed = () =>
  * updates the shop, and dragging an item into a table stocks it. Bundles ("Common
  * Tools (…)") are ordinary items bought generic and renamed on the sheet.
  *
- * NOT cached: every open re-reads the pack (`getDocuments`), so a cost edit is
- * reflected on the next open — the whole point of the reference model.
+ * NOT cached: every open re-reads the tables, so a cost edit is reflected on the
+ * next open — the whole point of the reference model.
+ *
+ * And the tables themselves are WORLD FIRST since 2026-09-13 — see `marketTables`
+ * below, and `docs/customizing-the-marketplace.md`. Everything a Warden changes
+ * inside our own compendium is destroyed by the next update, so the durable route
+ * is a world table of the same name.
  *
  * Each item can be BOUGHT (pay its cost in coins) or TAKEN (granted free, e.g. by
  * the Warden). Cairn's slot rules stay this system's job: both refuse when the
@@ -52,7 +58,53 @@ export const TRANSPORTS_CATEGORY = "Transports & Containers";
 // Shopper-facing category order; a table whose stripped name isn't listed falls
 // to the end in pack order.
 const CATEGORY_ORDER = ["Weapons", "Armor", "Gear", TRANSPORTS_CATEGORY];
-const MARKETPLACE_PACK = "air-bladder.marketplace";
+/** What makes a WORLD table a market aisle. English, because a table's stored
+ *  name is always English here — the content overlay translates for display and
+ *  never for storage, which is the same reason `CATEGORY_ORDER` is English. */
+const MARKET_PREFIX = /^Market:\s*/i;
+
+/**
+ * An aisle's two names: `name` is the ENGLISH identity the catalog filters and
+ * orders on, `label` what a heading renders. Translate, THEN strip: the
+ * overlay key is the table's FULL stored name ("Market: Weapons"), which is
+ * what the content extractor emits under table.name, so stripping first would
+ * leave a translator holding a key ("Weapons") the overlay never produces. The
+ * strip is generic because a translated prefix is not "Market:" ("Mercado:",
+ * …); a translation carrying no prefix at all is left whole, and a miss
+ * degrades to the English behaviour. Exported for the table banner
+ * (table-banner.js), which must name an aisle exactly as the shop heads it.
+ * @param {string} name  a table's stored name
+ * @returns {{name: string, label: string}|null}  null when the name is not an aisle
+ */
+const stripPrefix = (name) => String(name).replace(MARKET_PREFIX, "").trim();
+const displayName = (fullName) => t("table.name", fullName).replace(/^[^:]+:\s*/, "").trim();
+export const marketAisle = (name) =>
+  (MARKET_PREFIX.test(name ?? "") ? { name: stripPrefix(name), label: displayName(name) } : null);
+
+/** Both pool tables, both hack states — the declarations' table halves, never
+ *  retyped (config.js characterGenerator2e.spells). */
+const SPELL_POOL_TABLES = new Set(
+  Object.values(Cairn.characterGenerator2e.spells).map((decl) => compendiumInfoFromString(decl)[1]));
+
+/**
+ * Does Air Bladder keep THIS table alphabetical on a drop? The `Market:` aisles
+ * and the two spell-pool tables, world copies only — the four tables whose
+ * shipped rows the importers wrote in name order, and whose banner
+ * (table-banner.js) tells the Warden "rows stay in alphabetical order". ONE
+ * predicate for the hook and the sentence, so the two cannot disagree.
+ *
+ * The spell tables joined 2026-09-15: core's drop appends at `maxRoll + 1` and
+ * never touches the formula (roll-table-sheet.mjs `_createResult`), so on the
+ * copied `Spells — Canon (1d100)` a dragged 101st spellbook sat at 101 under
+ * `1d100`, unreachable and silent — while docs and CLAUDE.md sold "drag a
+ * spellbook onto the copy" as the story. The 2e, Barebones and Warden tables
+ * keep the book's order, so they are NOT here; table-banner.js `fitFormula`
+ * keeps their flat die in step with their rows instead.
+ * @param {RollTable|null|undefined} table
+ * @returns {boolean}
+ */
+export const keptAlphabetical = (table) =>
+  !!table && !table.pack && (MARKET_PREFIX.test(table.name ?? "") || SPELL_POOL_TABLES.has(table.name));
 
 /** A resolved pool document → a fresh owned-item payload; carries the item's
  *  cost/description/tags.
@@ -82,30 +134,107 @@ const ownedPayload = (doc) => ({
 });
 
 /**
- * Read the marketplace pack into shopper-facing categories. Each category's items
- * are owned-item payloads resolved from that table's pack results, in table order.
+ * The market tables, WORLD FIRST.
+ *
+ * A world RollTable named exactly as a shipped one ("Market: Gear") REPLACES
+ * that aisle; one carrying the prefix under a name nothing ships ("Market:
+ * Trinkets") ADDS an aisle, after the four known ones. Deleting it restores the
+ * shipped table, and there is nothing else to configure.
+ *
+ * This is the rule `Bonds` and `Omens` already follow (`docs/customizing-bonds.md`),
+ * deliberately, so a Warden learns it once — and it is the only way for a Warden
+ * to keep their own prices and stock, because Foundry's installer deletes a
+ * system's whole directory before extracting an update
+ * (`dist/packages/installer.mjs`: `fs.promises.rm(target, {recursive: true})`),
+ * compendiums included. Core says as much in the dialog that unlocking one
+ * raises. So a stocking edit made inside our pack cannot survive, and the shop
+ * has to look somewhere that can.
+ *
+ * REPLACE, not merge (user ruling 2026-09-13): a Warden must be able to REMOVE a
+ * shipped item, and Import-then-edit already hands them all 49 Gear rows to start
+ * from. NOT `findTableByName` — that hunts every RollTable pack by index for one
+ * name, where this needs four specific tables plus whatever the world adds.
+ */
+const marketTables = async () => {
+  const pack = game.packs.get(MARKETPLACE_PACK);
+  const shipped = pack ? await pack.getDocuments() : [];
+  // Keyed on name, shipped first, so a world table of the same name overwrites
+  // its entry in place and a new name lands after them.
+  const byName = new Map(shipped.map((t) => [t.name, t]));
+  for (const table of game.tables ?? []) {
+    if (MARKET_PREFIX.test(table.name)) byName.set(table.name, table);
+  }
+  return [...byName.values()];
+};
+
+/**
+ * Keep a WORLD table alphabetical (2026-09-13, user ask: a dragged-in item "is
+ * added to the bottom of the list"; the spell tables since 2026-09-15).
+ *
+ * Core's table sheet appends a dropped row at `maxRoll + 1`
+ * (roll-table-sheet.mjs `_createResult`) and both it and the shop order rows
+ * by `range[0]`, so the shipped tables are alphabetical only because the
+ * importer wrote them that way, and a Warden's first drop breaks it. This
+ * re-ranges every row `[i, i]` in name order and keeps the formula at `1dN`,
+ * which is what the imported table already declared. Rows keep their weight.
+ *
+ * Sorted on the STORED row name — a document row's `name` is the item's name
+ * at drop time, a text row's is its description — with a base-sensitivity
+ * compare so "air bladder" and "Air Bladder" sort as neighbours. Only rows
+ * whose range actually moves are written. Which tables this applies to is
+ * `keptAlphabetical`'s decision, not this function's, and WHEN it runs is
+ * table-banner.js `onReadTableRowsChanged`'s — the one row hook for every
+ * world table Air Bladder reads, on the creating client only.
+ * @param {RollTable} table
+ * @returns {Promise<boolean>}  whether anything was written
+ */
+export const resortTableByName = async (table) => {
+  const rows = [...table.results];
+  const key = (r) => String(resultText(r) ?? "").trim();
+  const sorted = [...rows].sort((a, b) => key(a).localeCompare(key(b), undefined, { sensitivity: "base" }));
+  const updates = sorted
+    .map((r, i) => ({ _id: r.id, range: [i + 1, i + 1] }))
+    .filter((u) => { const r = table.results.get(u._id); return r.range[0] !== u.range[0] || r.range[1] !== u.range[1]; });
+  const formula = `1d${rows.length}`;
+  // ONE write — rows and formula together through the parent's update, which
+  // merges embedded entries by _id. Two writes (updateEmbeddedDocuments, then
+  // update({formula})) re-rendered the sheet twice and let a reader see the
+  // rows sorted under a stale formula between them; the probe caught exactly
+  // that gap on its first run.
+  // THE STORED FORMULA, NOT THE DERIVED ONE (review #30). `table.formula` is
+  // filled by prepareDerivedData with `1d<total weight>` whenever the stored
+  // value is blank (roll-table.mjs:349-353) — and a table built the way the
+  // guide says, Create Roll Table then drag, never submits the sheet form and
+  // so stores NONE. Compared against the derived value the write was always
+  // skipped, `_source.formula` stayed "", and the first `roll()` on that
+  // table (its sheet's Roll button, a Dashboard Your Tables button) found a
+  // blank stored formula, normalized it AND SAVED (roll-table.mjs:270-274),
+  // re-ranging every row in drag order and undoing the sort until the next drop.
+  const data = {};
+  if (updates.length) data.results = updates;
+  if (rows.length && table._source.formula !== formula) data.formula = formula;
+  if (!Object.keys(data).length) return false;
+  await table.update(data);
+  return true;
+};
+
+/**
+ * Read the market tables into shopper-facing categories. Each category's items
+ * are owned-item payloads resolved from that table's results, in table order.
  *
  * `name` is the ENGLISH identity (callers filter on it via opts.only/opts.exclude,
  * and CATEGORY_ORDER sorts by it); `label` is what a heading should render.
  * @returns {Promise<{categories: {name:string, label:string, items:object[]}[]}>}
  */
 export const getMarketplaceCatalog = async () => {
-  const pack = game.packs.get(MARKETPLACE_PACK);
-  if (!pack) return { categories: [] };
-  const tables = await pack.getDocuments();
+  const tables = await marketTables();
+  if (!tables.length) return { categories: [] };
 
-  const stripPrefix = (name) => String(name).replace(/^Market:\s*/i, "").trim();
   const orderOf = (name) => {
     const i = CATEGORY_ORDER.indexOf(stripPrefix(name));
     return i === -1 ? CATEGORY_ORDER.length : i;
   };
-  // The heading's translation key is the table's FULL document name ("Market:
-  // Weapons") — that is what the content extractor emits under table.name, so
-  // stripping first would leave a translator holding a key ("Weapons") the overlay
-  // never produces. Translate, then strip. The strip is generic because a
-  // translated prefix is not "Market:" ("Mercado:", …); a translation carrying no
-  // prefix at all is left whole, and a miss degrades to the English behaviour.
-  const displayName = (fullName) => t("table.name", fullName).replace(/^[^:]+:\s*/, "").trim();
+  // The heading is `marketAisle`'s label — translate, then strip; see there.
   tables.sort((a, b) => orderOf(a.name) - orderOf(b.name) || a.name.localeCompare(b.name));
 
   const categories = [];
@@ -530,7 +659,11 @@ export const openMarketplace = async (actor, opts = {}) => {
     if (!root) return;
     const gold = actor.system.gold ?? 0;
     root.querySelector(".mkt-coins").textContent = gold;
-    root.querySelector(".mkt-slotval").textContent = `${actor.system.slotsUsed}/${actor.system.slotsMax}`;
+    // The Dropped Item Pile's maximum is Infinity, which a template string
+    // prints as the WORD (review #33: "3/Infinity"); the npc sheet's
+    // `slotsMaxLabel` already shows the symbol, and this is the second readout.
+    const max = actor.system.slotsMax;
+    root.querySelector(".mkt-slotval").textContent = `${actor.system.slotsUsed}/${Number.isFinite(max) ? max : "∞"}`;
     // A full pack greys the rows it cannot take, rather than leaving a live
     // button that answers with a refusal — the shop should not offer what it is
     // about to turn down. `acquire` still refuses on its own: this is the

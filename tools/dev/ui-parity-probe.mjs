@@ -151,9 +151,13 @@ try {
     // covering the RESTORED state, so the UI is known-good on the day it is
     // unparked.
     const origSettingsGet = game.settings.get;
-    game.settings.get = function (ns, key) {
+    game.settings.get = function (ns, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it will update by
+      // id, and a value handed back here makes it CREATE a duplicate instead.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
       if (key === "connections-ui-enabled") return true;
-      return origSettingsGet.call(this, ns, key);
+      return origSettingsGet.call(this, ns, key, ...rest);
     };
     try {
       actor.prepareData();
@@ -604,6 +608,14 @@ try {
     out.restore = read("#restore-abilities-button");
     out.deprivedTip = game.i18n.localize("CAIRN.DeprivedTip");
     out.restTip = game.i18n.localize("CAIRN.RestTip");
+    // A REST EATS A RATION (2026-10-03): the PC sheet's Rest tooltip is
+    // RestRationTip ALONE — the ration sentence plus Cairn's bandages sentence,
+    // and NOT Cairn's "few moments" opening (user ruling later that day); the
+    // NPC sheet keeps RestTip alone (npc-probe asserts that half). This
+    // fixture is a player character. The opening is RestTip's own first
+    // sentence in this client's language, never an English literal.
+    out.rationTip = game.i18n.localize("CAIRN.RestRationTip");
+    out.fewMoments = out.restTip.split(". ")[0];
     const rct = actor.sheet.element.querySelector("#rest-button").getBoundingClientRect();
     out.center = { x: rct.x + rct.width / 2, y: rct.y + rct.height / 2 };
     return out;
@@ -612,9 +624,10 @@ try {
   !dep.restBefore?.disabledAttr && dep.rest?.disabledAttr && dep.restore?.disabledAttr
     ? ok("Rest/Restore are disabled while deprived, enabled otherwise")
     : fail(`deprived disable wrong: before=${JSON.stringify(dep.restBefore)} after=${JSON.stringify(dep.rest)}`);
-  dep.restBefore?.tooltip === dep.restTip && dep.rest?.tooltip === dep.deprivedTip && dep.restore?.tooltip === dep.deprivedTip
-    ? ok("the tooltip swaps to DeprivedTip while deprived, RestTip otherwise")
-    : fail(`tooltip not swapped: before="${dep.restBefore?.tooltip?.slice(0, 40)}" deprived="${dep.rest?.tooltip?.slice(0, 40)}"`);
+  dep.restBefore?.tooltip === dep.rationTip && !dep.restBefore.tooltip.includes(dep.fewMoments)
+    && dep.rest?.tooltip === dep.deprivedTip && dep.restore?.tooltip === dep.deprivedTip
+    ? ok("the tooltip swaps to DeprivedTip while deprived; otherwise it is the ration sentence plus the bandages sentence, without Cairn's \"few moments\" opening")
+    : fail(`tooltip not swapped: before="${dep.restBefore?.tooltip?.slice(0, 60)}" deprived="${dep.rest?.tooltip?.slice(0, 40)}"`);
 
   await page.mouse.move(dep.center.x - 180, dep.center.y - 120);
   await page.waitForTimeout(200);

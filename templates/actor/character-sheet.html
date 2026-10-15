@@ -54,6 +54,17 @@
                 {{else}}
                 <input class="background-input" type="text" name="system.background" value="{{system.background}}"
                     placeholder="{{ localize 'CAIRN.Background' }}" />
+                {{! The die and the picker belong on THIS branch too (2026-09-11).
+                    They used to hang off the generated branch alone, so a
+                    character with no background stored had a text box and no way
+                    to reach the table — and typing a name grants nothing, because
+                    the gear rides changeBackground. That was invisible while every
+                    character arrived generated; an EMPTY sheet is nothing but this
+                    branch, and picking a background is the whole point of it. }}
+                {{#if generationEnabled}}
+                <a class="background-roll" data-action="rollBackground" data-tooltip="CAIRN.RollBackground" aria-label="{{ localize 'CAIRN.RollBackground' }}"><i class="fas fa-dice-d20"></i></a>
+                <a class="background-pick" data-action="pickBackground" data-tooltip="CAIRN.ChangeBackground" aria-label="{{ localize 'CAIRN.ChangeBackground' }}"><i class="fas fa-list-ul"></i></a>
+                {{/if}}
                 {{/if}}
                 {{#if system.contentSource}}
                 <span class="content-source-label">({{ localize 'CAIRN.Source' }} {{contentSourceLabel}})</span>
@@ -113,7 +124,12 @@
                   in Chromium and Firefox both (verified live 2026-08-08), so the
                   tooltip fires on the disabled button as-is — no aria-disabled
                   workaround needed, and dev:ui-parity hovers it for real. --}}
-            <button id="rest-button" type="button" data-action="rest" class="strict-size-button" data-tooltip="{{#if system.deprived}}{{ localize deprivedTipKey }}{{else}}{{ localize 'CAIRN.RestTip' }}{{/if}}" {{#if system.deprived}}disabled{{/if}}><i class="fas fa-campground"></i> {{ localize 'CAIRN.Rest' }}</button>
+            {{!-- A REST EATS A RATION (2026-10-03, house rule, player characters
+                  only): the PC tooltip is RestRationTip ALONE — the dialog's own
+                  ration sentence plus Cairn's bandages sentence (user ruling the
+                  same day, having read the two side by side). RestTip, Cairn's
+                  "few moments" prose, is not edited and the NPC sheet keeps it. --}}
+            <button id="rest-button" type="button" data-action="rest" class="strict-size-button" data-tooltip="{{#if system.deprived}}{{ localize deprivedTipKey }}{{else}}{{ localize 'CAIRN.RestRationTip' }}{{/if}}" {{#if system.deprived}}disabled{{/if}}><i class="fas fa-campground"></i> {{ localize 'CAIRN.Rest' }}</button>
             <button id="restore-abilities-button" type="button" data-action="restoreAbilities" class="strict-size-button" data-tooltip="{{#if system.deprived}}{{ localize deprivedTipKey }}{{else}}{{ localize 'CAIRN.RestoreTip' }}{{/if}}" {{#if system.deprived}}disabled{{/if}}><i class="fas fa-heart-pulse"></i> {{ localize 'CAIRN.RestoreAbilities' }}</button>
             <button id="die-of-fate-button" type="button" data-action="dieOfFate" class="strict-size-button" data-tooltip="{{ localize 'CAIRN.DieOfFateTip' }}"><i class="fas fa-dice-d6"></i> {{ localize 'CAIRN.DieOfFate' }}</button>
         </div>
@@ -230,7 +246,7 @@
             </nav>
             <section class="content">
                 <div class="tab {{tabs.items.cssClass}}" data-group="primary" data-tab="items">
-                    {{> "systems/air-bladder/templates/parts/items-list.html" withFatigue=1 withShop=withShop}}
+                    {{> "systems/air-bladder/templates/parts/items-list.html" withFatigue=1 withShop=withShop withImprovised=canImprovise improvisedFormula=improvisedFormula withDrop=canDrop withDropNote=isPile}}
                 </div>
                 <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
                     <div class="description">

@@ -1,28 +1,47 @@
 // Import Modules
-import { CairnActor } from "./actor/actor.js";
+import { CairnActor, localizeStatusCard, localizeChangeLogCard } from "./actor/actor.js";
 import { CairnActorSheet } from "./actor/actor-sheet.js";
 import { CairnItem, FATIGUE_NAME, SPELLSCROLL_NAME } from "./item/item.js";
 import { CairnItemSheet } from "./item/item-sheet.js";
-import { createCharacter, createNpc, createHireling, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard, prewarmGenerationPacks } from "./character-generator.js";
+import { createCharacter, createActorInteractive, requestPcGeneration, enabledContentSources, FLAG_SCOPE, awaitDiceAnimation, findGenerationRollMessage, localizeGenerationCard, prewarmGenerationPacks } from "./character-generator.js";
 import * as characterGenerator from "./character-generator.js";
-import { createMonster } from "./monster-generator.js";
 import * as monsterGenerator from "./monster-generator.js";
-import { generateFaction } from "./faction-generator.js";
-import { reseedSpellTable } from "./spell-tables.js";
+import { createFactionInteractive } from "./faction-generator.js";
+import { injectTakeOverButton } from "./take-over.js";
+import { abTableRoleBanner, refreshTableBanners, onReadTableRowsChanged } from "./table-banner.js";
 import { importKettlewrightCharacter, performKettlewrightImport, sanitizeKettlewrightExport, showImportSummary } from "./kettlewright-import.js";
 import * as kettlewrightImport from "./kettlewright-import.js";
 import { Cairn } from "./config.js";
-import { CairnCombat, CairnCombatTracker, registerCombatOrderGuard } from "./combat.js";
+import { CairnCombat, CairnCombatTracker, registerCombatOrderGuard, markInitiativeOutcome } from "./combat.js";
+import { handleOfferSocket, bindOfferCard } from "./item-offer.js";
 import { createCairnMacro, rollItemMacro } from "./macros.js";
-import { Damage, DAMAGE_APPLIED_FLAG, DAMAGE_SOURCE_FLAG } from "./damage.js";
+import { Damage, DAMAGE_APPLIED_FLAG, DAMAGE_SOURCE_FLAG, localizeDamageCard } from "./damage.js";
 import { registerWardenDamageControl } from "./warden-damage.js";
+import { registerWardenDashboardControl, refreshDashboardTime, localizeDashboardCard } from "./warden-dashboard.js";
+import { handlePileQuery, localizePileCard, PILE_DROP_QUERY, askWhatToDrop, dropItemToPile, partyFolderId } from "./party-pile.js";
+import { mustDropForFatigue } from "./gear.js";
+import { installWorldCalendar, checkWorldCalendar } from "./game-time.js";
+import { renderWatchClock, refreshWatchClock } from "./watch-clock.js";
+import { refreshValdCalendar } from "./vald-calendar.js";
 import { registerSettings, SETTINGS_NS, SETTING_GROUPS, migrateSettingsNamespace } from "./settings.js";
 import { ACTOR_DATA_MODELS, ITEM_DATA_MODELS, deriveNpcRole } from "./data-models.js";
 import { connectionHeadroom, connectedOwnershipShape, syncPendingOwnership, OWNERSHIP_SYNC_FLAG } from "./connections.js";
-import { loadContentOverlay, t, translationOf, contentLocalized, tokenDisplayName, actorDisplayName, LOCALIZED_DIRECTORIES } from "./i18n-content.js";
-import { injectEncounterButton } from "./encounters.js";
+import { loadContentOverlay, t, translationOf, contentLocalized, tokenDisplayName, actorDisplayName, LOCALIZED_DIRECTORIES, localizeJournalBlocks } from "./i18n-content.js";
+import { injectEncounterButton, localizeEncounterQty, resolveTable } from "./encounters.js";
 import { bindGrimoireFatigueButton, localizeGlogCastCard } from "./grimoire.js";
-import { nameableTokens } from "./utils.js";
+import { nameableTokens, DAMAGE_QUALITY_KEYS, localizeD20Card, localizeRollFlavor, damageDiceIcons } from "./utils.js";
+
+/**
+ * The Fatigue instead of Critical Damage option: the save card's choice, once
+ * taken. On the MESSAGE, because a `disabled` attribute is local DOM and does
+ * not survive a re-render — the grimoire's `fatigueApplied` precedent, and the
+ * thing the Mark Critical Damage button has always lacked.
+ *
+ * The flag's NAME keeps the `crawler` of the mode it was born under (removed
+ * 2026-10-03): it is stored on every decided card already in a log, and a
+ * rename would leave those cards reading as undecided.
+ */
+const CRAWLER_CHOICE_FLAG = "crawlerChoiceTaken";
 
 Hooks.once("init", async function () {
   game.cairn = {
@@ -86,6 +105,83 @@ Hooks.once("init", async function () {
   // so it sits with the rest of the system's registrations, and because the
   // scene-controls palette is not built until well after this.
   registerWardenDamageControl();
+  // Beside it, and for the same reason: both hang a GM-only button on the
+  // Token controls, and neither palette exists yet at this point.
+  registerWardenDashboardControl();
+
+  // The Vald calendar, if the hack is on. AFTER registerSettings() — it reads
+  // the setting — and the ordering against core is the trick that makes this
+  // a one-liner: `Hooks.callAll("init")` is client/game.mjs:652 while
+  // `new GameTime()` is game.mjs:722, so the calendar object is built after
+  // this hook returns and assigning CONFIG.time is enough. There is no
+  // initializeCalendar() to call and no race to lose.
+  installWorldCalendar();
+
+  // Keep the watch clock in step. AT INIT rather than ready, for the socket
+  // handler's reason: a world-time change that arrives while this client is
+  // still connecting would otherwise land before anything was listening.
+  const refreshTimeSurfaces = () => {
+    refreshWatchClock();
+    refreshValdCalendar();
+    // The Dashboard's time band, if a Warden has the window open. It is a
+    // no-op on a player's client, where the dashboard is never constructed.
+    //
+    // STATIC, and the dynamic `import()` that used to stand here was
+    // theatre. Its comment claimed a player's client never loads the module —
+    // false the moment it was written, because line 20 of this same file
+    // imports it statically for the scene-control registration, and this file
+    // is the system's only `esmodules` entry. The dynamic form resolved from
+    // the already-populated module registry and bought nothing. The
+    // `cairnWeatherChanged` listener below is the genuine article: it guards
+    // on `isGM` first and reaches a module nothing else imports.
+    refreshDashboardTime();
+  };
+  Hooks.on("updateWorldTime", refreshTimeSurfaces);
+
+  // A row added to, or removed from, a WORLD table Air Bladder reads keeps
+  // that table rollable (2026-09-13, user ask; the spell tables and then
+  // every bannered table 2026-09-15): core appends at maxRoll + 1 and never
+  // touches the formula, so a Warden's first drop landed at the bottom of an
+  // alphabetical aisle — and a 21st bond sat at 21 under 1d20, where no
+  // generator could reach it. The aisles and the spell tables re-sort by
+  // name; everything else gets its flat die refitted. Creating or deleting
+  // client only, world tables only — table-banner.js decides, off the same
+  // predicate that decides the banner.
+  Hooks.on("createTableResult", onReadTableRowsChanged);
+  Hooks.on("deleteTableResult", onReadTableRowsChanged);
+
+  // The Warden rolled the weather. A WORLD SETTING REACHES OTHER CLIENTS ONLY
+  // THROUGH ITS OWN `onChange` — which is why `vald-weather-today` has one and
+  // `enable-vald-calendar` deliberately does not: the switch is read once at
+  // `init` and requires a reload, while this lands on three surfaces that are
+  // already on screen. The setting's handler fires this hook; this is what
+  // listens for it.
+  Hooks.on("cairnWeatherChanged", refreshTimeSurfaces);
+
+  // ...and, on ONE client, write it down. The log is off by default; the
+  // module is only fetched on a Warden's client, and only then, for the reason
+  // the dashboard's import above is dynamic.
+  Hooks.on("cairnWeatherChanged", () => {
+    if (!game.user?.isGM) return;
+    import("./weather-log.js")
+      .then(({ recordWeather }) => recordWeather())
+      .catch((err) => console.error("air-bladder | the weather log failed to write:", err));
+  });
+
+  // The Warden's own calendar events are journal PAGES, so the calendar has to
+  // follow the journal. These fire on every client, which is how a player's
+  // open calendar learns about an event the Warden just added — and how it
+  // loses one that was removed.
+  //
+  // `updateJournalEntry` is on the list too (review #27): a page's visibility
+  // is its ENTRY's ownership, so the one change that reveals or hides a whole
+  // set of events at once — the Warden raising the hidden journal from NONE
+  // through core's ownership dialog — fires on the entry and on no page. A
+  // player's open calendar gained nothing until the next watch tick.
+  for (const hook of ["createJournalEntryPage", "updateJournalEntryPage",
+    "deleteJournalEntryPage", "updateJournalEntry", "deleteJournalEntry"]) {
+    Hooks.on(hook, () => refreshValdCalendar());
+  }
 });
 
 // The settings-namespace migration as a PROMISE the other ready callbacks can
@@ -104,6 +200,15 @@ Hooks.once("ready", () => {
   // AT READY on purpose: this hook must register AFTER every module's
   // init-time hooks so it runs after them — see registerCombatOrderGuard.
   registerCombatOrderGuard();
+  // The watch clock, and a check that we still own the calendar we installed.
+  // WRAPPED, because `dev:smoke` asserts zero console errors on every world
+  // and a throw out of a ready callback would fail it everywhere.
+  try {
+    checkWorldCalendar();
+    renderWatchClock();
+  } catch (err) {
+    console.warn("air-bladder | the watch clock did not start:", err);
+  }
   // Pre-warm the generation packs on the Warden's client (user ask
   // 2026-09-02): a client's FIRST generation of a session paid ~5s of
   // compendium loading, and on the relay that client is the Warden's — so
@@ -490,10 +595,62 @@ const localizeResultCells = (cells) => {
   }
 };
 
-const localizeTableResults = (root) => {
-  if (!contentLocalized()) return;
+/**
+ * Rebuild a draw card's flavor line — "Drew 1 result from the X table".
+ *
+ * Core stamps `TABLE.DrawFlavor` with the table's RAW name (roll-table.mjs:53-55)
+ * and STORES the composed sentence, so a Spanish sidebar draw read a Spanish
+ * sentence around "Warden: NPC - Reactions" over Spanish rows — the one list of
+ * names on this card the overlay never reached (review #27). Rebuilt from the
+ * message's own table, resolved through core's id flag (world first, then the
+ * pack index — the encounter button's resolver), never parsed out of the stored
+ * sentence.
+ *
+ * `t()`, not `translationOf()`: a miss returns the English source VERBATIM,
+ * which is the whole guarantee the overlay rests on. The old code bailed on a
+ * miss instead, so a Warden's own world table — a name no overlay can know —
+ * kept the composing client's sentence even on a Spanish client, while the
+ * Dashboard's draw of the same table rebuilt correctly through `labelForTable`
+ * (review #28).
+ *
+ * Two cards claim this line themselves and are left alone: the Dashboard's
+ * draw, relabelled with its button's UI key in `localizeDashboardCard`, and the
+ * scar card.
+ */
+const relabelDrawFlavor = (message, flavor, count) => {
+  if (!flavor) return;
+  if (message.getFlag("air-bladder", "dashboardDraw") || message.getFlag("air-bladder", "scarCard")) return;
+  const tableId = message.getFlag("core", "RollTable");
+  if (!tableId) return;
+  resolveTable(tableId).then((table) => {
+    if (!table) return;
+    flavor.textContent = game.i18n.format(`TABLE.DrawFlavor${count > 1 ? "Plural" : ""}`, {
+      number: count, name: t("table.name", table.name),
+    });
+  }).catch((err) => console.error("Air Bladder | draw flavor localization failed", err));
+};
+
+const localizeTableResults = (message, root) => {
+  const flavor = root?.querySelector?.(".flavor-text");
+  // The scar card (damage.js) stores its flavor in the ACTING client's
+  // language under its own flag, while the scar row beneath it was already
+  // swept per viewer — one card, two languages (review #27). Rebuilt from the
+  // key, and BEFORE the overlay gate: it is an interface string and needs no
+  // content overlay to translate.
+  if (flavor && message?.getFlag?.("air-bladder", "scarCard") === true) {
+    flavor.textContent = game.i18n.localize("CAIRN.ScarFlavor");
+  }
   const cells = root?.querySelectorAll?.(".table-results li");
   if (!cells?.length) return;
+  // BEFORE the overlay gate, for the reason the scar card above is: this
+  // sentence is core's own INTERFACE string (`TABLE.DrawFlavor`), which every
+  // language module translates, and it needs no content overlay to be worth
+  // rebuilding. Behind the gate it reached `es` alone — `lang/content/` holds
+  // one file while the manifest declares seven languages — so a player on de,
+  // fr, da, pl or pt-BR read the Warden's language on the flavor line of every
+  // sidebar draw (review #28).
+  relabelDrawFlavor(message, flavor, cells.length);
+  if (!contentLocalized()) return;
   // The table's own description heads the draw card (14.365 table-result.hbs
   // renders it above the roll) — `table.desc`, emitted by the extractor since
   // 2026-08-06. Guarded by the cells check above, so non-draw messages that
@@ -537,47 +694,22 @@ Hooks.on("renderRollTableSheet", (app) => {
   // above. Code here that "translated" it would be coverage theatre.
 });
 
+// The banner a table wears when Air Bladder reads it (module/table-banner.js):
+// a world copy says what reads it and how a row is added, a shipped pack table
+// says it is a template and names the button. Its OWN registration — the hook
+// above returns on `!contentLocalized()`, and this is owed in every language.
+Hooks.on("renderRollTableSheet", abTableRoleBanner);
+// Two world tables of one name: the warning line on an OPEN sheet follows the
+// other table's creation, rename or deletion without a reopen. DOM only — a
+// re-render would drop unsaved edits on an edit-mode sheet.
+// NAMED, so `withHookOff` can switch each off by name for its red-first leg.
+Hooks.on("createRollTable", function abTableBannerOnCreate() { refreshTableBanners(); });
+Hooks.on("deleteRollTable", function abTableBannerOnDelete() { refreshTableBanners(); });
+Hooks.on("updateRollTable", function abTableBannerOnRename(doc, changes) { if ("name" in (changes ?? {})) refreshTableBanners(); });
+
 /* -------------------------------------------- */
 /*  Journals — the player-facing rules handouts */
 /* -------------------------------------------- */
-
-/**
- * Block-level tags a journal page is translated at, ONE lookup per element.
- * MUST stay identical to BLOCK_TAGS in tools/i18n/content-strings.mjs: the
- * extractor emits `node.innerHTML` for exactly these and the overlay is keyed on
- * it, so a tag in one list and not the other is a key nothing ever asks for.
- * `npm run dev:journal-i18n` is what holds the two honest — it collects the real
- * rendered DOM's keys and checks the extractor emits every one.
- */
-const JOURNAL_BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, figcaption";
-
-/**
- * Translate a rendered page's prose, paragraph by paragraph.
- *
- * PARAGRAPH-level, ruled 2026-08-14: a page here is one `text.content` string of
- * up to 14,000 characters, so keying the overlay on the whole page would hand a
- * translator a rulebook page in one cell and orphan all of it on any English
- * edit. Split this way an edit costs only the sentences it touched.
- *
- * Nested blocks are skipped so only the INNERMOST block owns its text — a `<li>`
- * wrapping a nested list yields the inner items, never the outer's concatenation
- * of them, which would otherwise be keyed on a string that is also its own
- * children and fight them at render.
- *
- * `translationOf`, never `t`: the value written to innerHTML is then provably
- * from our own overlay JSON and DOM text can never round-trip back out as
- * markup — the same rule swapResultNode above is written to.
- */
-const localizeJournalBlocks = (root) => {
-  if (!root) return;
-  for (const node of root.querySelectorAll(JOURNAL_BLOCKS)) {
-    if (node.querySelector(JOURNAL_BLOCKS)) continue;
-    const en = node.innerHTML.trim();
-    if (!en) continue;
-    const es = translationOf("journal.block", en);
-    if (es !== undefined && es !== en) node.innerHTML = es;
-  }
-};
 
 /**
  * Every page sheet, whether it is drawn inside its entry's sheet or opened on
@@ -924,8 +1056,81 @@ async function handleGrantActors(msg, senderId) {
   }
 }
 
+/**
+ * A player's choice on a failed-save card, recorded by the Warden's client.
+ *
+ * THE CARD'S AUTHOR IS ITS OWNER (common/documents/chat-message.mjs), so a
+ * player may write the choice flag only on a save THEY rolled. The Roll STR
+ * save button is bound for the character's owner OR the Warden, and when the
+ * Warden presses it for Alice the card is the Warden's: until review #33 the
+ * gate was `isAuthor || isGM`, so Alice saw neither button and the Warden made
+ * her choice — against "WHICH item is always the player's". The write goes
+ * through here now, for an owner who is not the author, over the same
+ * request-and-reply channel the pile uses; `user` is the server-authenticated
+ * asker, and OWNING THE CARD'S ACTOR is the authorization, nothing in the
+ * payload.
+ * @param {Object} data            `{messageId, kind}`
+ * @param {Object} ctx             `{user}` — the requesting User
+ * @return {Promise<Boolean>}      whether the choice was recorded
+ */
+const handleChoiceQuery = async (data, { user } = {}) => {
+  if (!game.user.isGM || !user) return false;
+  const message = game.messages.get(String(data?.messageId ?? ""));
+  const kind = data?.kind === "fatigue" || data?.kind === "critical" ? data.kind : null;
+  if (!message || !kind) return false;
+  const speaker = message.speaker ?? {};
+  const actor = game.scenes.get(speaker.scene)?.tokens.get(speaker.token)?.actor
+    ?? game.actors.get(speaker.actor) ?? null;
+  if (!actor || !actor.testUserPermission(user, "OWNER")) return false;
+  if (message.getFlag(FLAG_SCOPE, CRAWLER_CHOICE_FLAG)) return false;       // already spent
+  await message.setFlag(FLAG_SCOPE, CRAWLER_CHOICE_FLAG, kind);
+  return true;
+};
+const CHOICE_QUERY = "air-bladder.choiceTaken";
+
 Hooks.once("init", () => {
+  // The two request-and-reply brokers (review #33): core routes a `User#query`
+  // to the named user and returns the handler's value to the asker, which the
+  // bare socket below cannot do. Registered here, where the socket is.
+  CONFIG.queries[PILE_DROP_QUERY] = handlePileQuery;
+  CONFIG.queries[CHOICE_QUERY] = handleChoiceQuery;
+
   game.socket.on(`system.${game.system.id}`, async (msg, senderId) => {
+    // The item-offer protocol (item-offer.js): peer-to-peer, answered by the
+    // offer message's AUTHOR (the giver's client) or a pending acceptor —
+    // never by the GM broker below, which is why it dispatches before the
+    // activeGM-gated actions. Caught here for the same reason ownershipSync
+    // is: a throw out of an un-awaited async socket handler names nothing.
+    if (typeof msg?.action === "string" && msg.action.startsWith("offer")) {
+      try {
+        await handleOfferSocket(msg, senderId);
+      } catch (err) {
+        console.error(`Air Bladder | offer socket (${msg.action}) from ${game.users.get(senderId)?.name ?? senderId} failed:`, err);
+      }
+      return;
+    }
+    // The Warden showed a table. EVERY client opens the popup, including other
+    // GMs — the point is that the table is on screen.
+    //
+    // `senderId` is the guard and the only field the server authenticates;
+    // nothing in `msg` is trusted. It does not need to be: the payload carries
+    // a uuid and no text, and `openShownTable` resolves it against the real
+    // document, so a crafted emit can at worst name a table that already
+    // exists. No markup ever crosses this wire.
+    //
+    // Caught for the handler's standing reason (review #17): fromUuid THROWS
+    // on a malformed uuid, and a throw here escapes an async socket handler
+    // nothing awaits, as an anonymous unhandled rejection.
+    if (msg?.action === "showTable") {
+      if (!game.users.get(senderId)?.isGM) return;
+      try {
+        const { openShownTable } = await import("./warden-dashboard.js");
+        await openShownTable(msg.uuid);
+      } catch (err) {
+        console.error(`Air Bladder | showing a table from ${game.users.get(senderId)?.name ?? senderId} failed:`, err);
+      }
+      return;
+    }
     // A player's connect/break asks the active GM's client to apply the
     // ownership shape their own client is forbidden to write. NOTHING in the
     // message is trusted: the sync flag on the document is the authorization
@@ -939,6 +1144,18 @@ Hooks.once("init", () => {
     // crafted client cannot skip it. It is the one field the server
     // authenticates. See syncPendingOwnership for what it refuses and why a
     // refusal must clear the flag.
+    //
+    // (This block sat above the showTable branch for two days, because that
+    // branch was inserted between a comment and its code — so a paragraph
+    // saying the FLAG is the authorization introduced a branch whose guard is
+    // `senderId`. A correct-sounding comment on contradicting code reads as
+    // verification; review #28 caught it, and this file records the same
+    // failure twice elsewhere.)
+    // A player dropped something into the Dropped Item Pile. The pile is
+    // OBSERVER for players by ruling, so they cannot write to it and the active
+    // GM does the move for them — the ownershipSync shape exactly, including the
+    // catch: `fromUuid` throws on a malformed uuid, and a throw out of an
+    // un-awaited async socket handler names nothing.
     if (msg?.action === "ownershipSync") {
       if (game.users.activeGM !== game.user) return;
       // Caught, the handler's own standing rule (review #17): a throw here —
@@ -1001,6 +1218,30 @@ Hooks.once("init", () => {
         const source = enabled.includes(msg.source) ? msg.source : (enabled[0] ?? "2e");
         const actor = await createCharacter({
           source,
+          // THE PARTY FOLDER, which only `createActorInteractive` applied until
+          // review #33 — and a player's own Create PC never reaches that
+          // wrapper, because players lack ACTOR_CREATE and always come through
+          // this relay. So the commonest character in any world, a player's
+          // own, landed at the root of the directory while the Warden's test
+          // characters filed themselves. This runs on the GM's client, which
+          // may make the folder.
+          folder: await partyFolderId(),
+          // The empty-sheet choice the player made on their own client. Coerced
+          // rather than passed through: the wire is not trusted, and anything
+          // other than a literal true means roll, which is the safe reading —
+          // a rolled character can be emptied by hand, a silently empty one
+          // looks like generation broke.
+          //
+          // AND ONLY WHERE THE PLAYER COULD FILL IT IN (review #27). The box
+          // is withheld on the clicking client from a player whose sheet would
+          // render no pickers (`blankIsFillableBy`: a character, and only
+          // while allow-player-randomization is on), but that is the
+          // affordance half, and this broker is the enforcement half — the
+          // one place a crafted or stale client cannot script around, as the
+          // allow-player-generate refusal above already says. A character is
+          // the only kind this relay mints, so the test is that one switch.
+          blank: msg.blank === true
+            && game.settings.get(SETTINGS_NS, "allow-player-randomization") === true,
           ownership: { [senderId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
           // The generation chat card is headed by the ROLLER's name, and the
           // roller is the PLAYER who asked -- this branch runs on the Warden's
@@ -1024,7 +1265,11 @@ Hooks.once("init", () => {
           }));
         }
         game.socket.emit(`system.${game.system.id}`, {
-          action: "pcGenerated", userId: senderId, uuid: actor?.uuid ?? null,
+          // The empty-sheet answer travels BACK too (review #26). An empty
+          // sheet posts no generation card, so without this the asking client
+          // polled ten times at 150ms for a message that could never arrive:
+          // ~1.5s of dead wait between the toast and their own sheet opening.
+          action: "pcGenerated", userId: senderId, uuid: actor?.uuid ?? null, blank: msg.blank === true,
         });
       } catch (err) {
         console.error(`Air Bladder | generatePC failed for ${user.name}:`, err);
@@ -1065,10 +1310,16 @@ Hooks.once("init", () => {
           // over: find it by actor.
           // Poll briefly, because the custom emit can outrun the chat broadcast
           // exactly as it can outrun the actor's (that is why this loop exists).
-          for (let j = 0; j < 10; j++) {
-            const rollMessage = findGenerationRollMessage(actor);
-            if (rollMessage) { await awaitDiceAnimation(rollMessage.id); break; }
-            await new Promise((r) => setTimeout(r, 150));
+          // Skipped for an empty sheet, which rolled nothing and so posts no
+          // card to find. Coerced the same way the request was: only a literal
+          // true skips the wait, so a malformed answer still waits rather than
+          // opening the sheet over an animation.
+          if (msg.blank !== true) {
+            for (let j = 0; j < 10; j++) {
+              const rollMessage = findGenerationRollMessage(actor);
+              if (rollMessage) { await awaitDiceAnimation(rollMessage.id); break; }
+              await new Promise((r) => setTimeout(r, 150));
+            }
           }
           actor.sheet?.render(true);
           return;
@@ -1448,9 +1699,40 @@ const migrateIconsToSvg = async () => {
  * invalidate every stamp made before it existed — a marker stamped before a
  * rule is the inverse of the "predicate stayed true while its set grew"
  * family, and just as silent. The 2026-08-04 art/ move plus the WebP
- * re-encode are generation 1.
+ * re-encode are generation 1; the 2026-09-05 move of Lydia Comer's 17
+ * monsters into the -monsters folders is generation 2.
  */
-const ART_MIGRATION_GENERATION = 1;
+const ART_MIGRATION_GENERATION = 2;
+
+/**
+ * The 17 creatures that lived in lydia-comer/portraits|tokens from 2026-08-04
+ * until the artist's character batch arrived (2026-09-05) and they moved to
+ * portraits-monsters/ + tokens-monsters/. Their moves are generated BY
+ * FILENAME, never by folder prefix: the vacated folders refilled with her
+ * CHARACTER art in the same change, and a player can log in and pick a
+ * character portrait before the world's first post-update GM load runs this
+ * migration — a prefix rule would drag that fresh path into a -monsters
+ * folder it never lived in.
+ */
+const LYDIA_MOVED_MONSTERS = [
+  "Bad-Bunny", "Bandit-Leader", "Black-Pudding", "Dire-Bear", "Dire-Fish",
+  "Dire-Marsupial", "Dire-Wolf", "Dragon-Turtle", "Dragon", "Estrie-Human",
+  "Fire-Elemental", "Gnome-with-Cock", "Shrieking-Gnoll", "Stork-Rider",
+  "Tentacles", "Undead-Mouse", "Were-Rat",
+];
+
+/**
+ * One [from, to] per stem × half × era. The trailing dot pins the whole stem
+ * ("Dragon." never matches "Dragon-Turtle.webp") while leaving the extension
+ * to ART_REENCODED, which chains after the move. BOTH eras map straight to
+ * the -monsters folder, because `movedArt` applies exactly one move — a
+ * pre-art/ path routed through the generic lydia hoist below would land in
+ * what is now the character folder and never move again.
+ */
+const lydiaMonsterMoves = () => LYDIA_MOVED_MONSTERS.flatMap((stem) =>
+  ["portraits", "tokens"].flatMap((half) =>
+    ["systems/air-bladder/lydia-comer/", "systems/air-bladder/art/lydia-comer/"].map((era) =>
+      [`${era}${half}/${stem}.`, `systems/air-bladder/art/lydia-comer/${half}-monsters/${stem}.`])));
 
 const ART_MOVES = [
   ["systems/air-bladder/character_portraits/", "systems/air-bladder/art/jon-aspeheim/portraits/"],
@@ -1469,6 +1751,11 @@ const ART_MOVES = [
   ["systems/air-bladder/art/tlomdev/Kettlewright Portraits/", "systems/air-bladder/art/tlomdev/kettlewright-portraits/"],
   ["systems/air-bladder/tlomdev/", "systems/air-bladder/art/tlomdev/"],
   ["systems/air-bladder/game-icons/", "systems/air-bladder/art/game-icons/"],
+  // The 17 monsters that moved aside for the character batch — 68 generated
+  // filename-pinned rules (17 stems × 2 halves × 2 eras), ABOVE the generic
+  // hoist below for the same first-match-wins reason the tlomdev rules sit
+  // above theirs. See lydiaMonsterMoves for why these are never a prefix.
+  ...lydiaMonsterMoves(),
   // Lydia's never reached a RELEASE — it landed and moved within the same day —
   // and it was left out of this table on that reasoning. dev:smoke then found a
   // token in the dev world still pointing at it. `dev` mirrors to GitHub in
@@ -2514,23 +2801,23 @@ Hooks.on("renderActorDirectory", (app, html) => {
         </div>
         `
       );
-      section
-        .querySelector(".create-character-generator-button")
-        ?.addEventListener("click", async () => {
-          const actor = await createCharacter();
-          if (actor) actor.sheet.render(true);
-        });
       // The two person roles get a button each (2026-08-20). Two buttons rather
       // than one that asks: a Warden knows which they are making before they
-      // reach for the mouse, and the tier picker on Generate Monster is a
-      // dialog because the tier is a real CHOICE about the thing being made,
-      // not a fork in which thing.
-      for (const [cls, make] of [
-        ["create-npc-button", createNpc],
-        ["create-hireling-button", createHireling],
+      // reach for the mouse.
+      //
+      // All four go through createActorInteractive, the same route the Create
+      // Actor switchboard takes, so the creation dialog — roll one, or open an
+      // empty sheet to fill in by hand — has one definition and the two routes
+      // cannot drift. Every one of them is dismissible, and a dismiss creates
+      // nothing. The monster's tier lives in that dialog too.
+      for (const [cls, kind] of [
+        ["create-character-generator-button", "character"],
+        ["create-npc-button", "npc"],
+        ["create-hireling-button", "hireling"],
+        ["create-monster-button", "monster"], // Warden-only: monsters are the Warden's to mint
       ]) {
         section.querySelector(`.${cls}`)?.addEventListener("click", async () => {
-          const actor = await make();
+          const actor = await createActorInteractive(kind);
           if (actor) actor.sheet.render(true);
         });
       }
@@ -2548,21 +2835,15 @@ Hooks.on("renderActorDirectory", (app, html) => {
           if (actor) actor.sheet.render(true);
         });
       }
-      // Warden-only: monsters are the Warden's to mint. The tier picker inside
-      // createMonster is dismissible, and a dismiss creates nothing.
-      section
-        .querySelector(".create-monster-button")
-        ?.addEventListener("click", async () => {
-          const actor = await createMonster();
-          if (actor) actor.sheet.render(true);
-        });
-      // Warden-only: one click, one faction dossier (a JournalEntry — a
-      // faction is campaign machinery, not an Actor). No confirm: creating a
-      // journal is non-destructive, and nothing is ever overwritten.
+      // Warden-only: a faction dossier (a JournalEntry — a faction is campaign
+      // machinery, not an Actor). It ASKS FIRST like the four above (2026-09-12,
+      // user ask), and its dialog is where the parts are picked when the box
+      // is cleared, since a journal has no sheet to carry pickers. Nothing is
+      // ever overwritten; a dismiss creates nothing.
       section
         .querySelector(".create-faction-button")
         ?.addEventListener("click", async () => {
-          const entry = await generateFaction();
+          const entry = await createFactionInteractive();
           if (entry) entry.sheet.render(true);
         });
       // Import a Kettlewright character export into a new Actor. GM-only
@@ -2763,6 +3044,149 @@ const offerUntargetedApply = (html) => {
 };
 
 /**
+ * Announce every exploding die on a damage card (the exploding dice option).
+ *
+ * THE EXPLOSIONS ARE ALREADY STORED, which is why this needs no flag, no
+ * template field and no edit to either producer. Measured in the shipped client:
+ * `Die#explode` stamps `r.exploded = true` on each result that explodes
+ * (dice/terms/die.mjs), `DiceTerm.SERIALIZE_ATTRIBUTES` includes `"results"`
+ * (terms/dice.mjs) and `RollTerm#toJSON` copies every one of those attributes
+ * wholesale (terms/term.mjs) — so the flag rides in the message's roll JSON for
+ * good. `Roll#dice` flattens, pushing each term's own `dice` (which covers a
+ * PoolTerm's inner rolls) and each DiceTerm itself, so one walk catches every die
+ * however the formula was shaped.
+ *
+ * Three things that buys, and they are the reason it is built this way:
+ *  - BOTH producers are covered without touching either (`#onRollDamage` and
+ *    macros.js), and so is any future one.
+ *  - It is language-neutral BY CONSTRUCTION. The only text is built here, per
+ *    viewer, from one key and a number — so this cannot join review #24's class
+ *    of cards frozen in the composer's language, because there is no stored
+ *    sentence to freeze.
+ *  - It is RETROACTIVE: every exploded card already in the log gains its lines
+ *    the moment this loads, which is `nameDamageTargets`' own argument.
+ *
+ * ONE LINE PER EXPLOSION, repeated (user ruling 2026-10-02, re-confirmed when
+ * the consolidated "exploded: 6, 6, 3" form was offered): a 6 -> 6 -> 3 chain
+ * prints two. That count is also a SECOND, INDEPENDENT WITNESS of modifier
+ * order — under the correct `2d6kx` the dropped die is `active: false` and
+ * `explode` skips it, so two sixes give ONE line, where `2d6xk` would give two.
+ *
+ * TWO behaviours that look like bugs and are not. It is driven by the ROLL and
+ * not by the setting, so a card keeps its lines after the option is switched off
+ * (the die really did explode — the price of being retroactive). And a Warden who
+ * types `2d6x` into a weapon's formula, or into the Warden's Damage field, which
+ * shares this template, is announced too: this says "a damage die exploded",
+ * which is true however the `x` got there.
+ */
+const nameExplodedDice = (message, html) => {
+  // The roll's own content is hidden from anyone who may not read it, and an
+  // explosion REVEALS that the die rolled its maximum. Asked FIRST, the rule
+  // localizeD20Card and markInitiativeOutcome already work to.
+  if (!message?.isContentVisible) return;
+  const row = html.querySelector(".flavor-dice-roll");
+  if (!row) return;                                 // not a damage card
+  // Idempotent: this hook fires on every render, and an appending rewrite with no
+  // guard doubles its own lines the first time the log is re-rendered.
+  if (row.querySelector(".dmg-exploded")) return;
+  for (const roll of message.rolls ?? []) {
+    for (const die of roll?.dice ?? []) {
+      const faces = Number(die?.faces);
+      if (!Number.isFinite(faces)) continue;
+      const n = (die.results ?? []).filter((r) => r?.exploded).length;
+      for (let i = 0; i < n; i++) {
+        const line = document.createElement("div");
+        line.className = "dmg-exploded";
+        // textContent, never innerHTML: the number comes off a stored roll, and
+        // a card value reaching a markup sink is the shape review #24 closed.
+        line.textContent = game.i18n.format("CAIRN.Crawler.DieExploded", { die: faces });
+        row.append(line);
+      }
+    }
+  }
+};
+
+/**
+ * The ONE Die term a roll rolled, or null for any other shape.
+ *
+ * `Roll#dice` flattens a PoolTerm into its members' dice, so a `+` formula comes
+ * back with two or more and this answers null — which is the same boundary
+ * `judgedDie` draws in utils.js, and for the same reason: on a pool the losing
+ * member may ALSO have rolled its maximum, and nothing here can tell a kept
+ * member from a dropped one without walking `PoolTerm#results`.
+ */
+const soleDie = (roll) => {
+  const dice = roll?.dice ?? [];
+  return dice.length === 1 ? dice[0] : null;
+};
+
+/**
+ * A check on the control that was taken (user ruling 2026-10-02).
+ *
+ * Both members of a sealed pair go plain and unglowing — the CSS does that from
+ * `[disabled]` — so without this a card scrolled back to says a choice was made
+ * and not WHICH. On the Fatigue pair it matters more than that: a player who
+ * refuses the drop never pressed Mark Critical Damage, so the tick is the only
+ * thing on screen telling them what happened instead.
+ *
+ * MODULE SCOPE: it was shared with a maneuver pair for the day maneuvers were a
+ * choice on the card (2026-10-02/03); the save card's Fatigue pair is its one
+ * caller now.
+ *
+ * DRAWN FROM THE FLAG, per viewer: nothing about it is stored, so it is right in
+ * every language and on every client that loads the card later. An `<i>` rather
+ * than a character, so it inherits the project's icon treatment and carries no
+ * text for a translator to miss.
+ * @param {HTMLElement|null} btn
+ */
+const markChoiceTaken = (btn) => {
+  if (!btn) return;
+  const tick = document.createElement("i");
+  tick.className = "fa-solid fa-check";
+  btn.prepend(tick);
+};
+
+/**
+ * The maneuver option: one line on a damage card whose die rolled its maximum,
+ * saying the player may also attempt a maneuver. The damage stands.
+ *
+ * A LINE, NOT A CHOICE (the night of 2026-10-03, user: "They get the damage AND
+ * they are offered a maneuver ... the decision tree should be removed from the
+ * chat"). For a day this was `nameManeuverChoice`: the card offered Explode the
+ * Die / Use a Maneuver!, a maneuver FORWENT the damage and Apply refused it,
+ * and Apply was withheld until one was pressed. All of that went — exploding,
+ * when on, now happens at roll time (`combatDamageFormula`).
+ *
+ * `nameExplodedDice`'s shape, line for line: per viewer, so nothing stored can
+ * freeze a language; `isContentVisible` FIRST, because a maximum REVEALS the
+ * die's face; idempotent, because the hook fires on every render; appended
+ * after the explosion lines. The template emits one silent datum
+ * (`data-maneuver`: a player character's roll with the option on when it was
+ * thrown, on a formula the recogniser accepts); everything else is read back
+ * off the stored roll, fail-closed. An EXPLODED maximum is still an active
+ * maximum, so the test must not exclude exploded results — the choice's old
+ * test did, because there an exploded die had already been decided.
+ *
+ * No author gate: it is information, like the explosion lines, and every
+ * viewer who may read the roll may read this.
+ */
+const nameManeuverAvailable = (message, html) => {
+  if (!message?.isContentVisible) return;
+  if (!html.querySelector("[data-maneuver]")) return;   // not an eligible card
+  const row = html.querySelector(".flavor-dice-roll");
+  if (!row) return;
+  if (row.querySelector(".dmg-maneuver-line")) return;
+  const die = soleDie(message.rolls?.[0]);
+  const faces = Number(die?.faces);
+  if (!die || !Number.isFinite(faces) || faces < 1) return;
+  if (!(die.results ?? []).some((r) => r?.active && r.result === faces)) return;
+  const line = document.createElement("div");
+  line.className = "dmg-maneuver-line";
+  line.textContent = game.i18n.localize("CAIRN.Crawler.ManeuverAvailable");
+  row.append(line);
+};
+
+/**
  * Who dealt this damage, as a display name.
  *
  * ONE rule, shared by the attack line on the roll card and the attribution line
@@ -2826,6 +3250,104 @@ const localizeSpeakerName = (message, html, token) => {
   if (display && display !== alias) header.textContent = display;
 };
 
+/**
+ * Rebuild the "Rolling damage with {weapon}" sentence in THIS viewer's language.
+ *
+ * The weapon NAME is not translated and never has been — it is whatever the
+ * roller saw, and the content overlay is many-to-one so there is no way back
+ * from a translated name to a key. It is the SENTENCE around it that is
+ * rebuilt, from `data-weapon`, exactly as the attack line is.
+ *
+ * `textContent`, never innerHTML: a weapon name is authored free text, and this
+ * card renders in every player's log. Same rule as the attack line below.
+ *
+ * `data-panic` decides which of the two whole-sentence keys was used. It is an
+ * explicit datum rather than an inference from the quality badge — panic does
+ * force `impaired`, so the badge would answer correctly today, but that is a
+ * correlation two independent branches happen to maintain and not something
+ * this line should depend on.
+ *
+ * `data-unarmed` picks a THIRD pair of keys, for an improvised attack with the
+ * description left blank. Whole sentences rather than "an improvised attack"
+ * injected as `{weapon}`, because `data-weapon` is also copied into a
+ * possessive frame (`CAIRN.DamageFromWeapon`) and because the article belongs
+ * to the translator. The attribute keeps the feature's earlier name on
+ * purpose: it is STORED on every such card already in a log (see
+ * dmg-roll-card.html).
+ */
+const relabelWeaponLine = (label) => {
+  // A CARD OLDER THAN `data-panic` CANNOT BE REBUILT, and must be left alone
+  // rather than guessed at (review #29). `data-weapon` shipped in f23962cb and
+  // `data-panic` only in fb5db539, so every untargeted damage card already in a
+  // log carries the first and not the second — and the attribute is now written
+  // on EVERY card, "0" or "1", precisely so that its ABSENCE means "before this
+  // existed" instead of "not panicked". Without the distinction those older
+  // cards were rewritten with the non-panic key, silently dropping the "(Panic)"
+  // their own stored content still holds; a panicked character rolling at
+  // nothing targeted is the common Panic case, and nothing ever repairs the
+  // card. Same shape as the rest of the class — `localizeDamageQuality` and
+  // `localizeD20Card` both bail when their datum is missing.
+  //
+  // THE GUARD SITS ABOVE THE WEAPON TEST, deliberately: there are two sentences
+  // to rebuild now, and the "leave an older card alone" rule covers both with
+  // one line rather than being spelled twice.
+  if (label?.dataset?.panic === undefined) return;
+  const weapon = label.dataset.weapon ?? "";
+  if (!weapon) {
+    // AN IMPROVISED ATTACK WITH THE FIELD LEFT BLANK NAMES ITSELF. Before this the
+    // function returned here and the card rendered an EMPTY `.dmg-label` -- a
+    // damage roll with no sentence at all. Anything else with no weapon (a
+    // hazard, a card from before the improvised route existed) still stands as
+    // posted, because there is genuinely nothing to name.
+    if (label.dataset.unarmed !== "1") return;
+    label.textContent = game.i18n.localize(
+      label.dataset.panic === "1" ? "CAIRN.RollingDmgImprovisedPanic" : "CAIRN.RollingDmgImprovised");
+    return;
+  }
+  label.textContent = game.i18n.format(
+    label.dataset.panic === "1" ? "CAIRN.RollingDmgWithWeaponPanic" : "CAIRN.RollingDmgWithWeapon",
+    { weapon });
+};
+
+/**
+ * Say "Apply damage" on the burst button in THIS viewer's language.
+ *
+ * The tooltip is composed by `dmg-roll-card.html` with a `localize` call and
+ * STORED in the card's flavor, so it froze the roller's language for good —
+ * review #28 rebuilt the two sentences on this very element and did not sweep
+ * the line between them (review #29). The button is REMOVED from a player's
+ * copy at the bottom of this hook, so the reader is always the Warden: a
+ * Spanish player rolls damage and the English Warden hovers "Aplicar daño".
+ *
+ * Only the TARGETED card is touched. `offerUntargetedApply` builds its own
+ * anchor per viewer and gives it a deliberately DIFFERENT tooltip
+ * (`CAIRN.ApplyDamageChoose`), and `data-targets` is exactly what tells the two
+ * apart — its absence is that feature's own signal.
+ *
+ * Runs BEFORE `showDamageApplied`, which overwrites this with the spent card's
+ * "already applied" tooltip. That ordering is the point: a spent card must keep
+ * saying it is spent.
+ */
+const relabelApplyTooltip = (html) => {
+  const btn = html.querySelector(".apply-dmg[data-targets]");
+  if (btn) btn.dataset.tooltip = game.i18n.localize("CAIRN.ApplyDamage");
+};
+
+/**
+ * Rebuild the Impaired / Enhanced badge from its KIND.
+ *
+ * It sat one line under an attack sentence the hook had already rebuilt, so a
+ * Spanish player read a Spanish sentence over an English "Impaired" (review
+ * #28). `hasOwn`, so a crafted kind finds no key rather than reaching Object's
+ * own members — the guard `localizeStatusCard` already uses.
+ */
+const localizeDamageQuality = (html) => {
+  const el = html.querySelector(".dmg-quality");
+  const kind = el?.dataset?.quality;
+  if (!kind || !Object.hasOwn(DAMAGE_QUALITY_KEYS, kind)) return;
+  el.textContent = game.i18n.localize(DAMAGE_QUALITY_KEYS[kind]);
+};
+
 const nameDamageTargets = (message, html, scene) => {
   const label = html.querySelector(".flavor-dice-roll .dmg-label")
     // Cards posted before the class existed: the label is the child div that is
@@ -2840,16 +3362,31 @@ const nameDamageTargets = (message, html, scene) => {
 
   const raw = html.querySelector(".apply-dmg")?.dataset.targets ?? "";
   const ids = raw.split(";").map((s) => s.trim()).filter(Boolean);
-  if (!ids.length) return;
+  // NO TARGETS: the attack line cannot be written — there is nobody to name —
+  // but the "Rolling damage with…" sentence underneath it still can, and it was
+  // composed in the ROLLER's language and stored. `offerUntargetedApply`
+  // deliberately builds its anchor without `data-targets` ("its ABSENCE is the
+  // signal"), so this early return used to leave every untargeted card frozen
+  // in one language for good — applying the damage later never adds the
+  // attribute, so nothing ever repaired it (review #28).
+  if (!ids.length) return relabelWeaponLine(label);
 
   const names = nameableTokens(ids, scene).map((n) => n.name);
   // Nothing this viewer may be told about: the weapon sentence stands rather
-  // than a half-written one. Naming the visible subset of a mixed group is fine
-  // — it reveals nothing about the one left out.
-  if (!names.length) return;
+  // than a half-written one — REBUILT, for the reason the no-targets branch
+  // above states. Naming the visible subset of a mixed group is fine — it
+  // reveals nothing about the one left out.
+  if (!names.length) return relabelWeaponLine(label);
 
   const attacker = attackerDisplayName(message.speaker, scene);
-  if (!attacker) return;
+  // The THIRD early return, and it takes the rebuild for the same reason the
+  // two above do: the attack line cannot be written without a name for the
+  // attacker, but the weapon sentence underneath it never needed one. Left as a
+  // bare `return` when the other two were converted (review #29). Both current
+  // producers speak as an ACTOR, which always stamps a non-empty alias, so this
+  // is consistency rather than a bug anyone can reach today — which is exactly
+  // why it should not be left as the odd one out for the next reader to weigh.
+  if (!attacker) return relabelWeaponLine(label);
 
   // Whole-sentence keys with every placeholder inside, per the rule the two
   // "Rolling damage with…" keys already follow: word order is not universal, so
@@ -2881,10 +3418,15 @@ const nameDamageTargets = (message, html, scene) => {
   // happened the first time this line was written.
   const MARK = "\u0000";
   const weapon = label.dataset.weapon ?? "";
-  const sentence = game.i18n.format(
-    weapon ? "CAIRN.AttacksTargetWeapon" : "CAIRN.AttacksTarget",
-    { attacker, weapon, target: MARK },
-  );
+  // Three arms, not two. `data-unarmed` with no weapon named is a roll made
+  // with nothing in hand and the field left blank, which has its own sentence —
+  // "Adobe attacks Goblin!" is complete English but says nothing about how.
+  // `replaceChildren` below replaces child NODES and not attributes, so
+  // `data-unarmed` survives the rewrite exactly as `data-weapon` does.
+  const key = weapon ? "CAIRN.AttacksTargetWeapon"
+    : label.dataset.unarmed === "1" ? "CAIRN.AttacksTargetImprovised"
+      : "CAIRN.AttacksTarget";
+  const sentence = game.i18n.format(key, { attacker, weapon, target: MARK });
   const [before, after = ""] = sentence.split(MARK);
   const strong = document.createElement("strong");
   strong.className = "dmg-target";
@@ -2952,8 +3494,16 @@ const nameDamageSource = (message, html, scene) => {
     // stands as it is rather than announcing that SOMETHING hit them, the same
     // choice the attack line and the applied summary make.
     if (!attacker) return;
+    // THREE FRAMES, picked by the KIND of value in `weapon` (review #33): an
+    // item's name takes the possessive ("from Adobe's Dagger"), an improvised
+    // attack's typed phrase cannot ("from Adobe's a chair leg" — the dev log
+    // held three such cards), and a blank weapon names the attacker alone.
+    // The phrase is never stored as the weapon on the blank route, which is
+    // why `data-unarmed` exists; this is the one site that had not asked it.
     sentence = game.i18n.format(
-      src.weapon ? "CAIRN.DamageFromWeapon" : "CAIRN.DamageFrom",
+      src.weapon
+        ? (src.unarmed ? "CAIRN.DamageFromImprovisedWith" : "CAIRN.DamageFromWeapon")
+        : "CAIRN.DamageFrom",
       { attacker, weapon: src.weapon ?? "" });
   }
 
@@ -3014,31 +3564,51 @@ const showDamageApplied = (message, html, scene) => {
   row.append(line);
 };
 
-Hooks.on("renderRollTableDirectory", (app, html) => {
-  // Warden-only: reseed a world spell table from a compendium's index,
-  // update-in-place (module/spell-tables.js). Same injection rules as the
-  // Actor directory's row above: scope the injected-already test to THIS
-  // directory root — the popped-out window is a second, independent render.
-  if (!game.user.isGM) return;
-  if (html.querySelector(".cairn-reseed-spell-table")) return;
-  const dirHeader = html.querySelector(".directory-header");
-  if (!dirHeader) return;
-  const section = document.createElement("header");
-  section.classList.add("character-generator", "directory-header");
-  dirHeader.parentNode.insertBefore(section, dirHeader);
-  section.insertAdjacentHTML(
-    "afterbegin",
-    `<div class="header-actions action-buttons flexrow">
-      <button class="cairn-reseed-spell-table"><i class="fas fa-arrows-rotate"></i>${game.i18n.localize("CAIRN.ReseedSpellTable")}</button>
-    </div>`
-  );
-  section.querySelector(".cairn-reseed-spell-table")
-    .addEventListener("click", () => reseedSpellTable());
+// The four "Create a Custom …" doors (module/take-over.js): NAMED handlers,
+// so a probe can switch each off in-page (lib.mjs withHookOff finds a hook by
+// its fn.name). All four sit at the top of the Rollable Tables sidebar — the
+// spells door first, where "Reseed a Spell Table…" sat until 2026-09-14 (user
+// ruling: one mechanism for every table, the Copy button's), the backgrounds
+// door fourth (user ruling 2026-09-15) — and the backgrounds door ALSO sits at
+// the top of the Compendium tab, where its 27 copies land (user ruling an hour
+// later, looking at that tab: "what are the implications of having it in
+// both?" — none but this second registration; the per-root guard keeps each
+// directory to one button and `running` keeps two clicks to one run). The
+// compendium one is its own registration because the search-wrap hook above
+// returns early on `!contentLocalized()`, and this button must not.
+Hooks.on("renderRollTableDirectory", function abTakeOverTablesButton(app, html) {
+  injectTakeOverButton(html, { kind: "spells" });
+  injectTakeOverButton(html, { kind: "marketplace" });
+  injectTakeOverButton(html, { kind: "barebones" });
+  injectTakeOverButton(html, { kind: "cairn2e" });
+});
+Hooks.on("renderCompendiumDirectory", function abTakeOverCompendiumButton(app, html) {
+  injectTakeOverButton(html, { kind: "cairn2e" });
 });
 
 Hooks.on("renderChatMessageHTML", (message, html, data) => {
-  // Display-only content overlay for RollTable draw cards (see above).
-  localizeTableResults(html);
+  // Display-only content overlay for RollTable draw cards (see above), the
+  // flavor line included.
+  localizeTableResults(message, html);
+
+  // Three older cards composed in the ACTING client's language and stored —
+  // the status bar, the encounter quantity, the scar (that one lives in
+  // localizeTableResults, since it is a draw card). Rebuilt per viewer from a
+  // flag that carries a kind or an English source string, never text
+  // (review #27; the class review #26 fixed on the Dashboard's cards).
+  localizeStatusCard(message, html);
+  localizeEncounterQty(message, html);
+  // The change-log ledger (module/actor/actor.js): whispered to owners AND
+  // Wardens, so it has readers in every language at the table (review #30).
+  localizeChangeLogCard(message, html);
+
+  // The initiative save's total, coloured by outcome (module/combat.js).
+  markInitiativeOutcome(message, html);
+
+  // The item-offer card (module/item-offer.js): body rebuilt in THIS viewer's
+  // language off the flag, and the Accept/Decline/Cancel buttons injected for
+  // exactly the viewers who may press them — never stored in the content.
+  bindOfferCard(message, html);
 
   // A table-draw card whose drawn rows PARSE as encounters grows the Warden's
   // "Add to scene" button (module/encounters.js). Injected per viewer, never
@@ -3067,6 +3637,17 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   // the Warden's client (review #18).
   localizeGenerationCard(message, html);
 
+  // The Dashboard's two hand-built cards, the same way (module/warden-dashboard.js):
+  // the reveal card rebuilt from a bare table uuid, the combined draw from the
+  // ENGLISH sources in its flag. Both were composed once on the Warden's client
+  // and stored, so review #25's overlay fix reached the author and nobody else.
+  localizeDashboardCard(message, html);
+
+  // The Dropped Item Pile's record of a Fatigue-driven drop. Composed on
+  // whichever client ran the move — the Warden's, for a player's drop — so the
+  // stored flag carries a NAME and the sentence is rebuilt here.
+  localizePileCard(message, html);
+
   // Roll Str Save.
   //
   // Resolve the token from the scene the message was SPOKEN in, not from whatever
@@ -3089,12 +3670,40 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   // an anchor this may have just built.
   offerUntargetedApply(html);
   nameDamageTargets(message, html, scene);
+  localizeDamageQuality(html);
+  // Every exploding die on the card, one line each, derived from the stored roll
+  // rather than from anything the roller composed. Ordering within this group is
+  // free — nothing here replaces `.flavor-dice-roll` wholesale and this only
+  // appends to it — but it rides before the player-trim like its siblings,
+  // because a player watching their own die explode is the point of it.
+  nameExplodedDice(message, html);
+  // The maneuver option's line, AFTER nameExplodedDice so it reads beneath an
+  // exploded die's lines.
+  nameManeuverAvailable(message, html);
+  // Before showDamageApplied, which replaces this tooltip on a spent card —
+  // see its docblock.
+  relabelApplyTooltip(html);
   showDamageApplied(message, html, scene);
   // A DETAIL card, not the roll card the three above rewrite, so this is
   // independent of their ordering. It is still run beside them and before the
   // player-trim below, because it must reach a player's copy too: knowing what
   // hit you is not Warden-only information.
+  //
+  // ORDER IS LOAD-BEARING FOR THESE TWO. localizeDamageCard REPLACES the whole
+  // body from the card's numbers, so it must run BEFORE nameDamageSource, which
+  // PREPENDS the attribution line to the same element and would otherwise have
+  // it thrown away — and before the STR-save and Critical Damage bindings
+  // below, which bind to elements it replaces.
+  localizeDamageCard(message, html);
   nameDamageSource(message, html, scene);
+  // The d20 save card — the damage flow's STR save and the sheet's ability
+  // roll, one shared builder. Also before the binding below: it replaces the
+  // Mark Critical Damage button.
+  localizeD20Card(message, html);
+  // Die of Fate and anything else whose only localized surface is the flavour
+  // line. Cheap and unconditional: it returns on the first line for every
+  // message that does not carry the flag.
+  localizeRollFlavor(message, html);
 
   if (token?.actor) {
     if (token.actor.testUserPermission(game.user, "OWNER") || game.user.isGM) {
@@ -3117,18 +3726,190 @@ Hooks.on("renderChatMessageHTML", (message, html, data) => {
   // speaker even with no token; STR is already reduced, so this only sets the
   // status.
   const critBtn = html.querySelector(".mark-critical-damage");
-  if (critBtn) {
+  const fatigueBtn = html.querySelector(".take-fatigue-instead");
+  if (critBtn || fatigueBtn) {
     const critActor = token?.actor ?? game.actors.get(message.speaker?.actor);
-    if (critActor && (critActor.testUserPermission(game.user, "OWNER") || game.user.isGM)) {
-      critBtn.onclick = async (ev) => {
-        // Capture the button before awaiting: event.currentTarget is null once
-        // the (async) handler resumes after the update.
-        const b = ev.currentTarget;
-        await critActor.update({ "system.critical": true });
-        b.setAttribute("disabled", "disabled");
-      };
-    } else {
-      critBtn.style.display = "none";
+    const mayAnswer = critActor
+      && (critActor.testUserPermission(game.user, "OWNER") || game.user.isGM);
+    // SPENDING THE CHOICE IS A MESSAGE WRITE, and a ChatMessage makes its AUTHOR
+    // the owner (common/documents/chat-message.mjs `getUserLevel`; `update`
+    // defaults to OWNER). So a second player who co-owns the character but did
+    // not roll the save passes `mayAnswer` and is refused by the server on the
+    // flag: the Fatigue lands on the actor, the flag does not, neither button
+    // seals, and they can then ALSO mark Critical Damage -- precisely the
+    // exclusivity this option promises. Found 2026-10-02, in code shipped the
+    // same day.
+    //
+    // THE ANSWER WAS A GATE FOR A DAY AND IS A ROUTE NOW (review #33). Gating
+    // on `isAuthor || isGM` hid BOTH buttons from the one person the choice
+    // belongs to whenever the Warden had pressed Roll STR save for them — the
+    // save button is bound for the owner OR the Warden, and the card is then
+    // the Warden's. So `spend` below writes the flag itself where it may, and
+    // asks the Warden's client to write it otherwise (`handleChoiceQuery`,
+    // which checks that the asker OWNS the card's actor). The gate for both
+    // buttons is simply `mayAnswer`.
+    // THE FATIGUE OPTION: the two buttons are EXCLUSIVE, and the choice is
+    // spent on the MESSAGE rather than in local DOM. `disabled` alone is what
+    // the Critical Damage button has always done, and it does not survive a
+    // re-render — the counter-example, not the precedent. The grimoire's
+    // Fatigue card is the precedent: the disabled button is the affordance,
+    // the flag check is the enforcement, and a card scrolled back to hours
+    // later is still spent.
+    //
+    // THE FLAG RECORDS WHICH (user ruling 2026-10-02). It used to store `true`;
+    // it stores `"fatigue"` or `"critical"` now, so the pair can wear a check on
+    // the one that was taken. `spent()` needs no change — it is a truthiness
+    // test, and a non-empty string is as truthy as `true` — which is what lets
+    // every enforcement path below stay exactly as it was.
+    //
+    // A CARD ALREADY IN A LOG CARRIES `true` AND IS LEFT ALONE: it seals with no
+    // check rather than being ticked by a default, because a default would
+    // silently mislabel history on precisely the cards nothing ever repairs. The
+    // `data-panic` rule — a shape older than the datum is not guessed at.
+    const spent = () => !!message.getFlag(FLAG_SCOPE, CRAWLER_CHOICE_FLAG);
+    /**
+     * Record the choice on the message: directly where this user may write it,
+     * through the Warden's client otherwise. Returns whether it was recorded —
+     * a `false` leaves the card live, nothing taken, and says why.
+     */
+    const spend = async (kind) => {
+      if (message.isAuthor || game.user.isGM) {
+        await message.setFlag(FLAG_SCOPE, CRAWLER_CHOICE_FLAG, kind);
+        return true;
+      }
+      const gm = game.users.activeGM;
+      let recorded = false;
+      if (gm) {
+        try {
+          recorded = await gm.query(CHOICE_QUERY, { messageId: message.id, kind }, { timeout: 15000 }) === true;
+        } catch (err) {
+          console.warn("Air Bladder | the Warden's client did not record the choice:", err);
+        }
+      }
+      if (!recorded) ui.notifications.warn(game.i18n.localize("CAIRN.Crawler.NoWardenForChoice"));
+      return recorded;
+    };
+    const seal = () => {
+      critBtn?.setAttribute("disabled", "disabled");
+      fatigueBtn?.setAttribute("disabled", "disabled");
+    };
+    /**
+     * ONE WRITER FOR THE CRITICAL DAMAGE. The refusal branch below must not
+     * become a second `critActor.update({"system.critical": true})` — two
+     * spellings of one notion is this codebase's thrice-repeated bug — so the
+     * Mark button's body lives here and both paths call it.
+     *
+     * It keeps the `if (fatigueBtn)` asymmetry: an ordinary Critical Damage card
+     * has no choice to spend and must not grow a flag nothing reads.
+     */
+    const takeCritical = async () => {
+      // The choice is recorded BEFORE the status lands, so a choice that could
+      // not be recorded costs nothing and the card stays live.
+      if (fatigueBtn && !(await spend("critical"))) return false;
+      await critActor.update({ "system.critical": true });
+      critBtn?.setAttribute("disabled", "disabled");
+      if (fatigueBtn) seal();
+      return true;
+    };
+    if (spent()) {
+      seal();
+      const taken = message.getFlag(FLAG_SCOPE, CRAWLER_CHOICE_FLAG);
+      if (taken === "fatigue") markChoiceTaken(fatigueBtn);
+      else if (taken === "critical") markChoiceTaken(critBtn);
+    }
+
+    if (critBtn) {
+      if (mayAnswer) {
+        critBtn.onclick = async () => {
+          if (spent()) return;
+          if (await takeCritical()) markChoiceTaken(critBtn);
+        };
+      } else {
+        critBtn.style.display = "none";
+      }
+    }
+
+    if (fatigueBtn) {
+      if (mayAnswer) {
+        fatigueBtn.onclick = async (ev) => {
+          const b = ev.currentTarget;
+          if (spent()) return;
+          // SOMETHING GOES ON THE FLOOR FIRST — BUT ONLY WHEN THE CHARACTER IS
+          // ALREADY OVERBURDENED (user ruling, the night of 2026-10-03, the
+          // third shape of this rule in two days: every press, then "when it
+          // would not fit", then this). `mustDropForFatigue` is
+          // `isEncumbered()`; anyone else takes the Fatigue with no dialog, a
+          // character at 9 of 10 included. Otherwise the picker asks what the
+          // character puts down — WHICH item is always the player's choice,
+          // never the system's, which is the line the no-automation deviation
+          // draws.
+          //
+          // THE DIALOG ANSWERS THREE WAYS, and the old rule is REVERSED (user
+          // ruling, same day). It used to be that cancelling backed out of
+          // everything — nothing spent, both buttons still live. Now the Fatigue
+          // is BOUGHT with an item, and declining to pay means the Critical
+          // Damage stands:
+          //   - an object   → the bargain is struck: drop it, then the Fatigue;
+          //   - "critical"  → REFUSED by the named button, so the save stands;
+          //   - null        → Escape or the window's ×: no decision at all.
+          // Escape is deliberately NOT a refusal, which is what preserves the
+          // accident guard the old ruling existed for: the only way to refuse is
+          // to read a sentence saying what refusing costs.
+          //
+          // NOTHING TO PAY WITH IS A REFUSAL TOO, and `askWhatToDrop` returns
+          // "critical" for it with NO DIALOG — the price is an item that frees a
+          // slot, and a character with none cannot pay it. Stated because it is
+          // the argument against: somebody stripped bare, often the one who has
+          // been paying all fight, loses the alternative exactly when they need
+          // it, with no warning at the moment of pressing. The check mark on Mark
+          // Critical Damage is what makes that legible — they pressed "take a
+          // Fatigue instead" and got the opposite, and the tick is the only thing
+          // that says so.
+          //
+          // ASKED BEFORE ANY WRITE, deliberately. The drop and the Fatigue are
+          // one bargain, and a Fatigue landing while the picker was still open
+          // would be half of it. A character who is not overburdened is
+          // answered without a dialog as "drop nothing".
+          const chose = mustDropForFatigue(critActor) ? await askWhatToDrop(critActor) : { id: null, place: "" };
+          if (chose === null) return;
+          if (spent()) return;             // re-asked: the dialog is seconds wide
+          if (chose === "critical") {
+            if (await takeCritical()) markChoiceTaken(critBtn);
+            return;
+          }
+          // THE DROP MUST HAVE HAPPENED (review #33). Its result was thrown
+          // away here, so with no Warden connected — or a refusal on the
+          // Warden's side — the Fatigue still landed and the card sealed over a
+          // bargain nobody had paid. `dropItemToPile` now answers truthfully
+          // (a real reply from the Warden's client), and a `false` stops here
+          // with the card live and nothing taken.
+          if (chose.id) {
+            const dropped = await dropItemToPile(critActor, chose.id, { announce: true, place: chose.place });
+            if (!dropped) {
+              ui.notifications.warn(game.i18n.localize("CAIRN.Pile.DropRefused"));
+              return;
+            }
+          }
+          // The choice is recorded BEFORE the Fatigue, as takeCritical does.
+          if (!(await spend("fatigue"))) return;
+          // Fatigue is a COST the rules impose, never a purchase, so it lands
+          // past a full pack — `ignoreCapacity` is the flag that exists for
+          // exactly this. With a drop in front of it the bargain NETS TO ZERO:
+          // one thing down, one Fatigue on, the same slots as before.
+          //
+          // `system.critical` is deliberately NOT written. Taking the Fatigue
+          // INSTEAD of Critical Damage is the whole point of the choice.
+          await critActor.createOwnedItem(
+            { name: FATIGUE_NAME, type: "item" },
+            { ignoreCapacity: true },
+          );
+          b.setAttribute("disabled", "disabled");
+          seal();
+          markChoiceTaken(fatigueBtn);
+        };
+      } else {
+        fatigueBtn.style.display = "none";
+      }
     }
   }
 
@@ -3179,6 +3960,13 @@ const configureHandleBar = () => {
 
   Handlebars.registerHelper("ifPrint", (cond, v1) => (cond ? v1 : ""));
   Handlebars.registerHelper("ifPrintElse", (cond, v1, v2) => (cond ? v1 : v2));
+
+  // One glyph per die a damage formula rolls, for the roll control on every
+  // inventory row. A HELPER rather than a prepared context value, because the
+  // rows are rendered by ONE partial that four sheets include and a prepared
+  // field would have to be computed in each of them -- and `items-list.html` is
+  // also handed container contents, which no sheet context walks.
+  Handlebars.registerHelper("damageDiceIcons", (formula) => damageDiceIcons(formula));
 
   Handlebars.registerHelper("times", function (n, block) {
     var accum = "";

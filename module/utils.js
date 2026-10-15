@@ -166,6 +166,517 @@ export const damageFormulaFor = (quality, standardFormula) =>
     : quality === "enhanced" ? ENHANCED_FORMULA
       : standardFormula;
 
+/* -------------------------------------------- */
+/*  The optional combat rules                   */
+/* -------------------------------------------- */
+
+/**
+ * Is one of the three optional combat rules on? (`exploding-damage-dice`,
+ * `fatigue-for-critical-damage`, `maneuver-on-max-damage`.)
+ *
+ * A plain read, NO MASTER (2026-10-03, user). For a day this was
+ * `crawlerOption`, which ANDed in a "Crawler Combat Mode" master; the master
+ * was removed and the three stand alone, off by default and never greyed. The
+ * try/catch stays: a card can render before settings are registered.
+ * @param {String} key  one of the three keys above
+ * @return {Boolean}
+ */
+export const combatOption = (key) => {
+  try {
+    return !!game.settings.get(SETTINGS_NS, key);
+  } catch {
+    return false;
+  }
+};
+
+/** A bare die, with or without an explicit count: `d6`, `1d8`, `2d10`. */
+const BARE_DIE = /^(\d*)d(\d+)$/i;
+/** A die carrying only a keep modifier: `2d6k`, `2d8kh`, `3d6kh1`. */
+const KEEP_DIE = /^(\d*)d(\d+)k[hl]?\d*$/i;
+
+/**
+ * THE DIE A DAMAGE ROLL IS JUDGED ON — one recogniser for BOTH dice options
+ * (exploding and maneuvers), so the exploding option and the maneuver option can
+ * never disagree about which rolls qualify (user ruling 2026-10-03: "maneuvers
+ * should parallel exploding dice").
+ *
+ * Answers `{formula, faces, count}` or null:
+ *   - a bare die (`d4`, `1d6`, `2d10`) or a keep form (`2d6k`, `2d8kh`,
+ *     `3d6kh1`) is itself;
+ *   - a same-size `+` pool (`d6 + d6`, `2d6 + d6`) is its KEEP form (`2d6k`,
+ *     `3d6k`). Cairn's `+` means keep-highest (`evaluateFormula` above), and
+ *     the keep form is the same roll written as ONE Die term, which is what
+ *     both consumers need: `kx` explodes only the kept die, and the card can
+ *     read `active` off one term where a PoolTerm's losing member may ALSO
+ *     have rolled its maximum and nothing can tell kept from dropped without
+ *     walking `PoolTerm#results`;
+ *   - mixed sizes (`d6 + d8`), arithmetic (`2d20 + 10`), anything already
+ *     carrying a modifier we did not write (`1d6x`) and anything unrecognised
+ *     are null — left alone by both halves, a stated limit rather than an
+ *     oversight. Guessing at a formula a Warden typed is how a damage roll
+ *     quietly stops meaning what it says.
+ *
+ * NO DIE-SIZE FLOOR, and that is the SECOND ruling on this in two days. On
+ * 2026-10-02 a floor of d6 was added here (`MIN_EXPLODING_FACES`) so that an
+ * impaired `1d4` neither exploded nor offered a maneuver; on 2026-10-03 the
+ * user reversed it for both halves — "available to ALL attack rolls made by
+ * PCs, including impaired attacks, improvised attack, and attacks with dice
+ * smaller than a d6", and "maneuvers needs to be allowed on all PC attack rolls
+ * where the result is max damage on the die". The case that fires is still
+ * IMPAIRED: `IMPAIRED_FORMULA` is `1d4` and every weapon in the game can be
+ * impaired, so a max on an impaired attack is now a one-in-four event. That is
+ * exactly why the probe's transform table KEEPS its five sub-d6 rows — they
+ * assert the reversal, and a table without them is how the first ruling
+ * shipped unexamined.
+ *
+ * MELEE AND RANGED ARE THE SAME TO BOTH OPTIONS since the night of
+ * 2026-10-03. For a day a ranged weapon never offered a maneuver ("I don't want
+ * maneuvers to be available on ranged attack rolls"); when the maneuver became a
+ * line on the card rather than a choice that cost the damage, the user let
+ * ranged attacks have it too. The weapon's `ranged` field stays, read by nothing.
+ *
+ * @param {String} formula
+ * @return {{formula: String, faces: Number, count: Number}|null}
+ */
+export const judgedDie = (formula) => {
+  const f = String(formula ?? "").trim();
+  if (!f) return null;
+  if (/x/i.test(f)) return null;
+  const single = BARE_DIE.exec(f) ?? KEEP_DIE.exec(f);
+  if (single) {
+    return { formula: f, count: Math.max(1, Number(single[1] || 1)), faces: Number(single[2]) };
+  }
+  if (!f.includes("+")) return null;
+  // A `+` POOL IS CAIRN NOTATION, AND ONLY WHILE THAT SETTING IS ON (review
+  // #33): `evaluateFormula` reads `d6 + d6` as keep-highest only under
+  // `use-cairn-dice-notation`, and with it off the same string is a SUM. Judged
+  // without asking, the keep rewrite below turned the shipped Twin daggers
+  // (`d6+d6`, 2–12) into a 1–6 keep-highest for every player character the
+  // moment either combat option was switched on in a notation-off world. With
+  // the setting off a `+` formula is arithmetic, which neither option judges.
+  if (!game.settings.get(SETTINGS_NS, "use-cairn-dice-notation")) return null;
+  const parsed = f.split("+").map((term) => BARE_DIE.exec(term.trim()));
+  if (parsed.some((m) => !m)) return null;
+  // Each term may carry its own count: `2d6 + d6` is three d6 kept highest.
+  const faces = new Set(parsed.map((m) => m[2]));
+  if (faces.size !== 1) return null;                   // mixed sizes — see above
+  const count = parsed.reduce((n, m) => n + Math.max(1, Number(m[1] || 1)), 0);
+  const size = Number([...faces][0]);
+  return { formula: `${count}d${size}k`, count, faces: size };
+};
+
+/**
+ * The exploding form of a damage formula, or the formula unchanged.
+ *
+ * MEASURED IN THE SHIPPED CLIENT (2026-10-02), because the whole feature rests
+ * on one ordering fact: modifiers apply in WRITTEN order
+ * (`DiceTerm#_evaluateModifiers`), `keep` flags the losers `active: false`
+ * (`_keepOrDrop`), and `explode` skips them (`if (!r.active) continue;`). So:
+ *
+ *   2d6kx  both dice roll 6  ->  6(dropped) 6! 2  = 8   ONE six, one chain
+ *   2d6xk  both dice roll 6  ->  6(dropped) 6! 2(dropped) 2(dropped) = 6
+ *
+ * The second is the trap and the probe's control: explode-then-keep compares
+ * raw FACES, so it can never exceed the die. `kx` is the user's rule exactly —
+ * "if both dice roll a 6 that should be treated as one six".
+ *
+ * THE `+` FORM IS REWRITTEN, NEVER APPENDED TO. `evaluateFormula` above turns
+ * `a + b` into `{a,b}kh` only when every `+`-separated term matches a bare die,
+ * so `d6x + d6x` fails that test and evaluates as an arithmetic SUM — a
+ * keep-highest weapon silently dealing double. `judgedDie` hands back `2d6k`,
+ * which leaves no `+` for the rewrite to see, and is the same roll.
+ *
+ * NO FLOOR (user ruling 2026-10-03, reversing 2026-10-02): an impaired `1d4`
+ * explodes, and so does a typed d4 — see `judgedDie` for the whole record.
+ *
+ * CAPPED SINCE 2026-10-04 (user ask): `explosionCap` explosions per chain,
+ * written as core's own `x{max}={faces}` modifier — `d6x2=6`, `2d6kx2=6`,
+ * `1d4x1=4`. THE SPELLING IS LOAD-BEARING: `x2` on its own means "explode on
+ * a 2" (`Die#explode` moves a lone number into the TARGET, die.mjs:145-148),
+ * so a cap is only a cap with a comparison beside it. Measured in the shipped
+ * client: the counter decrements per explosion and the loop breaks BEFORE
+ * marking the next result, so the maximum that stops a chain is not flagged
+ * `exploded` — the card's one-line-per-explosion count stays honest, and the
+ * maneuver line, which reads an ACTIVE maximum, still fires on it. The cap is
+ * per TERM: on a keep form only the kept die is active, so it is per chain; a
+ * formula that ADDS two dice (`2d10`, nothing shipped) shares one cap, by
+ * ruling. A cap of 0 (d2, d3) writes no `x` at all. A formula already carrying
+ * its own `x` is left as typed, `judgedDie` refusing it, so a typed `1d6x` is
+ * the one way to roll an uncapped chain.
+ *
+ * @param {String} formula  what a standard/impaired/enhanced roll would be
+ * @return {String}
+ */
+export const explodingDamageFormula = (formula) => {
+  const judged = judgedDie(formula);
+  if (!judged) return formula;
+  const cap = explosionCap(judged.faces);
+  return cap > 0 ? `${judged.formula}x${cap}=${judged.faces}` : judged.formula;
+};
+
+/**
+ * How many times a die of `faces` faces may explode under the Exploding damage
+ * dice option: half its faces, less one (user ruling 2026-10-04).
+ *
+ *   d4 1 · d6 2 · d8 3 · d10 4 · d12 5 · d20 9 · d2 and d3 0 (never)
+ *
+ * Rounded DOWN for an odd die (a d5 explodes once). It caps the CHAIN: a d6
+ * may go 6, 6, 6 and stops at 18, the third six added but not rolled again.
+ * With the option off nothing explodes at all, so this is read only where the
+ * `x` is written — see `explodingDamageFormula` for the spelling it needs.
+ *
+ * @param {Number} faces
+ * @return {Number}  0 when the die may not explode at all
+ */
+export const explosionCap = (faces) => Math.max(0, Math.floor(Number(faces) / 2) - 1);
+
+/**
+ * What a damage roll BECOMES under the optional combat rules, and whether the
+ * card may say a maneuver is possible — the ONE gate the three player-character damage
+ * sites read (`actor-sheet.js` `#onRollDamage` and `#onImprovisedAttack`,
+ * `macros.js` `rollItemMacro`). It was spelled three times, and the d6 floor
+ * had to be removed from all three on the same afternoon; a gate written once
+ * cannot drift.
+ *
+ * - Not a player character: the formula unchanged, nothing offered. The
+ *   Warden's Damage tool never reaches here at all (a trap has no actor).
+ * - The exploding option, if on, explodes AT ROLL TIME, always — melee,
+ *   ranged, maneuver or not.
+ * - The maneuver option, if on and the formula is one the recogniser accepts,
+ *   marks the card (`maneuver: true` → `data-maneuver`); a die that rolls its
+ *   maximum then gets one line saying a maneuver is also possible
+ *   (`nameManeuverAvailable`, cairn.js). With exploding OFF the roll is made as
+ *   `judgedDie`'s formula, so a `d6 + d6` weapon is rolled as `2d6k` and the
+ *   card can judge one term.
+ *
+ * NO CHOICE ANY MORE (the night of 2026-10-03, user: "They get the damage AND
+ * they are offered a maneuver"). For a day a maneuver COST the damage: with
+ * both options on a melee max was rolled plain and the card offered Explode the
+ * Die / Use a Maneuver!, withholding Apply until one was pressed. All of that
+ * went; the damage always stands.
+ *
+ * Called AFTER the quality substitution, so an ENHANCED roll (1d12) and an
+ * IMPAIRED one (1d4) are each judged on the die they actually roll rather than
+ * on the weapon's, and after the quality dialog, so its buttons advertise the
+ * plain formula rather than `1d6x`. Tested at the call site because
+ * `evaluateFormula` is handed `(formula, data)` and `getRollData()` carries no
+ * document: the evaluator cannot know who rolled.
+ *
+ * @param {String} base       the formula after the quality substitution
+ * @param {Object} [o]
+ * @param {Boolean} [o.pc]    a player character's roll
+ * @return {{formula: String, maneuver: Boolean}}
+ */
+export const combatDamageFormula = (base, { pc = false } = {}) => {
+  if (!pc) return { formula: base, maneuver: false };
+  const judged = judgedDie(base);
+  const maneuver = judged !== null && combatOption("maneuver-on-max-damage");
+  const formula = combatOption("exploding-damage-dice") ? explodingDamageFormula(base)
+    : maneuver ? judged.formula
+    : base;
+  return { formula, maneuver };
+};
+
+/**
+ * Cairn's unarmed damage: the Improvised Attack dialog's starting value, and what
+ * panic substitutes for whatever was typed there.
+ *
+ * DELIBERATELY NOT `IMPAIRED_FORMULA`, though both are `1d4` today. They are two
+ * different rules that happen to agree: this one is "Unarmed attacks always do
+ * d4 damage" from the Player's Guide, that one is what Impaired substitutes. If
+ * either ever moves it moves alone, and a single shared constant would carry the
+ * other along silently.
+ *
+ * A CONSTANT AND NOT A SETTING (user ruling 2026-10-02): the control is always
+ * available and the field is editable every time, so a world-level default would
+ * be a third place to look for a number the dialog already shows.
+ */
+export const IMPROVISED_FORMULA = "1d4";
+
+/**
+ * Ask what an improvised attack is made with and what it rolls.
+ *
+ * TWO FIELDS AND TWO BUTTONS (user ruling 2026-10-02, reversing the three-question
+ * dialog that shipped the same morning): a description, a formula, Roll Damage and
+ * Cancel. The dice builder, the Sum / Keep-highest pair and the Standard /
+ * Impaired / Enhanced row are all GONE. The field accepts any formula already, so
+ * a builder beside it was a second way to say one thing — and a quality that
+ * substitutes a fixed die is meaningless where the die is typed: Impaired IS
+ * typing `1d4`.
+ *
+ * PANIC OVERRIDES, IT DOES NOT REMOVE (user ruling, same day). The field is always
+ * rendered and always editable; a panicked character's typed formula is replaced
+ * with `IMPROVISED_FORMULA` at ROLL time, and the dialog says so before they type.
+ * Hiding the field — which is what shipped first — left nothing on screen for the
+ * override to be visibly overriding.
+ *
+ * THE DESCRIPTION IS OPTIONAL and rides to the card in the slot a weapon's name
+ * occupies, so "a chair leg" yields "Dom attacks the Goblin with a chair leg!"
+ * from keys that already ship, and an empty one yields the no-weapon sentence
+ * those keys already have a partner for. That is why the label asks what you are
+ * attacking WITH: it has to elicit a noun phrase, or the card reads "attacks the
+ * Goblin with swings wildly".
+ *
+ * NO FORMULA IN THE BUTTON'S LABEL, deliberately. The quality dialog prints the
+ * die it is about to roll because it is handed a fixed one; here the field is
+ * authoritative and can change after the button is painted, so a label naming a
+ * die would advertise one the roll may not use. That is the trap the deleted
+ * `relabelQualityButtons` existed to paper over.
+ *
+ * NOTHING IS VALIDATED HERE. The caller checks the formula the way
+ * `openWardenDamage` does, because the same three rules apply (no empty, no `@`,
+ * and `Roll.validate` last since it lies about `@` references).
+ *
+ * @param {Object} [opts]
+ * @param {Boolean} [opts.panicked]  panic replaces the typed formula with 1d4
+ * @return {Promise<{description: String, formula: String}|null>}
+ *   null = dismissed OR cancelled, and either must roll NOTHING.
+ */
+export const askImprovisedAttack = async ({ panicked = false, windowId = undefined } = {}) => {
+  // BARE: DialogV2 throws on a content element carrying ANY attribute, a single
+  // class included (dialog.mjs:189), so the class goes on a wrapper inside it.
+  const content = document.createElement("div");
+  const inner = document.createElement("div");
+  inner.className = "cairn-improvised";
+  content.append(inner);
+
+  const group = (labelKey, control) => {
+    const wrap = document.createElement("div");
+    wrap.className = "form-group";
+    const label = document.createElement("label");
+    label.textContent = game.i18n.localize(labelKey);
+    const fields = document.createElement("div");
+    fields.className = "form-fields";
+    fields.append(control);
+    wrap.append(label, fields);
+    inner.append(wrap);
+  };
+
+  const description = document.createElement("input");
+  description.setAttribute("type", "text");
+  description.setAttribute("name", "description");
+  description.setAttribute("placeholder", game.i18n.localize("CAIRN.Improvised.WithPlaceholder"));
+  group("CAIRN.Improvised.With", description);
+
+  // ALWAYS, panicked or not. The override is announced beneath the field rather
+  // than enforced by removing it: a greyed or absent field cannot show what the
+  // panic rule is replacing, and the value typed into it is still the player's
+  // answer for the next attack they make.
+  const formula = document.createElement("input");
+  formula.setAttribute("type", "text");
+  formula.setAttribute("name", "formula");
+  formula.setAttribute("value", IMPROVISED_FORMULA);
+  group("CAIRN.Damage", formula);
+
+  if (panicked) {
+    const note = document.createElement("p");
+    note.className = "cairn-improvised-panic";
+    note.textContent = game.i18n.format("CAIRN.Improvised.PanicNote", { formula: IMPROVISED_FORMULA });
+    inner.append(note);
+  }
+
+  // `button.form` is the dialog's form, so the fields are read at CLICK time
+  // rather than captured when the content was built.
+  //
+  // THE PANIC SUBSTITUTION IS NOT MADE HERE, though it easily could be. The
+  // dialog reports what was TYPED and `#onImprovisedAttack` overrides it, so the one
+  // place that decides what gets rolled is the same place that stamps the panic
+  // badge on the card. A dialog that quietly handed back `1d4` would leave the
+  // badge and the formula agreeing by coincidence.
+  const read = (form) => ({
+    description: String(form?.elements?.description?.value ?? "").trim(),
+    formula: String(form?.elements?.formula?.value ?? "").trim(),
+  });
+
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["cairn-improvised-dialog"],
+    window: { title: game.i18n.localize("CAIRN.Improvised.Title") },
+    // The sheet's own window when it is popped out (review #33; the reasoning
+    // is at `_confirmAction` in actor-sheet.js).
+    renderOptions: { window: { windowId } },
+    // STATED: `wait` merges no position, unlike `confirm` and `prompt` which
+    // both supply 400 (dialog.mjs:353,374), so an auto-width window would be as
+    // wide as its longest unwrapped line.
+    position: { width: 400 },
+    content,
+    buttons: [
+      {
+        action: "roll",
+        label: game.i18n.localize("CAIRN.Improvised.Roll"),
+        icon: "fa-solid fa-hand-fist",
+        default: true,
+        class: "cairn-quality-default",
+        callback: (_event, button) => read(button.form),
+      },
+      // `type: "button"`, so implicit submission cannot reach it: every DialogV2
+      // button is a submit by default and Enter fires the FIRST one, which is
+      // what makes Roll Damage the Enter action and keeps Cancel out of its way.
+      {
+        action: "cancel",
+        label: game.i18n.localize("CAIRN.Cancel"),
+        icon: "fa-solid fa-xmark",
+        type: "button",
+      },
+    ],
+    rejectClose: false,
+  });
+  // Cancel resolves to its own action STRING — a button with no callback resolves
+  // to `button.action` (dialog.mjs:273) — and a dismissal to null. Neither is an
+  // answer, and one test covers both without naming the action.
+  return (answer && typeof answer === "object") ? answer : null;
+};
+
+/**
+ * The dice builder: a row of die buttons, a clear, and a sum/keep-highest pair.
+ *
+ * ONE CONSUMER AGAIN — the Warden's Damage dialog. It was extracted here on
+ * 2026-10-02 when the Improvised Attack dialog became a second one, and that dialog
+ * lost it again the same day (user ruling: the formula field is the only control
+ * it needs). It STAYS here rather than moving back: the extraction cost nothing
+ * to keep, moving it would be churn in a file this change does not otherwise
+ * touch, and the next dialog that wants dice buttons finds it where a shared
+ * helper belongs.
+ *
+ * THE `wd-` CLASS PREFIX AND THE `CAIRN.WardenDamage.*` KEYS ARE KEPT, and that
+ * is deliberate. The classes are what `css/cairn.css` and `dev:hazard`'s
+ * selectors already name, and the keys are TRANSLATED in `lang/es.json` —
+ * renaming either would churn a gate and orphan Malecho's work to fix a prefix
+ * nobody reads. They are historical, not descriptive.
+ *
+ * Returns a DETACHED element with no listeners: DialogV2 serializes its content
+ * to innerHTML and re-parses it, so anything wired here is dead on arrival.
+ * Call `wireDiceBuilder` from the dialog's `render` callback.
+ *
+ * @return {HTMLElement}  the .wd-dice-builder element, to append where wanted
+ */
+export const buildDiceBuilder = () => {
+  // The dice builder. It writes INTO the formula field and holds no state of
+  // its own — every click re-reads the field through `parseDiceFormula`, so a
+  // hand edit is never clobbered, and nothing downstream can tell a built
+  // formula from a typed one. When the field says something the buttons cannot
+  // (`2d6 + 3`, an `@ref`), they grey out and the field stays fully editable:
+  // the greying is the affordance, and there is nothing to enforce because the
+  // field is authoritative.
+  //
+  // Every <button> is `type="button"` EXPLICITLY: DialogV2 renders content
+  // inside a <form>, where a bare <button> is type=submit — a die click would
+  // submit the dialog and close it.
+  //
+  // Listeners are NOT attached here. This element is serialized to innerHTML
+  // and re-parsed (dialog.mjs:187-191), so anything wired now is dead on
+  // arrival; `openWardenDamage` wires the LIVE nodes in its `render` callback.
+  const builder = document.createElement("div");
+  builder.className = "wd-dice-builder";
+
+  const diceRow = document.createElement("div");
+  diceRow.className = "wd-dice-row";
+  for (const size of [...DIE_ICONS].sort((a, b) => a - b)) {
+    const btn = document.createElement("button");
+    btn.setAttribute("type", "button");
+    btn.className = "wd-die";
+    btn.setAttribute("data-die", String(size));
+    btn.setAttribute("data-tooltip", game.i18n.format("CAIRN.WardenDamage.AddDie", { die: `d${size}` }));
+    const icon = document.createElement("i");
+    icon.className = dieIcon(`d${size}`);
+    const label = document.createElement("span");
+    label.textContent = `d${size}`;
+    btn.append(icon, label);
+    diceRow.append(btn);
+  }
+  const clear = document.createElement("button");
+  clear.setAttribute("type", "button");
+  clear.className = "wd-clear";
+  clear.setAttribute("data-tooltip", game.i18n.localize("CAIRN.WardenDamage.Clear"));
+  const clearIcon = document.createElement("i");
+  clearIcon.className = "fa-solid fa-xmark";
+  clear.append(clearIcon);
+  diceRow.append(clear);
+  builder.append(diceRow);
+
+  const modeRow = document.createElement("div");
+  modeRow.className = "wd-mode-row";
+  for (const [value, key] of [["sum", "CAIRN.WardenDamage.Sum"], ["kh", "CAIRN.WardenDamage.KeepHighest"]]) {
+    const lbl = document.createElement("label");
+    const radio = document.createElement("input");
+    radio.setAttribute("type", "radio");
+    radio.setAttribute("name", "diceMode");
+    radio.setAttribute("value", value);
+    // `checked` as an ATTRIBUTE — a property never reaches the serialized markup.
+    if (value === "sum") radio.setAttribute("checked", "");
+    const text = document.createElement("span");
+    text.textContent = game.i18n.localize(key);
+    lbl.append(radio, text);
+    modeRow.append(lbl);
+  }
+  builder.append(modeRow);
+  return builder;
+};
+
+/**
+ * Wire the dice builder onto the dialog's LIVE nodes.
+ *
+ * Called from DialogV2's `render` option (dialog.mjs:405, :420-422) — the seam
+ * the client's own docs point at for exactly this ("the element will get
+ * stringified, so any listeners … will not carry forward; you must still use
+ * the `render` option", dialog.mjs:152-155). The same rule the background
+ * picker's eye toggles already follow via `dialog.render(true).then(...)`.
+ *
+ * THE FIELD IS THE ONLY STATE. Every gesture is read-modify-write against the
+ * formula input via `parseDiceFormula` / `composeDiceFormula`:
+ *
+ *  - a die button parses the field, appends its die, recomposes;
+ *  - a mode radio recomposes the same dice under the new mode;
+ *  - ✕ EMPTIES the field (user ruling — ✕ means clear, the buttons are the way
+ *    back; only opening the dialog pre-fills 1d6);
+ *  - a hand edit re-greys or re-enables on every keystroke.
+ *
+ * The DIALECT is read from the setting ONCE here and passed as an argument —
+ * `composeDiceFormula` itself reads nothing, which is what lets a probe drive
+ * both dialects with zero world writes against a `requiresReload` setting.
+ */
+export const wireDiceBuilder = (root) => {
+  const field = root.querySelector('input[name="formula"]');
+  const dice = [...root.querySelectorAll(".wd-die")];
+  const clear = root.querySelector(".wd-clear");
+  const radios = [...root.querySelectorAll('input[name="diceMode"]')];
+  if (!field || !dice.length || !clear || !radios.length) return;
+  const cairnNotation = game.settings.get(SETTINGS_NS, "use-cairn-dice-notation");
+
+  const mode = () => radios.find((r) => r.checked)?.value ?? "sum";
+  const refresh = () => {
+    const parsed = parseDiceFormula(field.value);
+    const off = parsed === null;
+    for (const el of [...dice, ...radios]) el.disabled = off;
+    // The string decides the mode where it can (2d6 is a sum, d6 + d6 a keep-
+    // highest); a single die or an empty field leaves the radios where they are.
+    if (parsed?.mode) for (const r of radios) r.checked = r.value === parsed.mode;
+  };
+
+  for (const btn of dice) {
+    btn.addEventListener("click", () => {
+      const parsed = parseDiceFormula(field.value);
+      if (parsed === null) return; // disabled anyway; a race is not a crash
+      parsed.sizes.push(Number(btn.dataset.die));
+      field.value = composeDiceFormula(parsed.sizes, mode(), { cairnNotation });
+      refresh();
+    });
+  }
+  for (const r of radios) {
+    r.addEventListener("change", () => {
+      const parsed = parseDiceFormula(field.value);
+      if (parsed === null || !parsed.sizes.length) return;
+      field.value = composeDiceFormula(parsed.sizes, mode(), { cairnNotation });
+      refresh();
+    });
+  }
+  clear.addEventListener("click", () => {
+    field.value = "";
+    refresh();
+  });
+  field.addEventListener("input", refresh);
+  refresh();
+};
+
 /**
  * The badge a card shows for an impaired or enhanced roll, and "" for a standard
  * one — a card that says nothing is saying the roll was ordinary, which is most
@@ -193,6 +704,205 @@ export const damageQualityLabel = (quality, { panicked = false } = {}) => {
   return "";
 };
 
+/**
+ * The quality badge as a DATUM rather than a sentence.
+ *
+ * `damageQualityLabel` returns text already in the composing client's language,
+ * and the roll card stores it — so a card whose attack line the render hook had
+ * just rebuilt into Spanish carried an English "Impaired" on the line directly
+ * beneath (review #28). The card's own answer to that problem is `data-weapon`:
+ * store the datum, rebuild the sentence per viewer. This is the same move for
+ * the badge, and the two now travel together on the same element.
+ *
+ * "" for an ordinary roll, so the template's `{{#if}}` still drops the line.
+ * @param {String} quality
+ * @param {Object} [opts]
+ * @param {Boolean} [opts.panicked]
+ * @return {""|"impaired"|"enhanced"|"panic"}
+ */
+export const damageQualityKind = (quality, { panicked = false } = {}) => {
+  if (quality === "impaired") return panicked ? "panic" : "impaired";
+  if (quality === "enhanced") return "enhanced";
+  return "";
+};
+
+/** The badge keys, by kind. Read by the per-viewer rebuild; a kind that is not
+ * a member finds nothing rather than reaching Object's own properties. */
+export const DAMAGE_QUALITY_KEYS = {
+  impaired: "CAIRN.DamageQuality.BadgeImpaired",
+  enhanced: "CAIRN.DamageQuality.BadgeEnhanced",
+  panic: "CAIRN.DamageQuality.BadgePanic",
+};
+
+/* -------------------------------------------------------------------------- */
+/*  The d20 result card, shared by two rollers                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * ONE builder for the d20 save card, with TWO callers: the damage flow's STR
+ * save (`Damage._rollStrSave`) and the sheet's ability roll
+ * (`#onRollAbility`). It lives HERE, in the leaf both already import, because
+ * `actor-sheet.js` does not import `damage.js` and adding that edge to give
+ * them a shared home would be a cycle risk for a string.
+ *
+ * WHY IT EXISTS AT ALL: both cards were composed in the ROLLING client's
+ * language and stored, and both are public — so every other player at the
+ * table read "Success"/"Fail" and the Critical Damage button in whoever's
+ * language happened to roll (review #28). That is the class review #27 closed
+ * for four other cards; these two sat beside them unnoticed. The rebuild reads
+ * numbers and an ability KEY from a flag and never stored text.
+ */
+export const D20_CARD_ABILITIES = new Set(["STR", "DEX", "WIL"]);
+
+/**
+ * The flavor line. Both kinds name the save the same way; the sheet's roll
+ * wraps it in "Rolling {what}", which is the one difference between them.
+ * @param {"save"|"abilityRoll"} kind
+ * @param {String} ability  a member of D20_CARD_ABILITIES
+ */
+export const d20CardFlavor = (kind, ability) => {
+  const save = game.i18n.format("CAIRN.Save", { key: game.i18n.localize(ability) });
+  return kind === "abilityRoll" ? game.i18n.format("CAIRN.RollingWhat", { what: save }) : save;
+};
+
+/**
+ * The card body. `formula` is ESCAPED on both the build and the rebuild, so the
+ * two paths agree byte for byte — and because a rebuild reads it from a flag,
+ * which is player-authorable and never server-sanitized (the review #24 class).
+ * It renders identically: the formula's own `<=` is text either way.
+ * @param {Object} p
+ * @param {String} p.formula
+ * @param {Number} p.rolled
+ * @param {Boolean} p.failed
+ * @param {Boolean} p.crit   offer the Mark Critical Damage button
+ * @param {Boolean} [p.fatigue]  also offer "Take a Fatigue instead" (the
+ *   Fatigue instead of Critical Damage option). Rendered HERE and nowhere else: `localizeD20Card` replaces
+ *   `.message-content`'s whole innerHTML per viewer, so a button injected
+ *   anywhere else is destroyed on the next render.
+ */
+export const d20CardBody = ({ formula, rolled, failed, crit, fatigue }) => {
+  const f = foundry.utils.escapeHTML(String(formula));
+  const result = game.i18n.localize(failed ? "CAIRN.Fail" : "CAIRN.Success");
+  const cls = failed ? "failure" : "success";
+  const critButton = crit
+    ? `<button type="button" class="mark-critical-damage">${game.i18n.localize("CAIRN.MarkCriticalDamage")}</button>`
+    : "";
+  // The choice was ruled a BUTTON and not a dialog, so nothing interrupts the
+  // table — which means the tooltip is the only place the cost can be stated
+  // before it is paid. `data-tooltip` carries a bare key; core's TooltipManager
+  // localizes it at hover.
+  const fatigueButton = crit && fatigue
+    ? `<button type="button" class="take-fatigue-instead" data-tooltip="CAIRN.Crawler.FatigueButtonTip">`
+      + `${game.i18n.localize("CAIRN.Crawler.FatigueButton")}</button>`
+    : "";
+  // SIDE BY SIDE, NOT STACKED (user ruling, 2026-10-02: "those Fatigue and Mark
+  // Critical Damage Buttons are in fact stacked and they should be side by
+  // side"). They had no CSS at all, which is the whole reason two block-level
+  // buttons sat in a column — and a column reads as a list of things to do in
+  // order, where a row says "either of these". `.dmg-choice-row` carries the
+  // flex rule (it laid out a maneuver pair too, for the day maneuvers were a
+  // choice on the card).
+  //
+  // A ROW OF ONE IS FINE: with the Fatigue option off a crit card carries only
+  // Mark Critical Damage, and the wrapper then holds a single button.
+  //
+  // RETROACTIVE FOR FREE — `localizeD20Card` replaces `.message-content`'s whole
+  // innerHTML from this builder on every render, so every card already in the log
+  // gains the row the moment it is displayed.
+  const choices = critButton || fatigueButton
+    ? `<div class="dmg-choice-row">${critButton}${fatigueButton}</div>`
+    : "";
+  return `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">${f}</div>`
+    + `<div class="dice-tooltip" style="display: none;"><section class="tooltip-part"><div class="dice">`
+    + `<header class="part-header flexrow"><span class="part-formula">${f}</span></header>`
+    + `<ol class="dice-rolls"><li class="roll die d20">${rolled}</li></ol></div></section></div>`
+    + `<h4 class="dice-total ${cls}">${result} (${rolled})</h4></div></div>${choices}`;
+};
+
+/**
+ * Rebuild a stored d20 card in THIS viewer's language, from its flag alone.
+ * Returns false when the message is not one of ours or the flag does not
+ * survive coercion, so a crafted flag leaves the stored card alone rather than
+ * rendering anything from it.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ */
+export const localizeD20Card = (message, html) => {
+  // A CARD CORE HAS HIDDEN MUST STAY HIDDEN. `ChatMessage#visible` is true for
+  // a whispered message when `isRoll` (chat-message.mjs:101-104 — the caveat
+  // `concealmentWhisper` above already records), so this hook FIRES on clients
+  // that may not read the result: core has already thrown our stored card away
+  // and written "rolled privately" into `.message-content` and `.flavor-text`
+  // (`#renderRollContent`, chat-message.mjs:475-481), which are exactly the two
+  // elements below. Without this line a Private GM Roll save showed the whole
+  // table the die and the Critical Damage button, and a Blind GM Roll showed
+  // the roller their own result — the one thing blind exists to prevent.
+  // Both producers post through `Roll#toMessage`, which applies the client's
+  // chat-mode dropdown (roll.mjs:932,948), so this is reachable from the UI
+  // with no crafted anything.
+  if (!message?.isContentVisible) return false;
+  const raw = message?.getFlag?.("air-bladder", "d20Card");
+  if (!raw || typeof raw !== "object") return false;
+  const { kind, ability } = raw;
+  if (kind !== "save" && kind !== "abilityRoll") return false;
+  if (typeof ability !== "string" || !D20_CARD_ABILITIES.has(ability)) return false;
+  const rolled = Number(raw.rolled);
+  if (!Number.isFinite(rolled)) return false;
+  const body = html.querySelector(".message-content");
+  if (!body) return false;
+  body.innerHTML = d20CardBody({
+    formula: raw.formula, rolled, failed: raw.failed === true, crit: raw.crit === true,
+    // `=== true` like its siblings: the flag is player-authorable and never
+    // server-sanitized (the review #24 class), so nothing here is coerced.
+    fatigue: raw.fatigue === true,
+  });
+  // The flavor sits OUTSIDE .message-content, in the header core renders.
+  const flavor = html.querySelector(".flavor-text");
+  if (flavor) flavor.textContent = d20CardFlavor(kind, ability);
+  return true;
+};
+
+/**
+ * Roll cards whose whole localized surface is a FLAVOUR LINE and nothing else.
+ *
+ * The d20 cards above carry a body worth rebuilding; these carry a sentence.
+ * Same rule, smallest possible shape: the flag holds a KIND, the receiver maps
+ * it to a key, and `Object.hasOwn` guards the lookup so a crafted kind reaches
+ * no member of `Object`'s own prototype.
+ *
+ * Die of Fate was found by review #29's sweep — the one the class's own rule
+ * asks for after every fix in it, run over all 23 `create`/`toMessage` sites.
+ * It ships on BOTH sheets, so a player can be the composer, and it posts under
+ * the chat-mode dropdown like any roll: a Spanish player pressing it put
+ * "Dado del destino" in every English log. This docblock then called it "the
+ * last stored card neither rebuilt per viewer nor read by exactly one person"
+ * — and the change-log ledger (actor.js), whispered to the owners AND every
+ * Warden, was exactly that for another day (review #30; rebuilt now via
+ * `localizeChangeLogCard`). A sweep's closing claim is a copy that drifts.
+ */
+export const ROLL_FLAVOR_KEYS = { dieOfFate: "CAIRN.DieOfFate" };
+
+/**
+ * Rebuild a stored roll card's flavour line in THIS viewer's language.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ * @returns {boolean} whether the line was rebuilt
+ */
+export const localizeRollFlavor = (message, html) => {
+  // Hidden stays hidden, for the reason `localizeD20Card` states at length.
+  if (!message?.isContentVisible) return false;
+  const kind = message?.getFlag?.("air-bladder", "rollFlavor");
+  if (typeof kind !== "string" || !Object.hasOwn(ROLL_FLAVOR_KEYS, kind)) return false;
+  const flavor = html.querySelector(".flavor-text");
+  if (!flavor) return false;
+  // textContent, not innerHTML: nothing here is markup, and the value is
+  // reached through a whitelist rather than localized blind — `localize()`
+  // returns an unknown key VERBATIM, which is how a crafted string becomes
+  // markup on the other route.
+  flavor.textContent = game.i18n.localize(ROLL_FLAVOR_KEYS[kind]);
+  return true;
+};
+
 /** The dice Font Awesome actually ships a glyph for. Exported for the Warden's
  * damage dice buttons — one list, not two to drift. */
 export const DIE_ICONS = new Set([4, 6, 8, 10, 12, 20]);
@@ -216,6 +926,89 @@ export const DIE_ICONS = new Set([4, 6, 8, 10, 12, 20]);
 export const dieIcon = (formula) => {
   const n = Number(/d(\d+)/i.exec(String(formula ?? ""))?.[1]);
   return DIE_ICONS.has(n) ? `fa-solid fa-dice-d${n}` : "";
+};
+
+/**
+ * What a roll control wears when the formula names no standard die.
+ *
+ * `dieIcon` returns "" there, which is right for a DIALOG BUTTON — `_renderButtons`
+ * does `if (icon)`, so the `<i>` is simply omitted and nothing claims a die the
+ * roll will not use. An inventory row cannot do that: the glyph is the control's
+ * only content, so "" would leave nothing to click. The generic d20 is what every
+ * row wore before this existed, so falling back to it is falling back to the
+ * shipped behaviour.
+ */
+const GENERIC_DIE_ICON = "fa-solid fa-dice-d20";
+
+/**
+ * The die a ROW control wears for a formula: `dieIcon`'s answer, or the generic
+ * d20 when the formula names no standard die (or there is no formula at all).
+ *
+ * THE TRAIT DICE JOINED THE RULE ON 2026-10-03 (user: "the Traits ... are
+ * rolled from d10 tables. therefore the roller die in the sheet, which
+ * currently a d20, should be replaced with a d10"). Not a second literal: the
+ * eight 2e trait tables roll 1d10, the NPC sheet's four roll 1d20 through the
+ * SAME partial, and a Warden's own world `Physique` may roll whatever they
+ * gave it — so each row reads the die off the table it will roll, world-first,
+ * the way an inventory row reads its damage formula.
+ * @param {String} formula  a RollTable's (derived) formula
+ * @return {String}  a class list; never empty
+ */
+export const dieIconOrGeneric = (formula) => dieIcon(formula) || GENERIC_DIE_ICON;
+
+/**
+ * At most this many glyphs on one row (user ruling 2026-10-02: "render up to
+ * four"). Nothing shipped comes near it — of 408 damage formulas in the packs the
+ * largest count is `3d6k` — but homebrew `10d6` would push the edit and delete
+ * controls off the end of the row, and a row that loses its controls to a
+ * decoration is a worse trade than a count that stops being literal.
+ */
+const MAX_DIE_GLYPHS = 4;
+
+/**
+ * One Font Awesome class per die a damage formula rolls.
+ *
+ * THE DICE ON A ROW SAY WHAT IT ROLLS (user ask 2026-10-02). Every roll control in
+ * the inventory wore `fa-dice-d20` regardless, so a Dagger and a Greatsword were
+ * indistinguishable until you read the tag beside them.
+ *
+ * THE LIST IS RENDERED INSIDE ONE ANCHOR, never one anchor per die. `2d6k` is a
+ * single roll of two dice, so two glyphs on two controls would be two click
+ * targets for one action and two tooltips to keep in step. The template loops
+ * this inside the control, which is "they both do the same thing" expressed in
+ * the markup rather than promised in a comment.
+ *
+ * ALL OR NOTHING ON RECOGNITION. A formula whose terms are not all bare dice of a
+ * size Font Awesome ships — `1d6 + 2`, a flat `3`, `1d7` — returns the single
+ * generic glyph rather than a partial reading, because a row showing one d6 for
+ * `d6 + 2` would be stating something false about the roll.
+ *
+ * @param {String} formula
+ * @return {String[]}  at least one class; never empty
+ */
+export const damageDiceIcons = (formula) => {
+  const f = String(formula ?? "").trim();
+  if (!f) return [GENERIC_DIE_ICON];
+  const faces = [];
+  for (const term of f.split("+")) {
+    // The same two recognisers `judgedDie` uses, per `+` term: both are anchored,
+    // so a term carrying anything else fails here rather than matching loosely.
+    const m = BARE_DIE.exec(term.trim()) ?? KEEP_DIE.exec(term.trim());
+    if (!m) return [GENERIC_DIE_ICON];
+    const n = Number(m[2]);
+    if (!DIE_ICONS.has(n)) return [GENERIC_DIE_ICON];
+    // The COUNT, not one per term: `2d6k` rolls two dice and keeps one, and what
+    // the row reports is what hits the table.
+    // BOUNDED INSIDE THE TERM, not only between terms (review #33): the count
+    // is whatever the item's owner typed into an unvalidated string, and this
+    // runs on every render of every sheet that lists the weapon — `100000000d6`
+    // on an equipped weapon pushed 1e8 entries per render on the Warden's own
+    // client the moment they opened that sheet.
+    for (let i = Math.max(1, Number(m[1] || 1)); i > 0 && faces.length < MAX_DIE_GLYPHS; i--) faces.push(n);
+    if (faces.length >= MAX_DIE_GLYPHS) break;
+  }
+  if (!faces.length) return [GENERIC_DIE_ICON];
+  return faces.slice(0, MAX_DIE_GLYPHS).map((n) => `fa-solid fa-dice-d${n}`);
 };
 
 /**
@@ -579,6 +1372,29 @@ export const grantSourceLabel = (source) => {
   if (s.startsWith("question:")) return game.i18n.localize("CAIRN.GrantQuestion");
   if (s === "failed-career") return game.i18n.localize("CAIRN.GrantFailedCareer");
   return "";
+};
+
+/**
+ * What ONE item costs in inventory slots: bulky = 2, petty/weightless = 0,
+ * anything else = 1, times its quantity.
+ *
+ * ONE COPY OF THE SLOT MATHS. `CairnActor#calcSlotsUsed` sums this over an
+ * actor's items, and the Fatigue drop picker uses it to tell a player what each
+ * row would free — two readers of one rule, which must not be two spellings of
+ * it. A picker that disagreed with the slot count would be worse than no picker:
+ * it would offer a trade whose stated price is wrong.
+ *
+ * `quantity` is `!= undefined` rather than `?? 1`, faithfully to the reduce this
+ * came out of: a stored 0 means zero slots, not one.
+ * @param {Item} item
+ * @return {Number}
+ */
+export const itemSlotCost = (item) => {
+  const sys = item?.system ?? {};
+  const qty = sys.quantity;
+  if (sys.bulky ?? false) return qty != undefined ? 2 * qty : 2;
+  if (sys.weightless ?? false) return 0;
+  return qty != undefined ? qty : 1;
 };
 
 /**

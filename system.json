@@ -2,10 +2,10 @@
   "id": "air-bladder",
   "title": "Air Bladder — Cairn 2e",
   "description": "Air Bladder — a game system for Cairn 2nd Edition and Barebones, the OSR RPG by Yochai Gal, on Foundry VTT. Cairn character generation, backgrounds, marketplace, and Warden tables; descended from Into the Odd. A companion system compatible with Cairn — not the official Cairn system.",
-  "version": "0.1.19",
+  "version": "0.1.24",
   "compatibility": {
     "minimum": "14.365",
-    "verified": "14.365"
+    "verified": "14.368"
   },
   "license": "LICENSE.txt",
   "url": "https://domfortunato.github.io/air-bladder/",
@@ -200,12 +200,6 @@
       "system": "air-bladder"
     },
     {
-      "name": "more-spellbooks",
-      "label": "CAIRN.Pack.more-spellbooks",
-      "type": "Item",
-      "system": "air-bladder"
-    },
-    {
       "name": "spellbooks-glog",
       "label": "CAIRN.Pack.spellbooks-glog",
       "type": "Item",
@@ -314,7 +308,6 @@
         "reliquary",
         "market-goods",
         "spellbooks",
-        "more-spellbooks",
         "spellbooks-glog"
       ]
     },

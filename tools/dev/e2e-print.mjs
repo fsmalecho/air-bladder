@@ -112,6 +112,10 @@ const r = await page.evaluate(async ({ xssName }) => {
   // shadow forcing GLOG off; the world's value is the user's, never written.
   const origGetGlog = game.settings.get;
   game.settings.get = function (scope, key, ...rest) {
+    // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+    // get(ns, key, {document: true}) for the Setting document it updates by id,
+    // and any value handed back makes it CREATE a duplicate. check:probes gates this.
+    if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, scope, key, ...rest);
     if (scope === game.system.id && key === "enable-glog-magic") return false;
     return origGetGlog.call(this, scope, key, ...rest);
   };
@@ -485,9 +489,13 @@ const r = await page.evaluate(async ({ xssName }) => {
     return popup2;
   };
   const origGet = game.settings.get;
-  game.settings.get = function (ns, key) {
+  game.settings.get = function (ns, key, ...rest) {
+    // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+    // get(ns, key, {document: true}) for the Setting document it will update by
+    // id, and a value handed back here makes it CREATE a duplicate instead.
+    if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
     if (key === "barebones-failed-career") return true;
-    return origGet.call(this, ns, key);
+    return origGet.call(this, ns, key, ...rest);
   };
   try {
     pc.sheet.element.querySelector('[data-action="printSheet"]')?.click();
@@ -730,9 +738,13 @@ const r = await page.evaluate(async ({ xssName }) => {
   await sleep(600);
   const printWithShadow = async (shadow) => {
     const origGet2 = game.settings.get;
-    game.settings.get = function (ns, key) {
+    game.settings.get = function (ns, key, ...rest) {
+      // A DOCUMENT request is never shadowed (review #27): core's #setWorld asks
+      // get(ns, key, {document: true}) for the Setting document it will update by
+      // id, and a value handed back here makes it CREATE a duplicate instead.
+      if (rest[0]?.document) return foundry.helpers.ClientSettings.prototype.get.call(this, ns, key, ...rest);
       if (key in shadow) return shadow[key];
-      return origGet2.call(this, ns, key);
+      return origGet2.call(this, ns, key, ...rest);
     };
     let popup8 = null;
     window.open = (...a) => {
@@ -805,6 +817,29 @@ const r = await page.evaluate(async ({ xssName }) => {
   out.omenSourceRestored = pc.system.contentSource === origSource;
   // Hiding is not erasing — read off the document after the shadow is gone.
   out.omenSwitchTextKept = pc.system.omen;
+
+  // The show-traits switch reaches the paper too (ruled 2026-09-07, the
+  // show-omens one-switch-both-surfaces precedent): OFF drops the Traits
+  // section AND its heading — age travels only inside the sentence, so it
+  // goes with it. The age is set to a marker value no other section can
+  // contain, and put back afterwards for the passes that follow.
+  const traitsHead = game.i18n.localize("CAIRN.Traits");
+  const origAge = pc.system.age;
+  const origPronouns = pc.system.pronouns;
+  await pc.update({ "system.age": "397", "system.pronouns": "zey/zem" });
+  try {
+    const onT = await printWithShadow({ "show-traits": true });
+    out.traitsSwitchOn = onT.headings.includes(traitsHead) && onT.text.includes("397");
+    const offT = await printWithShadow({ "show-traits": false });
+    out.traitsSwitchOff = !offT.headings.includes(traitsHead) && !offT.text.includes("397");
+    out.traitsSwitchOffHeadings = offT.headings;
+    // Pronouns are not this switch's business and still print — a marker
+    // value, or an empty fixture would make this leg unfailable.
+    out.traitsOffPronouns = offT.text.includes("zey/zem");
+  } finally {
+    await pc.update({ "system.age": origAge, "system.pronouns": origPronouns });
+  }
+  out.traitsAgeRestored = pc.system.age === origAge && pc.system.pronouns === origPronouns;
   await pc.sheet.close();
 
   // Fourth pass: the route prefix (review #13 #7). abs() used to resolve
@@ -1169,6 +1204,15 @@ check("a BAREBONES character prints no Omen even with the switch ON", r.omenBare
   + "Barebones ships no omens table, and a legacy one keeps its enabled flag and its text");
 check("and the fixture's content source is restored", r.omenSourceRestored === true,
   `was ${r.omenSourceBefore} — later passes read this same actor`);
+
+check("an ENABLED traits section prints, heading and age marker", r.traitsSwitchOn === true,
+  "the precondition for the switch leg below — without it, an absent section passes for the wrong reason");
+check("the show-traits switch drops the printed Traits section", r.traitsSwitchOff === true && r.traitsSwitchOn === true,
+  `off-hidden=${r.traitsSwitchOff} (headings then: ${JSON.stringify(r.traitsSwitchOffHeadings)}) — one switch covers sheet AND paper, and age goes with the sentence`);
+check("pronouns still print with traits hidden", r.traitsOffPronouns === true,
+  "pronouns are never rolled and are not this switch's business");
+check("the fixture's age and pronouns are restored", r.traitsAgeRestored === true,
+  "later passes read this same actor");
 
 console.log("\nthe route prefix");
 check("a prefixed host keeps its portraits", (r.prefixedSrc ?? "").includes("/pfx-probe/systems/air-bladder/"),

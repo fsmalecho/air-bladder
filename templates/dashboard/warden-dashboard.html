@@ -1,0 +1,151 @@
+{{!--
+  The Warden's Dashboard.
+
+  ONE ROOT ELEMENT, and it is not a style choice: an ApplicationV2 part that
+  renders several top-level elements fails outright with "Template part must
+  render a single HTML element", and the window never opens. The wrapper is
+  the flex column; the four bands inside it are its children.
+
+  ONE loop over `panelList`, where each entry already carries core's tab state
+  and its own buttons — see `_prepareContext`. The alternative was six
+  hand-written tab blocks and a Handlebars `lookup` chain to pair each with
+  its tab.
+
+  Every <button> is type="button" EXPLICITLY. The application element is a
+  <form> (`tag: "form"`), so a bare button is a submit button and rolling a
+  table would submit the window instead.
+
+  GLYPH, THEN A LEFT-ALIGNED LABEL (user ruling 2026-09-10, "very crowded and
+  difficult to read"). The glyph sits in a fixed-width box so every label on a
+  tab starts at the same x and the eye runs down the column instead of reading
+  each button in turn. Centred runs of text were the actual defect; the gaps
+  were the symptom. Labels WRAP to a second line rather than truncating — a
+  hidden half-label is worse than a taller row, and the CSS lets the pair
+  stretch so the eye still matches the two halves.
+--}}
+<div class="cairn-dashboard-inner">
+
+    {{!--
+      ABOVE THE TAB STRIP, not below it. There is ONE of these and it governs
+      every tab, but sitting between the strip and the tab's own content made
+      it read as Travel's own control (user, looking at it: "default on all
+      tabs"). Above the strip, its scope is visible.
+    --}}
+    <div class="cairn-dashboard-visibility">
+        <label for="ab-dashboard-mode">{{localize "CAIRN.Dashboard.Visibility"}}</label>
+        <select id="ab-dashboard-mode" name="messageMode">
+            {{#each modes as |mode|}}
+                <option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>
+            {{/each}}
+        </select>
+    </div>
+
+    <nav class="sheet-tabs tabs cairn-dashboard-tabs" data-group="primary">
+        {{#each panelList as |panel|}}
+            <a class="item {{panel.cssClass}}" data-action="tab" data-group="primary"
+               data-tab="{{panel.id}}"><i class="fa-solid {{panel.icon}}"></i>{{localize panel.label}}</a>
+        {{/each}}
+    </nav>
+
+    <section class="sheet-body cairn-dashboard-body">
+        {{#each panelList as |panel|}}
+            <div class="tab {{panel.cssClass}}" data-group="primary" data-tab="{{panel.id}}">
+
+                {{#if panel.empty}}
+                    <p class="hint">{{localize "CAIRN.Dashboard.NoTables"}}</p>
+                {{/if}}
+
+                {{#if panel.hasGrid}}
+                    <div class="cairn-dashboard-grid">
+                        {{#each panel.tables as |btn|}}
+                            <span class="cairn-dashboard-pair">
+                                <button type="button" data-action="rollTable"
+                                        data-table="{{btn.table}}">
+                                    <i class="fa-solid {{btn.icon}}"></i>
+                                    <span>{{btn.label}}</span>
+                                </button>
+                                <button type="button" class="cairn-show-btn" data-action="showTable"
+                                        data-table="{{btn.table}}"
+                                        data-tooltip="{{localize 'CAIRN.Dashboard.ShowTable'}}"
+                                        aria-label="{{localize 'CAIRN.Dashboard.ShowTable'}}"><i class="fas fa-eye"></i></button>
+                            </span>
+                        {{/each}}
+
+                        {{!--
+                          THE COMBINED DRAW SITS IN THE SAME GRID, and the
+                          heading it used to live under ("Roll the lot") is
+                          gone by user ruling. The tooltip carries what the
+                          heading was saying, since a button reading "Complete
+                          Path" does not say by itself that it rolls three.
+
+                          THE WRAPPER IS NOT `.cairn-dashboard-pair` AND MUST
+                          NOT BE. `dev:warden-dashboard` asserts pairs equal
+                          roll buttons, and separately counts a "stray" as any
+                          set button whose PARENT ELEMENT contains an eye — so
+                          a bare button dropped straight into this grid, which
+                          is full of eyes, reds a correct system.
+                        --}}
+                        {{#each panel.sets as |set|}}
+                            <span class="cairn-dashboard-solo">
+                                <button type="button" data-action="rollSet" data-key="{{set.key}}"
+                                        data-tables="{{set.tables}}"
+                                        data-tooltip="{{localize 'CAIRN.Dashboard.Tip.Set'}}">
+                                    <i class="fa-solid {{set.icon}}"></i>
+                                    <span>{{set.label}}</span>
+                                </button>
+                            </span>
+                        {{/each}}
+                    </div>
+                {{/if}}
+
+                {{#each panel.groups as |group|}}
+                    <h3 class="cairn-dashboard-head">{{group.head}}</h3>
+                    <div class="cairn-dashboard-grid">
+                        {{#each group.tables as |btn|}}
+                            <span class="cairn-dashboard-pair">
+                                <button type="button" data-action="rollTable"
+                                        data-table="{{btn.table}}">
+                                    <i class="fa-solid {{btn.icon}}"></i>
+                                    <span>{{btn.label}}</span>
+                                </button>
+                                <button type="button" class="cairn-show-btn" data-action="showTable"
+                                        data-table="{{btn.table}}"
+                                        data-tooltip="{{localize 'CAIRN.Dashboard.ShowTable'}}"
+                                        aria-label="{{localize 'CAIRN.Dashboard.ShowTable'}}"><i class="fas fa-eye"></i></button>
+                            </span>
+                        {{/each}}
+                    </div>
+                {{/each}}
+
+                {{#if panel.creates.length}}
+                    <h3 class="cairn-dashboard-head">{{localize "CAIRN.Dashboard.Head.Create"}}</h3>
+                    {{#if panel.createHint}}<p class="hint">{{panel.createHint}}</p>{{/if}}
+                    <div class="cairn-dashboard-grid">
+                        {{#each panel.creates as |make|}}
+                            <button type="button" data-action="generate" data-gen="{{make.gen}}">
+                                <i class="{{make.icon}}"></i>
+                                <span>{{make.label}}</span>
+                            </button>
+                        {{/each}}
+                    </div>
+                {{/if}}
+
+            </div>
+        {{/each}}
+    </section>
+
+    {{!--
+      The damage tool sits OUTSIDE the tabs, so it is one click from wherever
+      the Warden is standing. It keeps its Token-controls button too: its
+      targets come from the aiming gesture, which is a token-layer operation,
+      so the palette entry sits beside the gesture that feeds it and this one
+      is the convenience.
+    --}}
+    <footer class="cairn-dashboard-footer">
+        <button type="button" data-action="wardenDamage">
+            <i class="fas fa-skull-crossbones"></i>
+            <span>{{damageLabel}}</span>
+        </button>
+    </footer>
+
+</div>

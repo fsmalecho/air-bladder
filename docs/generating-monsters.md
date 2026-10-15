@@ -15,11 +15,13 @@ stats, the ability weights, the design reasoning — is recorded in
 
 ## Where the button is
 
-**Actors tab → the button row at the top → Generate Monster** (the dragon
+**Actors tab → the button row at the top → Create Monster** (the dragon
 icon).
 
-Clicking it opens one question — **"How dangerous is it?"** — with four
-buttons:
+Clicking it opens one window: a **How dangerous is it?** dropdown with four
+choices, and the **Use random generation.** tick-box every creation button
+carries (clear it for an empty monster sheet, and the tier greys out, since a
+tier chooses nothing on an empty sheet):
 
 | Tier | HP | Attack die | Armor |
 |---|---|---|---|
@@ -28,8 +30,8 @@ buttons:
 | **Serious** | 10 | d10 | usually |
 | **Random** (the default) | — | — | weighted 3 : 2 : 1, so mooks are common and bosses are rare |
 
-Dismissing the dialog with **✕** creates nothing — a monster only ever
-arrives from an explicit button press.
+Dismissing the dialog with **✕** or **Cancel** creates nothing — a monster
+only ever arrives from an explicit **Create**.
 
 ## What you get
 
@@ -55,7 +57,9 @@ arrives from an explicit button press.
   distinguishable in the directory until inspiration strikes. Rename freely.
 - **A portrait** drawn from the creature categories of the Game-Icons
   gallery, with the token wearing the same image — hostile and unlinked,
-  like the shipped monsters.
+  like the shipped monsters. Unlinked is what lets you place the same monster
+  a dozen times and damage each one separately; see
+  [Tokens and Sheets](tokens-and-sheets.md).
 
 ## Re-rolling a monster
 

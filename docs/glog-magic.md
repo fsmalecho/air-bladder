@@ -28,7 +28,7 @@ The exclamation mark is earned. Turning this ON converts the whole world, once, 
   carrying the GLOG wording of its spell. A scroll that was already spent
   stays spent.
 - **New arrivals convert too.** Drag a canon spellbook from any compendium onto a character and it lands as an unspent Spellscroll. There are no spellbooks in a GLOG world — there are only Grimoires and spellscrolls.
-- **Character generation** hands out only GLOG and custom spells, always as scrolls.
+- **Character generation** hands out only GLOG spells, always as scrolls. They are rolled on the shipped **Spells — GLOG** table in **Tables (GLOG)**, and a table of that name in your world is rolled instead — **Create a Custom Spell Table…** on the Rollable Tables sidebar makes that copy, spells included, while the hack is on (see [Generating Characters](generating-characters.md)).
 
 **IMPORTANT: Turning GLOG magic off in settings will not convert spellscrolls back into normal (non-GLOG) spellbooks and spellscrolls** Treat the switch to GLOG as a campaign decision, not a toggle to flip between sessions.
 
@@ -44,6 +44,8 @@ It is *bulky* (two slots), and a character can carry **one** — dropping a seco
 A Grimoire costs 300gp in labor and special inks and is *always found, made or taken*. Players will never find one for sale as shelf stock — so it ships in the Reliquary, not the Marketplace. Creating one from a Scroll (requiring 200gp in special ink, and a full moon) is downtime action in the Player Rules journal.
 
 A warden can edit a Grimoire's **spellpage capacity** in — `Pages` on the Grimoire's item sheet, 10 by default. Edit the capacity there if your table uses larger or meaner tomes. Each spellpage holds one spell that was formerly a spellscroll.
+
+The **Grimoire** box and its **Pages** field appear only on a Grimoire's sheet, and only while GLOG Magic is switched on — no other item offers to become one. A spellbook's **GLOG** box (marking a spell written in the hack's wording) likewise appears only while the hack is on; its **Scroll** box is Cairn 2e's and is always there.
 
 ## Moving a Grimoire between sheets
 

@@ -51,7 +51,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * @property {string} hint          i18n key — the one-line description under the button.
  * @property {string} icon          Font Awesome classes for the button and the window.
  * @property {string[]} keys        Setting keys, in the order the rows render.
- * @property {{master: string, keys: string[]}} [subOptions]
+ * @property {{master: string, keys: string[]}|{master: string, keys: string[]}[]} [subOptions]
  *   Rows that only mean something while a master checkbox is on: they are
  *   disabled (and greyed) while it is off — live if the master is in this
  *   app, from the stored value at render if it lives in another submenu.
@@ -171,12 +171,19 @@ export class SettingsGroupMenu extends HandlebarsApplicationMixin(ApplicationV2)
     // STORED value decides, read at render. (Was the Barebones sub-option
     // rule in the old renderSettingsConfig hook; same behaviour, declared on
     // the group.)
-    if (subOptions) {
-      const master = root.querySelector(`[name="${ns}.${subOptions.master}"]`);
-      const masterOn = () => (master ? !!master.checked : !!game.settings.get(ns, subOptions.master));
+    // A LIST since 2026-10-02 (Crawler Combat Mode needed a second master in
+    // Hacks). Normalized rather than converted, so a group may still declare a
+    // single object and both shapes behave identically. That master went on
+    // 2026-10-03, so the one live declaration (Barebones, whose master is in
+    // another submenu) exercises only the STORED-value branch of `masterOn`;
+    // the live-follow branch is kept as plain code, unexercised, for the next
+    // group whose master sits in its own submenu.
+    for (const spec of [subOptions].flat().filter(Boolean)) {
+      const master = root.querySelector(`[name="${ns}.${spec.master}"]`);
+      const masterOn = () => (master ? !!master.checked : !!game.settings.get(ns, spec.master));
       const sync = () => {
         const on = masterOn();
-        for (const key of subOptions.keys) {
+        for (const key of spec.keys) {
           const input = root.querySelector(`[name="${ns}.${key}"]`);
           if (!input) continue;
           input.disabled = !on;

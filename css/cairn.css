@@ -78,6 +78,16 @@
     --ab-accent-wash: rgba(18, 163, 180, 0.12);   /* fatigue-row tint */
     --ab-ok-wash: rgba(34, 170, 102, 0.18);       /* snapshot chip fill */
 
+    /* The Vald calendar's season tints. FAINT on purpose: the grid has to stay
+       readable first, and the tint exists to make a MID-MONTH season boundary
+       visible at all — the glyph on the boundary day states it outright for
+       anyone who cannot see the difference. */
+    --ab-season-dead: rgba(120, 150, 190, 0.12);
+    --ab-season-dry: rgba(200, 160, 80, 0.12);
+    --ab-season-wet: rgba(80, 140, 190, 0.12);
+    --ab-season-harvest: rgba(190, 150, 60, 0.14);
+    --ab-season-reclamation: rgba(150, 120, 190, 0.14);
+
     /* Whisper tiles. Core paints every whispered message a cool lavender
        (--color-whisper-background #e8e8ef, foundry2.css:513) that clashes with
        the warm parchment of every other tile. These keep a whisper distinct but
@@ -108,6 +118,28 @@
        the LIGHT accent for the same reason as the stripe: the dark-theme teal
        washes out on a tile that is parchment in both themes. */
     --ab-fatigue-chat: #12a3b4;
+
+    /* The maneuver line on a damage card glows in that SAME teal (user ask,
+       2026-10-04: "should glow teal"). An alias rather than a second literal,
+       so the two cannot drift apart by accident; give it its own value only if
+       the two are ever meant to differ. Pinned by inheritance, for the same
+       parchment-in-both-themes reason. */
+    --ab-maneuver-chat: var(--ab-fatigue-chat);
+
+    /* What the Fatigue pair wears once the choice is spent: no colour, no glow,
+       just a quiet frame. PINNED for the same reason as its neighbours and not
+       --ab-line, which is `black` in light and #7a7266 in dark — a divergence
+       with nothing behind it on a tile that is parchment either way. */
+    --ab-sealed-chat: #8a8172;
+
+    /* The initiative save card's outcome (user ask, 2026-09-06): a passed
+       save's total goes green, a failed one red, so "acts before the enemies"
+       reads as a success at a glance. Chat-only, so PINNED like the whisper
+       tokens above — the tile is parchment in both client themes. Same hues
+       as --ab-ok-strong / --ab-peril's light values, deliberately restated:
+       those tokens flip with the theme, these must not. */
+    --ab-save-pass-chat: #1a7a3a;
+    --ab-save-fail-chat: #c62828;
 }
 
 /* Dark scheme.
@@ -147,6 +179,13 @@
        invisible against a near-black backdrop. */
     --ab-accent-wash: rgba(53, 200, 218, 0.18);
     --ab-ok-wash: rgba(79, 208, 138, 0.22);
+
+    /* The season tints go up for the same reason the washes above do. */
+    --ab-season-dead: rgba(140, 175, 215, 0.18);
+    --ab-season-dry: rgba(220, 180, 100, 0.18);
+    --ab-season-wet: rgba(100, 165, 215, 0.18);
+    --ab-season-harvest: rgba(215, 175, 80, 0.20);
+    --ab-season-reclamation: rgba(175, 145, 215, 0.20);
 
     /* --ab-whisper-bg/border are deliberately NOT overridden here — see the
        light block: the chat tile they paint is parchment in both themes. */
@@ -231,7 +270,20 @@
        HP/Gold counters over STR and Armor. `auto` takes its minimum from the
        content, so it can never be squeezed below what it holds. The 140px floor
        is not lost: the portrait in column 1 is 140px tall and sets it. */
-    grid-template-rows: auto 112px 1fr;
+    /* ROW 2 IS `auto`, NOT A FIXED 112px (2026-10-02). It was 112px to match the
+       three ability rows beside it (3 x 36px + 2 x 2px), which exactly fitted the
+       three stack buttons at 32px + 2px gaps = 100px. A FOURTH button -- then
+       called Improvised Attack -- made that stack 134px, and a fixed track does
+       not grow: the extra 22px overflowed into the tab section below.
+
+       THE STACK IS BACK TO THREE and this is STILL `auto`, deliberately. That
+       button became a row in the items list the same day, so 112px would fit
+       again -- but a fixed track is a standing trap that only fires when somebody
+       adds a control, and `auto` sizes the row to its tallest child, which is
+       what the npc sheet has always done for its own version of this (see
+       `.cairn-npc-sheet .charater-sheet-grid`). Restoring the number would be
+       re-arming it for nothing. */
+    grid-template-rows: auto auto 1fr;
     height: 100%;
 }
 
@@ -1038,8 +1090,39 @@
     width: 18px;
 }
 
+/* A ROLL CONTROL CAN HOLD SEVERAL DICE (2026-10-02): one glyph per die the
+   formula rolls, so `2d6k` wears two and `3d6k` three. The 18px above is a
+   single-glyph width and would clip every one of them -- `min-width` keeps a
+   one-die control the same size as its neighbours, and `width: auto` lets the
+   rest grow. Still ONE anchor: one click target, one tooltip, one roll. */
+.cairn-item-controls a.roll-control {
+    display: inline-flex;
+    /* A flex row states its own cross-axis alignment rather than inheriting the
+       look from a line-height two rules away. NOT what fixes the die sitting
+       high — the measurement above rules that out, since the boxes already
+       shared a top edge — but this anchor holds two or three glyphs and should
+       say where they sit. */
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: auto;
+    min-width: 18px;
+}
+
+/* BOTH SPELLINGS, because `fas` and `fa-solid` render the same glyph and a rule
+   keyed to one of them silently misses the other. Every icon in these rows was
+   hand-written as `fas` until `damageDiceIcons` started emitting `fa-solid`, and
+   nothing looked wrong — the die simply sat high: measured on a live weapon row,
+   line-height 14px against the trash can's 26px, in boxes with the same top edge
+   and the same height, so it was never flex alignment. Widened rather than
+   changing the helper: `fas` is the FA5-era alias, three places already emit
+   `fa-solid`, and the next helper-written icon should not have to rediscover
+   this. Checked exhaustively — this was the only `.fas` rule in the file and
+   nothing targeted `.fa-solid` at all. */
 .cairn-item-name-and-tags .fas,
-.cairn-item-controls .fas {
+.cairn-item-name-and-tags .fa-solid,
+.cairn-item-controls .fas,
+.cairn-item-controls .fa-solid {
     line-height: 26px;
 }
 
@@ -1109,6 +1192,24 @@
 .spellbook.item-sheet-grid .item-sheet-section-tabs {
     grid-row-start: 5;
     grid-row-end: 5;
+}
+
+/* "Nothing left to vary" stopped being true the day the GLOG counter went
+   behind the hack switch (2026-09-13): a plain spellbook in a GLOG-off world —
+   the shipped default — has four counters, two rows, and the third row sat
+   empty above the tabs (review #30). The template adds `compact` for exactly
+   that case (item-sheet.js `spellbookCompact`); a scroll or a GLOG-on book
+   keeps the three rows above. */
+.spellbook.compact.item-sheet-grid {
+    /* Two 36px counter rows: the pair of text inputs that land in the second
+       fit 36px the way every plain item's do; the three-row layout's 46px
+       middle row measured as 18px of slack under them (dev:glog-flags). */
+    grid-template-rows: 46px 36px 36px 1fr;
+}
+
+.spellbook.compact.item-sheet-grid .item-sheet-section-tabs {
+    grid-row-start: 4;
+    grid-row-end: 4;
 }
 
 /* The plain-item sheet grew its own variant when the Grimoire checkbox became
@@ -1340,6 +1441,36 @@
     font-weight: 700;
 }
 
+/* "A d6 exploded!", one line per explosion on a damage card (module/cairn.js
+   nameExplodedDice). Bold, its own full-width line, and since 2026-10-04 a RED
+   GLOW (user ask: "The die exploded line needs to glow red") -- Mark Critical
+   Damage's exact error red and 8px text glow, the colour the Explode the Die
+   button wore for the day it existed. It was deliberately uncoloured before
+   (ruling 2026-10-02, when a red glow was offered and declined); the lines are
+   now the only place either option speaks on the card, so they carry the
+   colour the buttons did. The ink stays core's, as on the buttons: only the
+   glow is coloured, which keeps the text readable on the parchment tile. */
+.chat-message .dmg-exploded {
+    flex-basis: 100%;
+    font-weight: 700;
+    text-shadow: 0 0 8px var(--color-level-error, #ce0707);
+}
+
+/* "Maximum damage! You may also attempt a maneuver." (the maneuver option,
+   module/cairn.js nameManeuverAvailable). Under the explosion lines and dressed
+   like them: information about the roll, not a control. It was a pair of
+   buttons for a day, and a maneuver forwent the damage; since the night of
+   2026-10-03 the damage stands and this line is all there is. Glows TEAL
+   (user ask, 2026-10-04) -- --ab-maneuver-chat, an alias of the Fatigue teal,
+   never --ab-accent, which re-points for a .chat-message in dark mode while
+   the tile is parchment in both. (The Use a Maneuver! button itself was
+   amber; the user asked for teal for the line.) */
+.chat-message .dmg-maneuver-line {
+    flex-basis: 100%;
+    font-weight: 700;
+    text-shadow: 0 0 8px var(--ab-maneuver-chat);
+}
+
 /* "Got a scar!" on a damage card. A scar is a rules event with lasting
    consequences and it read as one more bold label in a stack of them. Centred
    and glowed, borrowing #die-of-fate-button's treatment (user ask) -- the same
@@ -1391,6 +1522,47 @@
     font-weight: bold;
     box-shadow: 0 0 8px var(--ab-fatigue-chat);
     text-shadow: 0 0 8px var(--ab-fatigue-chat);
+}
+
+/* The initiative save's total, coloured by outcome (module/combat.js
+   markInitiativeOutcome adds the class per viewer off the stored flag).
+   Pinned chat tokens -- see their declaration. */
+.chat-message .dice-total.cairn-save-pass {
+    color: var(--ab-save-pass-chat);
+    border-color: var(--ab-save-pass-chat);
+}
+.chat-message .dice-total.cairn-save-fail {
+    color: var(--ab-save-fail-chat);
+    border-color: var(--ab-save-fail-chat);
+}
+
+/* The item-offer card (module/item-offer.js). Layout only -- the tile is
+   core's parchment in both client themes, so the one colour here is pinned
+   dark like every other chat-only rule (the whisper-token doctrine). */
+.chat-message .cairn-offer-card .cairn-offer-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.chat-message .cairn-offer-card .cairn-offer-body img {
+    width: 28px;
+    height: 28px;
+    border: none;
+    object-fit: cover;
+}
+.chat-message .cairn-offer-card .cairn-offer-state {
+    font-style: italic;
+    color: rgba(0, 0, 0, 0.6);
+    margin-top: 4px;
+}
+.chat-message .cairn-offer-card .cairn-offer-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+/* The picker reuses the bg-pick-row radio idiom; only the intro needs room. */
+.cairn-offer-picker > p {
+    margin-top: 0;
 }
 
 /* The character-generation card: HP / STR / DEX / WIL / Gold, one "LABEL: value"
@@ -1458,6 +1630,91 @@
     text-shadow: 0 0 12px var(--color-level-error, #ce0707);
 }
 
+/* The Fatigue option's alternative to Mark Critical Damage, directly beside it
+   on the same card. Deliberately that button's SHAPE -- bold, a coloured border,
+   an 8px text glow brightening to 12px -- recoloured in the teal Fatigue wears in
+   the inventory (.fatigue-row) and on the cast whisper's Add Fatigue button, so
+   the two controls read as a matched pair of equal choices separated only by
+   colour (user ask, 2026-10-02). NOT .grimoire-add-fatigue's box-shadow halo:
+   that button never sits next to a bordered one, and a haloed button beside a
+   bordered one reads as a different KIND of control rather than an alternative.
+   Unscoped, like .mark-critical-damage above and unlike .grimoire-add-fatigue,
+   so the pair's two rules stay symmetric in this file.
+   --ab-fatigue-chat, NEVER --ab-accent: the accent is re-pointed to #35c8da for
+   a .chat-message under a dark interface (see its declaration) and washes out on
+   a tile that is parchment in BOTH themes. Same hue in light, so this is the
+   sheet's Fatigue colour wherever the two surfaces can share one. The mistake is
+   invisible in light mode, which is why dev:combat-options reads it in dark. */
+.take-fatigue-instead {
+    font-weight: bold;
+    border-color: var(--ab-fatigue-chat);
+    text-shadow: 0 0 8px var(--ab-fatigue-chat);
+}
+
+/* The hover is scoped to THIS button and deliberately not shared with
+   .grimoire-add-fatigue, which has never had one: the two no longer share a
+   rule, so there is nothing to keep identical, and the GLOG whisper is a
+   different surface that this change does not touch. */
+.take-fatigue-instead:hover {
+    text-shadow: 0 0 12px var(--ab-fatigue-chat);
+}
+
+/* THE FATIGUE PAIR on a failed save card: Mark Critical Damage / Take a
+   Fatigue instead (utils.js d20CardBody).
+
+   SIDE BY SIDE (user ask, 2026-10-02). They had no rule here at all, which is
+   why two block-level buttons stacked. They are alternatives offered at one
+   moment, and a row is what says "either of these", where a column reads as a
+   list of things to do in order. (A maneuver pair, Explode the Die / Use a
+   Maneuver!, shared this rule for the day maneuvers were a choice.) */
+.dmg-choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-basis: 100%;
+    margin-top: 4px;
+}
+
+/* AND THE BUTTONS HAVE TO BE TOLD TO SHARE THE ROW, which took three goes and is
+   worth recording. `display: flex` on the wrapper is necessary and NOT
+   sufficient: core sizes a chat-message button to its container's full width, so
+   two of them wrapped onto a line each -- measured as one flex row with the
+   buttons on different top edges. Setting `width: auto; flex: 1 1 auto` was still
+   not enough, because a flex item's default `min-width: auto` forbids shrinking
+   below its own content, and "Mark Critical Damage" beside "Take a Fatigue
+   instead" does not fit the 272px chat sidebar at one line each.
+
+   So `min-width: 0` lets them shrink and `white-space: normal` lets the labels
+   wrap -- a two-line button, which this project has already ruled acceptable for
+   the take-over doors ("ok if that button spans two lines as long as it's all
+   readable"). `flex: 1 1 0` makes the pair exact halves, which is what says the
+   two choices are equal. */
+.dmg-choice-row > button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    white-space: normal;
+    text-wrap: balance;
+}
+
+/* ONCE DECIDED, NEITHER GLOWS (user ruling, 2026-10-02). A sealed control that
+   still advertises itself invites a click that does nothing, and the colours
+   were there to say "choose" -- which is over. The check that `mark()` prepends
+   is what says which one was taken, so the pair goes quiet and the tick carries
+   the whole message. */
+.dmg-choice-row button[disabled] {
+    font-weight: normal;
+    border-color: var(--ab-sealed-chat);
+    text-shadow: none;
+    opacity: 0.75;
+}
+
+/* The tick sits before the label on the button that was pressed. */
+.dmg-choice-row button[disabled] .fa-check {
+    margin-right: 0.4em;
+    opacity: 0.9;
+}
+
 /* THE DAMAGE-QUALITY DIALOG -- askDamageQuality in module/utils.js, which passes
    both class names below.
 
@@ -1478,7 +1735,8 @@
    read as equal choices. Accent border + bold, the treatment
    #die-of-fate-button and .mark-critical-damage already use to mark the notable
    control in a group. */
-.cairn-damage-quality .cairn-quality-default {
+.cairn-damage-quality .cairn-quality-default,
+.cairn-improvised-dialog .cairn-quality-default {
     font-weight: 700;
     border-color: var(--ab-accent);
 }
@@ -1498,10 +1756,78 @@
    reaches a screen reader through the button's aria-label, which DialogV2 fills
    from `tooltip`. It now sits directly after the label as part of the centred
    group — do NOT restore the auto margin. */
-.cairn-damage-quality .cairn-quality-default::after {
+.cairn-damage-quality .cairn-quality-default::after,
+.cairn-improvised-dialog .cairn-quality-default::after {
     content: "\23CE";
     margin-left: 0.4em;
     opacity: 0.7;
+}
+
+/* THE IMPROVISED ATTACK DIALOG (askImprovisedAttack in module/utils.js). Two fields
+   and two buttons, so its footer is deliberately core's own ROW -- the quality
+   dialog's column rule exists because three labels each carrying a die wrapped,
+   and neither condition holds here. It shares only the default-button cue above.
+
+   The panic note sits under the Damage field it is about to override, quiet
+   rather than alarming: the field is still editable and the value still matters
+   for the next attack, so this states a rule rather than reporting an error. */
+.cairn-improvised-panic {
+    margin: 4px 0 0;
+    font-size: var(--font-size-12);
+    color: var(--ab-muted);
+}
+
+/* THE DROP PICKER -- askWhatToDrop in module/party-pile.js, opened by Take a
+   Fatigue Instead. A roster of what the character is carrying, not a form: the
+   same reasoning as .cairn-damage-targets above, and the same shape, so the two
+   "pick from what you have" dialogs in this system read alike. */
+.cairn-drop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.cairn-drop-list label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    cursor: pointer;
+}
+
+.cairn-drop-list label:hover {
+    background: var(--ab-wash);
+}
+
+/* Each row reads: name ............ 2 of 3 uses | frees 2 slots. The name takes
+   the slack so the two figures line up down the right-hand side, which is what
+   makes them comparable at a glance -- the slot number is the whole basis of the
+   choice. Both figures are quiet: they inform the decision, they are not it. */
+.cairn-drop-name {
+    flex: 1;
+}
+
+.cairn-drop-uses,
+.cairn-drop-frees {
+    font-size: var(--font-size-12);
+    color: var(--ab-muted);
+    white-space: nowrap;
+}
+
+/* The uses figure sits left of the slot figure and is the less important of the
+   two, so it gets no border; the slot cost is the one being compared. */
+.cairn-drop-frees {
+    min-width: 7em;
+    text-align: right;
+}
+
+/* Why petty items are absent, shown only when some were. */
+.cairn-drop-petty-note {
+    margin: 8px 0 0;
+    font-size: var(--font-size-12);
+    color: var(--ab-muted);
 }
 
 /* The "who takes this?" picker, offered when a damage roll was made with nothing
@@ -1723,6 +2049,16 @@
     opacity: 0.85;
 }
 
+/* Improvised Attack: the fixed row at the top of the inventory (2026-10-02). The
+   gold rows' treatment exactly, and for the same reason -- both are rows in the
+   items list that are NOT items, and the italic is what says so without a tag
+   saying it in words. It is also what keeps a player from hunting for the trash
+   can that every row below it has. */
+.improvised-row .cairn-item-title {
+    font-style: italic;
+    opacity: 0.85;
+}
+
 /******************************************************************************
  * Description tab: traits (pronouns/age/sentence/pick-lists), Omen, Scars.
  ******************************************************************************/
@@ -1766,15 +2102,53 @@
     cursor: pointer;
 }
 
-/* The 8 trait dropdowns: two columns, column-major (physical traits left). */
+/* The 8 trait dropdowns: two columns, column-major (physical traits left).
+
+   SIX TRACKS, NOT TWO (2026-10-03, user: the fixed 96px label column left a
+   hole beside "Skin" — "deadspace that looks odd"). Each half is label, die,
+   select, and each .trait-row is a SUBGRID spanning its three tracks, so a
+   half's label track is exactly as wide as its longest label — in any
+   language, with no magic number — and the dropdowns still line up. The
+   labels are right-aligned (user's pick of three previews), so what little
+   space remains sits at the left edge, where it reads as indentation.
+   grid-auto-flow: column still fills rows 1-4 of the left half first: a
+   three-track item placed in column flow cannot start at track 2 or 3 while
+   track 1's rows are taken, so the fifth row lands at track 4. */
 .character-traits .trait-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: max-content max-content 1fr max-content max-content 1fr;
+    /* A role-npc sheet has TEN rows (six 2e traits plus the Warden's four) and
+       overflows into a third half of implicit tracks, as it always did; this
+       cycles the same three track sizes over them. */
+    grid-auto-columns: max-content max-content 1fr;
     grid-template-rows: repeat(4, auto);
     grid-auto-flow: column;
-    column-gap: 16px;
+    column-gap: 16px; /* the seam between the two halves */
     row-gap: 4px;
     margin-top: 6px;
+}
+
+/* A row is a subgrid over its half's three tracks. Its OWN column-gap
+   overrides the inherited 16px, so label-die-select stay 8px apart while the
+   seam between halves keeps the parent's 16px. */
+.character-traits .trait-grid .trait-row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 3;
+    align-items: center;
+    column-gap: 8px;
+}
+
+/* With Character Creation Mode off the die is not rendered and its track is
+   empty; the select spans it so there is ONE 8px gap after the label, not
+   two. :has() has a precedent at .reroll-dialog .reroll-row:has(input:disabled). */
+.character-traits .trait-grid .trait-row:not(:has(.trait-roll)) .trait-input {
+    grid-column: span 2;
+}
+
+.character-traits .trait-grid .trait-label {
+    min-width: auto;
+    text-align: right;
 }
 
 /* Separate the traits block from the Omen/Scar block below it. */
@@ -1854,7 +2228,8 @@ textarea.omen-input {
 
 .character-omen-scar .omen-roll,
 .character-omen-scar .omen-pick,
-.character-traits .age-roll {
+.character-traits .age-roll,
+.character-traits .trait-roll {
     flex: 0 0 auto;
     cursor: pointer;
 }
@@ -2088,6 +2463,21 @@ textarea.omen-input {
     border-bottom: 1px solid var(--color-border);
 }
 
+/* The creation dialog's "Use random generation." row. The class was set on the
+   label from the day the empty-sheet feature landed and matched no rule at all
+   (review #26), so the checkbox and its text sat flush against each other.
+   Not scoped to `.cairn` — this lives in a DialogV2, which is core chrome. */
+.ab-creation-roll {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.ab-creation-roll input[type="checkbox"] {
+    flex: 0 0 auto;
+}
+
 .bg-pick-row {
     display: grid;
     /* third column: the Warden's per-background eye toggle */
@@ -2099,9 +2489,19 @@ textarea.omen-input {
     cursor: pointer;
 }
 
-.bg-pick-row input[type="radio"] {
+.bg-pick-row input[type="radio"],
+.bg-pick-row input[type="checkbox"] {
     grid-column: 1;
     grid-row: 1 / 3;
+}
+
+/* The Create Faction dialog's pick-lists (2026-09-12): six dropdowns on core's
+   own `.standard-form .form-group` rows, then the Advantages tick-list. The
+   list is capped shorter than the background picker's so the whole dialog —
+   the box, six rows, twenty ticks and two buttons — fits a 1000px viewport
+   without the window growing off the bottom of the screen. */
+.ab-faction-picks .bg-pick-list {
+    max-height: 200px;
 }
 
 .bg-pick-name {
@@ -2513,6 +2913,29 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     font-variant: small-caps;
     letter-spacing: 0.3px;
     border-color: var(--ab-chip-border-strong);
+}
+
+/* WHERE IT WAS DROPPED, on the pile's rows only. A chip like the rest, led by a
+   map pin so a free-text note reads as a PLACE rather than as another mechanical
+   tag; no small-caps, because this is something a player typed and sentence case
+   is how they typed it. The gap is the pin's breathing room -- the glyph sits
+   inside the chip, so it must not touch the border. */
+.cairn-drop-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* The "Where?" field in both drop dialogs: the label above its input, the input
+   full width. Narrow on purpose -- 25 characters is the whole budget. */
+.cairn-drop-where {
+    margin-top: 8px;
+}
+
+.cairn-drop-where label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 /* Grab cursor on reorderable rows only when reorder is enabled. */
@@ -3281,8 +3704,16 @@ ol.combat-tracker li.combatant.cairn-drop-below {
    background, so a panel is a distinction the description cannot accidentally
    acquire, and it needs no reading to work. Size, position and wording are
    unchanged: all three are recorded decisions (see the note on font-size, and
-   the ABOVE-the-prose-mirror note in the template). */
-.bg-tab-hint {
+   the ABOVE-the-prose-mirror note in the template).
+
+   SHARED with the table banner (module/table-banner.js), the same shape one
+   sheet over: an aside sitting above the content it explains. The selector is
+   three classes deep on purpose — core's `.standard-form .hint` (the sheet's
+   content carries standard-form) sets margin, colour and size at (0,2,0), and
+   a bare class would lose to it. */
+.bg-tab-hint,
+.application.roll-table-sheet .ab-table-role,
+.application.roll-table-sheet .ab-table-duplicate {
     margin: 0 0 10px;
     /* Full size, NOT the 0.85em .bg-edit-hint uses. That hint sits inside a form
        the reader is already looking at; this one has to be read by someone who
@@ -3307,10 +3738,35 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     box-shadow: inset 3px 0 0 var(--ab-rule-strong);
 }
 
-.bg-tab-hint > i {
+.bg-tab-hint > i,
+.application.roll-table-sheet .ab-table-role > i,
+.application.roll-table-sheet .ab-table-duplicate > i {
     /* Optically centred on the first line rather than box-aligned to it. */
     margin-top: 0.15em;
     opacity: 0.8;
+}
+
+/* The table banner's own two departures. It is four sentences, not one, so it
+   is set upright: a paragraph of italic reads as fine print, and this is the
+   one thing on the sheet a Warden has to read. And it sits in a flex column
+   beside a list declared `flex: 1; height: 0` (core's roll-table rules), whose
+   default shrink would squeeze the banner to nothing on a short window. */
+.application.roll-table-sheet .ab-table-role,
+.application.roll-table-sheet .ab-table-duplicate {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    font-style: normal;
+}
+
+/* The duplicate-name line under the banner: the same panel, with the rule and
+   the glyph in the warn colour so it reads as the one thing here to act on. */
+.application.roll-table-sheet .ab-table-duplicate {
+    box-shadow: inset 3px 0 0 var(--ab-warn);
+}
+
+.application.roll-table-sheet .ab-table-duplicate > i {
+    color: var(--ab-warn);
+    opacity: 1;
 }
 
 /* Example names — a wrapping list of small pills. */
@@ -3595,4 +4051,945 @@ ol.combat-tracker li.combatant.cairn-drop-below {
     font-size: 12px;
     font-style: italic;
     color: var(--ab-muted);
+}
+
+/* ---- The Warden's Dashboard ---------------------------------------------
+   A launcher, so it borrows core's button chrome and adds layout only.
+
+   The grid REFLOWS rather than stretching (`auto-fill` + `minmax`), which is
+   what makes this window safe to resize where Mythic Bastionland's fixed
+   twelve-column equivalent is not. Narrow it and the buttons re-column.
+
+   The window-content's one child is `.cairn-dashboard-inner`, because an
+   ApplicationV2 part must render exactly ONE root element — several and the
+   render throws and the window never opens. So the restored
+   `.cairn.sheet .window-content > * { flex: 1 }` lands on the wrapper, which
+   is what we want, and the wrapper is the flex column that lays out the four
+   bands. The BODY takes the slack and the scrolling; the tabs, the visibility
+   row and the damage button keep their natural height, so they stay put while
+   the panel scrolls under them. */
+.cairn-dashboard .cairn-dashboard-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cairn-dashboard .cairn-dashboard-body {
+    flex: 1 1 auto;
+    overflow: hidden auto;
+    min-height: 0;   /* a flex child will not shrink below its content without this */
+}
+
+/* Six tabs will not fit a narrowed window on one line, and core's `.sheet-tabs`
+   is `flex-wrap: nowrap`, so without this the strip pushes the window's own
+   content wider than the frame and the whole thing scrolls sideways. Core's
+   rule is in @layer blocks.base and this file is @layer system, declared
+   later, so no !important is needed. */
+.cairn-dashboard .cairn-dashboard-tabs {
+    flex-wrap: wrap;
+    /* The clock band above needs to read as a separate thing from the tabs
+       (user, 2026-09-11: "there should be a line break or space between the
+       calendar functions at the top and the row of tabs"). The band supplies
+       most of that gap; this keeps the strip off the visibility row. */
+    margin-top: 4px;
+}
+
+/* WIDER CELLS AND LOOSER ROWS since 2026-09-10 (user: "very crowded and
+   difficult to read"). Rows are gapped more than columns on purpose, so a row
+   reads as a row rather than as part of a field of buttons. */
+.cairn-dashboard .cairn-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px 6px;
+    margin-bottom: 14px;
+    align-items: stretch;
+}
+
+/* GLYPH, THEN A LEFT-ALIGNED LABEL. Every label on a tab starts at the same x
+   because the glyph sits in a fixed 1.1em box, which is what lets the eye run
+   down the column instead of reading each button.
+
+   THE HEIGHT OVERRIDE IS LOAD-BEARING, not tidying. Core pins every <button>
+   to `height: var(--button-size)` with a matching min-height (foundry2.css,
+   @layer elements.forms), overflow stays visible, and a label that wraps to a
+   second line is therefore DRAWN OUTSIDE its own button — no error, no
+   clipping, nothing in the console. `dev:warden-dashboard` measures
+   scrollHeight against clientHeight on every button rather than trusting this
+   rule to have applied. */
+.cairn-dashboard .cairn-dashboard-grid button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    height: auto;
+    min-height: var(--button-size, 32px);
+    margin: 0;
+    padding: 4px 8px;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.cairn-dashboard .cairn-dashboard-grid button > i {
+    flex: 0 0 1.1em;
+    width: 1.1em;
+    text-align: center;
+}
+
+/* Labels WRAP rather than truncate: a hidden half-label is worse than a taller
+   row, and the pair stretches so the two halves still read as one control. */
+.cairn-dashboard .cairn-dashboard-grid button > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* A combined draw shares the tab's first grid with the table pairs, since the
+   heading it used to sit under is gone. The wrapper exists so the button fills
+   one grid cell exactly as a pair does — and so its PARENT is not the grid,
+   which `dev:warden-dashboard` scans for an eye when it checks that no set
+   button grew one. It is deliberately not `.cairn-dashboard-pair`: the same
+   probe counts those against the number of roll buttons. */
+.cairn-dashboard .cairn-dashboard-solo {
+    display: flex;
+    min-width: 0;
+}
+
+.cairn-dashboard .cairn-dashboard-solo > button {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* A table button is a PAIR: the name rolls it, the eye shows it to the
+   players. The pair occupies one grid cell, so the reflowing column count is
+   unchanged and a narrowed window behaves exactly as it did before. The eye is
+   fixed-width and the name takes the rest, so long labels shrink the label and
+   never the target you are aiming at. */
+.cairn-dashboard .cairn-dashboard-pair {
+    display: flex;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cairn-dashboard .cairn-dashboard-pair > button:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* The eye loses its border and becomes a quiet glyph that lights on hover and
+   on focus. It is ALWAYS present — hiding it until hover costs discoverability
+   and does nothing at all on a touch screen. */
+.cairn-dashboard .cairn-dashboard-pair > .cairn-show-btn {
+    flex: 0 0 26px;
+    width: 26px;
+    min-height: 0;
+    padding: 0;
+    justify-content: center;
+    border: none;
+    background: none;
+    opacity: 0.6;
+}
+
+.cairn-dashboard .cairn-dashboard-pair > .cairn-show-btn > i {
+    flex: 0 0 auto;
+}
+
+.cairn-dashboard .cairn-dashboard-pair > .cairn-show-btn:hover,
+.cairn-dashboard .cairn-dashboard-pair > .cairn-show-btn:focus-visible {
+    opacity: 1;
+    background: var(--ab-wash-strong);
+}
+
+/* The popup every client opens when a table is shown, and the chat card that
+   records it. One rule set, because they render the same markup. */
+.cairn-shown-table {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cairn-shown-table .cairn-show-title {
+    font-weight: 600;
+}
+
+/* The popup's own title bar already names the table, so the body's heading is
+   a duplicate THERE and only there. The chat card has no title bar and needs
+   it, which is why one render serves both and the CSS does the hiding. */
+.cairn-shown-table-view .cairn-show-title {
+    display: none;
+}
+
+/* THE REVEAL MUST SCROLL. The restore at the top of this file is scoped
+   `.cairn.sheet` and this window is deliberately NOT a sheet (it is a reveal,
+   not a document sheet -- see ShownTableView), so it inherited core's flat
+   `overflow: hidden` on .window-content (foundry2.css:7030) and AppV2's
+   viewport clamp on .application (:6993). Measured before the fix on the Name
+   table: a 922px window over 1401px of content, 517px of it unreachable --
+   scrollbar absent, wheel dead, no resize handle. A Warden showing a table is
+   showing the odds, and a third of them were off the bottom.
+
+   The pair is deliberate: `flex: 1` lets the body take the window's height so
+   there is something for `overflow: auto` to act on. Without it the body is
+   `flex: 0 1 auto` and gets shrunk instead, which is the same trap the sheet
+   restore documents. */
+.cairn-shown-table-view .window-content {
+    overflow: hidden auto;
+}
+
+.cairn-shown-table-view .window-content > * {
+    flex: 1;
+}
+
+.cairn-shown-table .cairn-show-formula {
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--ab-muted);
+}
+
+.cairn-shown-table .cairn-show-row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 1px 0;
+    border-top: 1px solid var(--ab-hairline);
+}
+
+.cairn-shown-table .cairn-show-range {
+    flex: 0 0 3.2em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ab-muted);
+}
+
+.cairn-shown-table .cairn-show-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cairn-dashboard .cairn-dashboard-head {
+    margin: 18px 0 8px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--ab-hairline);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ab-muted);
+}
+
+/* WHO SEES THE RESULT, at 16px rather than 12 (user ruling 2026-09-11). It
+   governs all 45 buttons under it and was reading as a footnote to them.
+
+   The SELECT needs the size stated on itself: a form control does not inherit
+   font-size from its parent, so styling the row alone leaves the dropdown
+   small beside its own label — the same fact that makes core's form controls
+   look consistent whatever a sheet does around them. */
+.cairn-dashboard .cairn-dashboard-visibility {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 4px 0 6px;
+    font-size: 16px;
+    color: var(--ab-muted);
+}
+
+.cairn-dashboard .cairn-dashboard-visibility select {
+    flex: 1;
+    height: auto;
+    min-height: var(--input-height, 32px);
+    font-size: 16px;
+}
+
+.cairn-dashboard .cairn-dashboard-footer {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ab-line);
+}
+
+.cairn-dashboard .cairn-dashboard-footer button {
+    width: 100%;
+    margin: 0;
+}
+
+/* ---- The Warden's clock, on the Dashboard --------------------------------
+   A BAND above the tabs, and its own ApplicationV2 part so it can re-render
+   alone when the world clock moves.
+
+   `flex: 0 0 auto` IS LOAD-BEARING. The top of this file restores
+   `.cairn.sheet .window-content > * { flex: 1 }`, which AppV2 drops and every
+   sheet grid here was laid out against. That rule was written when this window
+   had exactly one child; a second part makes two, and without this the band
+   takes half the window — while rendering perfectly, persisting everything and
+   logging nothing, which is the failure `dev:sheet-layout` exists for.
+
+   THE SELECTOR IS LONG ON PURPOSE. The restored rule is three classes plus a
+   universal (0,3,0); the obvious `.cairn-dashboard .cairn-dashboard-time` is
+   two (0,2,0) and LOSES. Measured: the band took 284px of a 582px window and
+   still looked plausible. Matching the restored rule's own shape and adding
+   one class is what wins it, and `dev:vald-time` measures the height rather
+   than trusting the rule to apply. */
+.cairn.sheet.cairn-dashboard .window-content > .cairn-dashboard-time {
+    flex: 0 0 auto;
+    /* Roomier than it was, so the band and the tab strip do not read as one
+       block (user, 2026-09-11). */
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ab-line);
+}
+
+/* A COLUMN, MATCHING THE CALENDAR'S DAY PANEL (user, 2026-09-11, with both
+   windows open: "the top three lines of the Warden's dashboard should look
+   like the lines in the calendar"). The four facts used to share one wrapped
+   row separated by middle dots; the panel stacks them, and so does this now.
+
+   Every number below is the panel's own — 22px headline, 15px quiet lines —
+   because "looks like the calendar" is a claim about both surfaces and a
+   second set of sizes would drift from it. See `.cairn-calendar-date` and
+   `.cairn-calendar-season`, which are the originals. */
+.cairn-dashboard .cairn-time-read {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+    color: var(--ab-ink);
+}
+
+.cairn-dashboard .cairn-time-date {
+    margin-bottom: 2px;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ab-ink);
+}
+
+/* The three quiet lines. The glyph sits in a fixed box so all three labels
+   start at the same x — the same trick the button grid uses, and what makes a
+   stack read as a stack rather than as three unrelated rows. */
+.cairn-dashboard .cairn-time-watch,
+.cairn-dashboard .cairn-time-season,
+.cairn-dashboard .cairn-time-today-weather {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--ab-muted);
+}
+
+.cairn-dashboard .cairn-time-watch > i,
+.cairn-dashboard .cairn-time-season > i,
+.cairn-dashboard .cairn-time-today-weather > i {
+    flex: 0 0 1.1em;
+    width: 1.1em;
+    text-align: center;
+}
+
+/* The controls reflow the way the table grids do, so a narrowed window
+   re-columns them instead of scrolling sideways. */
+.cairn-dashboard .cairn-time-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cairn-dashboard .cairn-time-controls button,
+.cairn-dashboard .cairn-time-say-weather {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    flex: 1 1 130px;
+    height: auto;
+    min-height: var(--button-size, 32px);
+    margin: 0;
+    padding: 4px 8px;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.cairn-dashboard .cairn-time-controls button > i,
+.cairn-dashboard .cairn-time-say-weather > i {
+    flex: 0 0 1.1em;
+    width: 1.1em;
+    text-align: center;
+}
+
+.cairn-dashboard .cairn-time-controls button > span,
+.cairn-dashboard .cairn-time-say-weather > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.cairn-dashboard .cairn-time-weather {
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+/* The two event tables, beneath the weather. Same grid as everywhere else, so
+   they re-column with the window. */
+.cairn-dashboard .cairn-time-events {
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+/* ---- The watch clock ------------------------------------------------------
+   THE ONE PLACE THIS FILE'S PALETTE RULE DOES NOT APPLY, and it is worth
+   saying why rather than looking like an oversight.
+
+   "No literal colours; every colour is an --ab-* token" was written for
+   SHEETS, which paint dark ink on parchment in light mode and invert in dark.
+   This element is not a sheet. It lives in #ui-left-column-1 beside the player
+   list, wearing core's own `faded-ui`, and the panel it has to match is a
+   translucent DARK slab with light text in BOTH schemes. Painting --ab-ink
+   here would be invisible in light mode.
+
+   So it reads CORE's chrome variables. BUT NOT ALL OF THEM SWITCH, and that
+   distinction is the whole of the defect this block shipped with in 0.1.21.
+   `--color-cool-5-75` and `--color-cool-4` are palette CONSTANTS — one literal
+   each, declared on `body` in @layer variables.base and never redefined.
+   `--color-text-secondary` and `--color-text-primary` are semantic TOKENS,
+   which `body.theme-light` and `.themed.theme-light` repoint in @layer
+   variables.themes. Pinning the GROUND to a constant while the INK follows the
+   theme is the bug: under a light interface the clock painted `#333` text on a
+   near-black slab at 1.26:1 — unreadable, hover included, and out in a release.
+   This file's own comment claimed it agreed with the player list "in every
+   theme, for free", which was never measured and was false.
+
+   #players does not have this problem because it declares its OWN
+   `--background-color` per theme and reads that. So this block does the same,
+   with core's own two values lifted from `#players` — foundry2.css:592 (dark)
+   and :2423 / :2728 (light). Those light values are literal rgba in core too;
+   there is no token for them, which is why two literals appear below.
+
+   TWO SELECTORS PER SCHEME, and the order is core's rather than a guess.
+   Configure UI has TWO dropdowns and `configureUI` (client/game.mjs:1852-1875)
+   sends them to different elements: Applications lands on <body>, INTERFACE
+   lands on #interface. Core lets the interface theme win — `.themed.theme-light
+   #players` (1,2,0) outranks `body.theme-light #players` (1,1,1) — and the
+   pairs below keep that ordering at (0,3,0) over (0,2,1). Get it backwards and
+   a Warden running Interface dark with Applications light gets a white clock
+   over a dark player list. `dev:theme` measures the clock as a STRICT surface
+   now: a finding in EITHER scheme fails, because nothing inside this panel is
+   core's to blame. See docs/theming.md.
+
+   The 200px width and the margin are not arbitrary either: #players-active is
+   200px and deliberately OVERFLOWS this narrow column (the column is only as
+   wide as the control icons), so matching it is what makes the two read as
+   one stack. `margin-top: auto` absorbs the column's free space so core's
+   `justify-content: space-between` has none left to redistribute — without it
+   a third child pushes the player list into the middle of the screen. */
+.cairn-watch-clock {
+    /* Dark, matching core's unthemed #players block, so a client that has
+       resolved no theme at all still gets the pairing right. */
+    --ab-clock-bg: var(--color-cool-5-75);
+    --ab-clock-border: var(--color-cool-4);
+    position: relative; /* the calendar door is absolutely placed in the corner */
+    pointer-events: all;
+    flex: none;
+    width: 200px;
+    margin-top: auto;
+    padding: 6px 8px;
+    border: 1px solid var(--ab-clock-border);
+    border-radius: 8px;
+    background: var(--ab-clock-bg);
+    color: var(--color-text-secondary);
+    /* LARGER AGAIN on 2026-09-11 (user ask). It is read from across the room
+       at 12px and was not being read at all. Taller, never wider: the 200px
+       below is pinned to #players-active. */
+    font-size: var(--font-size-14);
+}
+
+/* The two schemes, stated the way core states them for #players. The dark pair
+   restates the base so an INTERFACE dark under an APPLICATIONS light still wins
+   on specificity; see the note above. */
+body.theme-dark .cairn-watch-clock,
+.themed.theme-dark .cairn-watch-clock {
+    --ab-clock-bg: var(--color-cool-5-75);
+    --ab-clock-border: var(--color-cool-4);
+}
+
+body.theme-light .cairn-watch-clock,
+.themed.theme-light .cairn-watch-clock {
+    --ab-clock-bg: rgba(255, 255, 255, 0.6);
+    --ab-clock-border: rgba(255, 255, 255, 0.8);
+}
+
+/* BOLDER, AND IT CARRIES THE WEATHER (user ruling, on seeing it in place).
+   Bigger here means taller and heavier type, never wider: the 200px is pinned
+   to #players-active so the two line up, and growing sideways would break that.
+
+   A FOURTH LINE IS SAFE BECAUSE OF WHERE THIS SITS. The panel is ABOVE
+   #players and takes the column's slack with `margin-top: auto`, so a line
+   that appears grows UPWARD into empty space and the player list does not
+   move. `dev:vald-time` measures the player list's position before and after
+   the Warden calls the weather, because that is the only way to know. */
+/* Under Vald this element is a real <button>, so its chrome is stated away
+   explicitly — otherwise the panel would have a button drawn inside itself.
+   Core pins a button's HEIGHT from a later layer, which is why `height: auto`
+   and `min-height: 0` are here; the colours need no `!important` (measured —
+   see the calendar's day cell for the full note). */
+.cairn-watch-clock .cairn-watch-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* The door to the calendar, top-right of the panel and out of the text's way.
+   Only rendered when there is a calendar to open. */
+.cairn-watch-clock .cairn-watch-door {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    opacity: 0.5;
+}
+
+.cairn-watch-clock button.cairn-watch-inner {
+    cursor: pointer;
+}
+
+.cairn-watch-clock button.cairn-watch-inner:hover .cairn-watch-door,
+.cairn-watch-clock button.cairn-watch-inner:focus-visible .cairn-watch-door {
+    opacity: 1;
+}
+
+.cairn-watch-clock .cairn-watch-watch {
+    font-weight: 700;
+    font-size: var(--font-size-18);
+    line-height: 1.2;
+    color: var(--color-text-primary);
+}
+
+.cairn-watch-clock .cairn-watch-date,
+.cairn-watch-clock .cairn-watch-season,
+.cairn-watch-clock .cairn-watch-weather {
+    color: var(--color-text-secondary);
+}
+
+.cairn-watch-clock .cairn-watch-season,
+.cairn-watch-clock .cairn-watch-weather {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.cairn-watch-clock .cairn-watch-weather {
+    font-style: italic;
+}
+
+/* ---- The Vald calendar ----------------------------------------------------
+   A month grid, today circled and the day you picked highlighted. Two markers
+   rather than one, because "what day is it" and "what am I reading about" are
+   different questions and a single marker answers neither well.
+
+   Season tints are the only place a Vald season paints anything. They are
+   deliberately faint: the grid has to stay readable first, and the tint is
+   there to make a MID-MONTH season boundary visible at all — which the icon on
+   the boundary day states outright for anyone who cannot see the difference. */
+.cairn-vald-calendar .cairn-calendar-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+}
+
+.cairn-vald-calendar .cairn-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cairn-vald-calendar .cairn-calendar-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cairn-vald-calendar .cairn-calendar-year {
+    color: var(--ab-muted);
+    font-size: 14px;
+}
+
+.cairn-vald-calendar .cairn-calendar-step,
+.cairn-vald-calendar .cairn-calendar-pencil {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--ab-ink);
+    opacity: 0.7;
+}
+
+.cairn-vald-calendar .cairn-calendar-step {
+    width: 32px;
+}
+
+.cairn-vald-calendar .cairn-calendar-step:hover,
+.cairn-vald-calendar .cairn-calendar-step:focus-visible,
+.cairn-vald-calendar .cairn-calendar-pencil:hover,
+.cairn-vald-calendar .cairn-calendar-pencil:focus-visible {
+    opacity: 1;
+}
+
+.cairn-vald-calendar .cairn-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+}
+
+.cairn-vald-calendar .cairn-calendar-weekday {
+    padding: 2px 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ab-muted);
+}
+
+.cairn-vald-calendar .cairn-calendar-blank {
+    min-height: 1px;
+}
+
+/* A day is a BUTTON so it is reachable from the keyboard. Its ground, text and
+   border are stated explicitly rather than inherited, because core gives every
+   button a chrome appearance and a cell has to look like a cell.
+
+   NO `!important` HERE, and that is a measured result rather than an omission.
+   These declarations were shipped with `!important` for a day on the reading
+   that core's chrome, being in a later cascade layer, was winning — which is
+   true of a button's HEIGHT (see the dashboard grid above) and was NOT true of
+   its colours. The evidence had looked conclusive and was an artefact: an app
+   rendered under one theme keeps its RESOLVED colours when the body's theme
+   class changes, so every reading taken without re-rendering was the previous
+   scheme's paint. `dev:theme` re-renders now and carries the note. A correct
+   fix resting on a wrong cause is how the next person deletes a real one. */
+.cairn-vald-calendar .cairn-calendar-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    height: auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid var(--ab-hairline);
+    border-radius: 4px;
+    background: none;
+    color: var(--ab-ink);
+    font-size: 13px;
+    line-height: 1.1;
+}
+
+.cairn-vald-calendar .cairn-calendar-day:hover {
+    border-color: var(--ab-muted);
+}
+
+.cairn-vald-calendar .cairn-calendar-day.is-today .cairn-calendar-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.7em;
+    height: 1.7em;
+    padding: 0 0.2em;
+    border: 2px solid var(--ab-accent);
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.cairn-vald-calendar .cairn-calendar-day.is-selected {
+    border-color: var(--ab-accent);
+    box-shadow: inset 0 0 0 1px var(--ab-accent);
+}
+
+.cairn-vald-calendar .cairn-calendar-season-mark {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.cairn-vald-calendar .cairn-calendar-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+/* The Warden's own days take the accent rather than the ink, so a day carrying
+   a festival AND something the Warden wrote does not read as one thing. */
+.cairn-vald-calendar .cairn-calendar-dot.is-warden {
+    background: var(--ab-accent);
+    opacity: 1;
+}
+
+/* The four seasons, faint. --ab-* tokens only, per docs/theming.md: this is a
+   sheet-style window and not Foundry chrome, unlike the watch clock. */
+.cairn-vald-calendar .cairn-season-dead { background: var(--ab-season-dead); }
+.cairn-vald-calendar .cairn-season-dry { background: var(--ab-season-dry); }
+.cairn-vald-calendar .cairn-season-wet { background: var(--ab-season-wet); }
+.cairn-vald-calendar .cairn-season-harvest { background: var(--ab-season-harvest); }
+.cairn-vald-calendar .cairn-season-reclamation { background: var(--ab-season-reclamation); }
+
+.cairn-vald-calendar .cairn-calendar-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden auto;
+    padding-top: 6px;
+    border-top: 1px solid var(--ab-hairline);
+}
+
+/* THE STATEMENT ABOUT THE DAY, in the size the thing the panel is ABOUT
+   deserves (user ruling 2026-09-11: "much larger"). The season and the weather
+   beneath it come up with it rather than staying at 13px, because "the
+   statement about the day" reads onto either line and a scale that lifts only
+   one of them looks like a mistake. */
+.cairn-vald-calendar .cairn-calendar-date {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.cairn-vald-calendar .cairn-calendar-season,
+.cairn-vald-calendar .cairn-calendar-weather {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: var(--ab-muted);
+    font-size: 15px;
+}
+
+.cairn-vald-calendar .cairn-calendar-begins {
+    font-size: 12px;
+}
+
+.cairn-vald-calendar .cairn-calendar-pencil {
+    width: 24px;
+    height: 24px;
+    min-height: 0;
+}
+
+.cairn-vald-calendar .cairn-calendar-festival h4 {
+    margin: 10px 0 2px;
+    font-size: 16px;
+}
+
+.cairn-vald-calendar .cairn-calendar-span,
+.cairn-vald-calendar .cairn-calendar-quiet,
+.cairn-vald-calendar .cairn-calendar-note {
+    margin: 0 0 4px;
+    color: var(--ab-muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.cairn-vald-calendar .cairn-calendar-festival-text p {
+    margin: 0 0 6px;
+}
+
+/* An event the Warden wrote, marked off from the Guide's own festivals by a
+   rule down its left edge rather than by a colour, so it survives both
+   schemes and reads at a glance as "ours, not the book's". */
+.cairn-vald-calendar .cairn-calendar-festival.is-warden {
+    padding-left: 8px;
+    border-left: 2px solid var(--ab-accent);
+}
+
+.cairn-vald-calendar .cairn-calendar-secret {
+    margin-left: 4px;
+    color: var(--ab-muted);
+    font-size: 12px;
+}
+
+.cairn-vald-calendar .cairn-calendar-event-tools {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0 0;
+}
+
+.cairn-vald-calendar .cairn-calendar-event-tools button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.cairn-vald-calendar .cairn-calendar-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.cairn-vald-calendar .cairn-calendar-foot button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: var(--button-size, 32px);
+    margin: 0;
+    padding: 4px 8px;
+    line-height: 1.2;
+}
+
+/* ---- The offer picker's filter --------------------------------------------
+   The target list used to be every other player character, three or four
+   rows. It is now every actor the user can SEE, which in a world with an
+   imported bestiary is dozens — so the filter is part of the feature, not
+   polish on top of it. A group header hides when nothing under it survives,
+   or the list shows headings with no rows beneath them. */
+.cairn-offer-picker .cairn-offer-filter {
+    width: 100%;
+    margin-bottom: 6px;
+}
+
+.cairn-offer-picker .cairn-offer-group {
+    margin: 8px 0 2px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--ab-line);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ab-muted);
+}
+
+.cairn-offer-picker .cairn-offer-group:first-of-type {
+    margin-top: 0;
+}
+
+.cairn-offer-picker .cairn-hidden {
+    display: none;
+}
+
+/* "Copy to Your World" (module/take-over.js): a headed paragraph per point, a
+   counts line, and a hint. Layout only - the dialog is core chrome and keeps
+   core's colours, so there is nothing here for either theme to get wrong. */
+.cairn-take-over p {
+    margin: 0 0 0.6em;
+}
+
+.cairn-take-over p:last-child {
+    margin-bottom: 0;
+}
+
+.cairn-take-over .take-over-counts {
+    font-size: var(--font-size-13);
+}
+
+/* Both take-over windows SCROLL. A `DialogV2.wait` window at height auto is
+   clamped to the viewport by `_updatePosition` and core hides the overflow, so
+   on a 650px screen the confirm's Copy button sat below the bottom edge with
+   no way to reach it (review #31). Same shape as the shown-table reveal above. */
+.cairn-take-over-dialog .window-content {
+    overflow: hidden auto;
+}
+
+/* The RESULT window's buttons each carry a sentence - "Show the Custom
+   Marketplace folder in Items" - because "Open Items" told the Warden nothing
+   about what it opened (user, round nine). One button per row, in the door
+   rule's shape below: the label left-aligned after a glyph column, wrapping,
+   balanced. Close keeps core's centring, having no glyph to align to. Core's
+   `.standard-form .form-footer > button { flex: 1 }` sits in a layer this
+   file's outranks, so no !important. */
+.cairn-take-over-result .form-footer > button {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    text-align: left;
+    white-space: normal;
+    text-wrap: balance;
+    height: auto;
+    min-height: var(--button-size);
+    line-height: 1.25;
+    padding-block: 5px;
+}
+
+.cairn-take-over-result .form-footer > button > i {
+    flex: 0 0 1.1em;
+    text-align: center;
+}
+
+.cairn-take-over-result .form-footer > button[data-action="close"] {
+    justify-content: center;
+}
+
+/* One button, one job, one row: these buttons carry a whole sentence, and
+   sharing a row left them cramped and unreadable (user, round two). The row
+   wraps so each takes the sidebar's full width under it - core's .flexrow does
+   not wrap on its own.
+
+   The label is LEFT-ALIGNED after a fixed glyph column, which is the Warden's
+   Dashboard ruling applied here: centred text under a glyph makes every line
+   start somewhere different, and a sentence that wraps looks broken rather
+   than merely long. `text-wrap: balance` is what stops "...to this" / "world"
+   - it splits a two-line label evenly instead of orphaning the last word. */
+header.character-generator.directory-header .header-actions {
+    flex-wrap: wrap;
+}
+
+header.character-generator.directory-header .header-actions > button.cairn-take-over {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    text-align: left;
+    white-space: normal;
+    text-wrap: balance;
+    height: auto;
+    min-height: var(--input-height);
+    line-height: 1.25;
+    padding-block: 5px;
+}
+
+header.character-generator.directory-header .header-actions > button.cairn-take-over > i {
+    flex: 0 0 1.1em;
+    text-align: center;
+}
+
+/* The Actor Directory's own row - Create PC, NPC, Hireling, Monster,
+   Companion, Transport, Container, Faction, Import from Kettlewright - shares
+   this header and CAUGHT the full-width rule above for a day (review #31).
+   User ruling: every label fully legible, no truncation, and a button that
+   needs the whole width may take it. So each button is at least as wide as
+   its own label, the row wraps into as many rows as that takes, and the
+   leftover space on a row is shared - core's ellipsis never gets a chance.
+   `fit-content`, not `max-content` (review #32): a label wider than the whole
+   sidebar - Import from Kettlewright at core's larger Font Size steps, longer
+   still in Spanish - was pinned wider than the 300px the sidebar has and cut
+   off mid-word, the ellipsis being exactly what this rule refuses. At
+   fit-content it is still never narrower than a label that fits, and a label
+   that does not fit takes the width there is and WRAPS, the door rule's own
+   shape - the one reading of "fully legible" that survives every font size. */
+header.character-generator.directory-header .header-actions > button:not(.cairn-take-over) {
+    flex: 1 1 auto;
+    min-width: fit-content;
+    white-space: normal;
+    text-wrap: balance;
+    height: auto;
+    min-height: var(--button-size);
+    line-height: 1.25;
+    overflow: visible;
+    text-overflow: clip;
 }

@@ -1,8 +1,17 @@
 # Dice Formulas
 
 Air Bladder reads dice formulas in a few places a Warden can edit — a
-weapon's damage, a monster's attack, and the **Age formula** setting under
-Character Generation. This page is what those formulas can say.
+weapon's damage, a monster's attack, the **Damage** field on the Warden's
+Damage tool, and two settings under Character Generation: the **Age
+formula** and the **Hit Protection formula for player characters**. This
+page is what those formulas can say. It also explains the notation on the
+**Ability dice** and **Gold dice** menus, which offer a fixed set of
+formulas rather than a box to type in.
+
+**Every field that takes dice also takes a plain number.** Put `4` in the
+Hit Protection formula and every character has 4 Hit Protection; put `3` in
+the Warden's Damage field and it deals 3. A fixed amount is simply a
+formula with no dice in it, so there is nothing special to turn on.
 
 ## The basics
 
@@ -29,6 +38,57 @@ applies:
 
 Only the die-plus-die form keeps the highest. With the notation setting
 off, `+` always adds and `d8 + d8` is simply 2–16.
+
+## Keeping the best of several dice
+
+`kh` after a die means "keep the highest", and the number after it says how
+many dice to keep:
+
+| You write | It means | Result |
+|---|---|---|
+| `4d6kh3` | roll four d6, keep the best three | 3–18, high results much more likely |
+| `2d20kh1` | roll two d20, keep the higher | 1–20 |
+| `3d6kl2` | roll three d6, keep the lowest two | 2–12 (**k**eep **l**owest) |
+
+This is Foundry's own notation rather than Cairn's, so it works whether the
+Cairn notation setting is on or off. It is what the **Adventurer** option on
+the Ability dice and Gold dice menus rolls: `4d6kh3` covers the same 3–18
+range as the book's `3d6`, but weights it heavily towards the top.
+
+Mind the difference from Cairn's plus form above. `d8 + d8` keeps **one** die
+of two, so it stays within one die's range, 1–8. `4d6kh3` keeps **three**
+dice and adds them, so its range is three dice wide.
+
+## Exploding dice
+
+`x` after a die rolls it again whenever it comes up its highest face, and adds
+the result — for as long as it keeps rolling the highest:
+
+| You write | It means | Result |
+|---|---|---|
+| `1d6x` | roll a d6; on a 6, roll and add again | 1–5, or 6 plus another roll |
+| `2d6kx` | roll two d6, keep the higher, and explode **that one** | 1–5, or 6 plus another roll |
+| `1d6x2=6` | roll a d6; on a 6, roll and add again, **at most twice** | 1–5, or 6 plus up to two more |
+
+Order matters, and `2d6kx` is deliberate: `k` keeps the higher die first, so
+only the kept die explodes. Two sixes are one six. Written the other way round,
+`2d6xk` explodes both dice and then compares them, which can never exceed 6 —
+not what you want.
+
+**The Exploding damage dice option applies this for you**, to player
+characters' damage rolls only, so you do not normally type it — see
+**Optional Combat Rules**. It writes the capped form — `1d6x2=6`, `2d6kx2=6`,
+`1d4x1=4` — so a die explodes at most half its faces less one times: the
+number after `x` is the cap and the number after `=` is the face that
+explodes. Write `x2` on its own and Foundry reads it as "explode on a 2", so
+keep the `=` if you type a cap yourself. One limit goes with it: a keep-highest roll of
+**different** dice, `d6 + d8`, is left alone, because keeping the highest and
+then exploding it cannot be written for mixed dice. Every other die explodes,
+however small — a d4 weapon and an Impaired roll's d4 included.
+
+With **Maneuver on max damage** also on, nothing about the roll changes: the die
+still explodes when it is rolled, and the card adds a line saying a maneuver is
+possible as well.
 
 ## Minimums and maximums
 

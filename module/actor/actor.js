@@ -6,8 +6,9 @@ import {
   connectedOwnershipShape, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG,
 } from "../connections.js";
 import { actorDisplayName, t } from "../i18n-content.js";
-import { concealmentWhisper, formatCount } from "../utils.js";
+import { concealmentWhisper, formatCount, itemSlotCost } from "../utils.js";
 import { FATIGUE_NAME } from "../item/item.js";
+import { isDroppedPile } from "../party-pile.js";
 
 /** Document names go into dialog HTML; a name is user-authored text. */
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -91,6 +92,24 @@ const STATUS_CARDS = {
  * @param {Actor} actor
  * @param {"critical"|"stabilized"|"dead"} kind
  */
+const statusBannerLine = (spec) =>
+  game.i18n.format("CAIRN.StatusBannerLine", { label: spec.label(), text: game.i18n.localize(spec.text) });
+
+/**
+ * Rebuild a status card's line in THIS viewer's language (renderChatMessageHTML).
+ * The flag is a KIND, looked up with hasOwn so a crafted value — "constructor",
+ * "__proto__" — finds no spec rather than an Object member; the strings come
+ * from the language files, never from the message.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ */
+export const localizeStatusCard = (message, html) => {
+  const kind = message.getFlag("air-bladder", "statusCard");
+  if (typeof kind !== "string" || !Object.hasOwn(STATUS_CARDS, kind)) return;
+  const span = html.querySelector(".status-banner > span");
+  if (span) span.innerHTML = statusBannerLine(STATUS_CARDS[kind]);
+};
+
 export const postStatusCard = async (actor, kind) => {
   const spec = STATUS_CARDS[kind];
   if (!spec || !actor) return;
@@ -106,7 +125,14 @@ export const postStatusCard = async (actor, kind) => {
     // bars were copied value for value from the sheet's, and one key is what
     // keeps a translator's reordering from splitting the pair.
     content: `<div class="status-banner ${spec.cls}"><i class="fas ${spec.icon}"></i>`
-      + `<span>${game.i18n.format("CAIRN.StatusBannerLine", { label: spec.label(), text: game.i18n.localize(spec.text) })}</span></div>`,
+      + `<span>${statusBannerLine(spec)}</span></div>`,
+    // Composed on the ACTING client and stored, so a Spanish player whose
+    // character an English Warden's hazard dropped to Critical Damage read an
+    // English bar in chat under a Spanish one on the sheet — the docblock's
+    // "identical bar" promise, broken. The flag names the KIND and nothing
+    // else; `localizeStatusCard` rebuilds the line per viewer from the same
+    // table (review #27).
+    flags: { "air-bladder": { statusCard: kind } },
   };
   // A hidden creature's death is not table news. Only a TOKEN can be concealed --
   // a world actor with no token has nothing to hide behind, and concealmentWhisper
@@ -196,6 +222,106 @@ const AUDIT_ARRAYS = ["system.scars"];
 const AUDIT_ACTIONS = new Set(["CAIRN.Rest", "CAIRN.RestoreAbilities"]);
 
 /**
+ * THE LEDGER CARD IS REBUILT PER VIEWER (review #30). It is whispered to the
+ * actor's owners AND every Warden, so it has as many readers as the table has
+ * languages — and it stored the acting client's rendering, so a Spanish
+ * player's slot edit reached the English Warden's log as "Fuerza: 10 → 8".
+ * The class rule (CLAUDE.md, "A STORED CHAT LINE"): the flag carries a KIND
+ * per line and the values that made it, never text, and each client renders.
+ * The stored content is still the composer's rendering, for a client without
+ * the hook.
+ *
+ * Every field is coerced or whitelisted on the way back out — a message's
+ * flags are player-authorable and never server-sanitized (review #24's
+ * class): a `p` must be a key of AUDIT_LABELS / AUDIT_BOOLEANS, a `k` one of
+ * the seven kinds, numbers pass a finite gate, names are strings run through
+ * the overlay, and the whole line is escaped at assembly exactly as before.
+ */
+const CHANGE_LOG_FLAG = "changeLog";
+/** Bounds a crafted flag; a real card carries a handful of lines. */
+const CHANGE_LOG_MAX_LINES = 200;
+
+const changeLogValue = (v, trait = false) => {
+  if (v === "" || v === undefined || v === null) return "—";
+  if (typeof v === "number") return Number.isFinite(v) ? String(v) : "—";
+  if (typeof v !== "string") return "—";
+  // Trait values are stored English and displayed through the overlay, so
+  // the ledger shows what the pick-list shows; numbers pass through.
+  return trait ? t("table.result", v) : v;
+};
+
+const changeLogLine = (e) => {
+  if (!e || typeof e !== "object") return null;
+  const name = typeof e.name === "string" ? e.name : "";
+  const ns = e.monster === true ? "monster.itemName" : "item.name";
+  switch (e.k) {
+    case "field": {
+      if (typeof e.p !== "string" || !Object.hasOwn(AUDIT_LABELS, e.p)) return null;
+      const trait = AUDIT_TRAIT_PATHS.has(e.p);
+      return game.i18n.format("CAIRN.ChangeLog.Field",
+        { label: AUDIT_LABELS[e.p](), from: changeLogValue(e.from, trait), to: changeLogValue(e.to, trait) });
+    }
+    case "bool":
+      if (typeof e.p !== "string" || !Object.hasOwn(AUDIT_BOOLEANS, e.p)) return null;
+      return game.i18n.format(e.on === true ? "CAIRN.ChangeLog.Marked" : "CAIRN.ChangeLog.Cleared",
+        { label: game.i18n.localize(AUDIT_BOOLEANS[e.p]) });
+    case "scar":
+      if (!name) return null;
+      return game.i18n.format(e.added === true ? "CAIRN.ChangeLog.ScarAdded" : "CAIRN.ChangeLog.ScarRemoved",
+        { name: t("table.result", name) });
+    case "fatigue":
+      return game.i18n.localize(e.added === true ? "CAIRN.ChangeLog.FatigueAdded" : "CAIRN.ChangeLog.FatigueRemoved");
+    case "item":
+      if (!name) return null;
+      return game.i18n.format(e.added === true ? "CAIRN.ChangeLog.ItemAdded" : "CAIRN.ChangeLog.ItemRemoved",
+        { name: t(ns, name) });
+    case "qty":
+      if (!name) return null;
+      return game.i18n.format("CAIRN.ChangeLog.Field",
+        { label: t(ns, name), from: changeLogValue(Number(e.from)), to: changeLogValue(Number(e.to)) });
+    case "uses":
+      if (!name) return null;
+      return game.i18n.format("CAIRN.ChangeLog.Uses",
+        { name: t(ns, name), from: changeLogValue(Number(e.from)), to: changeLogValue(Number(e.to)) });
+    default:
+      return null;
+  }
+};
+
+/** The card's whole body, in THIS client's language, from the flag's data. */
+const changeLogBody = ({ user, action, entries }) => {
+  const id = String(user ?? "");
+  const who = game.users.get(id)?.name ?? id;
+  // Whitelisted or dropped — never a wire-supplied key through raw.
+  const actionKey = AUDIT_ACTIONS.has(action) ? action : null;
+  const lines = (Array.isArray(entries) ? entries.slice(0, CHANGE_LOG_MAX_LINES) : [])
+    .map(changeLogLine).filter((l) => typeof l === "string" && l);
+  return `<div class="change-log">`
+    + `<p class="change-log-user">${esc(game.i18n.format("CAIRN.ChangeLog.By", { user: who }))}</p>`
+    + (actionKey ? `<p class="change-log-action">${esc(game.i18n.localize(actionKey))}</p>` : "")
+    + `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>`;
+};
+
+/**
+ * Rebuild a ledger card's body in THIS viewer's language (renderChatMessageHTML).
+ * A card from before the flag existed keeps its stored body.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ * @returns {boolean} whether the body was rebuilt
+ */
+export const localizeChangeLogCard = (message, html) => {
+  // Hidden stays hidden. The ledger never carries a Roll, so a non-recipient
+  // never renders it at all — but the guard is the rule, not the exception.
+  if (!message?.isContentVisible) return false;
+  const data = message?.getFlag?.("air-bladder", CHANGE_LOG_FLAG);
+  if (!data || typeof data !== "object" || !Array.isArray(data.entries)) return false;
+  const body = html.querySelector(".message-content");
+  if (!body?.querySelector(".change-log")) return false;
+  body.innerHTML = changeLogBody(data);
+  return true;
+};
+
+/**
  * Extend the base Actor entity by defining a custom roll data structure which is ideal for the Simple system.
  * @extends {Actor}
  */
@@ -255,7 +381,24 @@ export class CairnActor extends Actor {
       o.textContent = text;
       select.append(o);
     }
-    content.append(label, select);
+    // What the choice DOES, said where it is made (2026-09-10). A player
+    // reported a whole session of enemies sharing one HP bar: they had built
+    // them with the NPC button, which stamps a LINKED prototype because an NPC
+    // is one named person, while the Monster button leaves tokens unlinked so
+    // each takes its own damage. Both routes are right; nothing here said they
+    // differed, and the difference only shows up mid-fight. Ruled SIGNPOSTING
+    // rather than a default change or a setting — the linked default is what a
+    // Warden's Guide NPC and a hireling both want, and the crowd case already
+    // has the Monster route and the bestiary's own Bandit and Brigand.
+    // `p.hint` is core's own muted class: DialogV2's form carries
+    // `standard-form` (dialog.mjs:207) and core styles `.standard-form .hint`
+    // (foundry2.css:5460), so this needs no CSS of ours. Static text with no
+    // listener, so the dead-listener trap on rendered content does not apply.
+    // Full explanation: docs/tokens-and-sheets.md. Gate: npm run dev:dialogs.
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = game.i18n.localize("CAIRN.CreateActorHint");
+    content.append(label, select, hint);
     const picked = await foundry.applications.api.DialogV2.prompt({
       // Our own key, not core's DOCUMENT.Create format: the i18n:source gate
       // holds every literal key to en.json, and a system key also gives the
@@ -269,26 +412,50 @@ export class CairnActor extends Actor {
     // Dynamic imports, like _preCreate's portrait pair below: the generators
     // import this module, so a static import is a cycle.
     let actor = null;
-    if (picked === "character") {
-      const { createCharacter } = await import("../character-generator.js");
-      actor = await createCharacter({ folder });
-    } else if (picked === "npc") {
-      const { createNpc } = await import("../character-generator.js");
-      actor = await createNpc({ folder });
-    } else if (picked === "hireling") {
-      // Note this mints TYPE npc with ROLE hireling — the `hireling` type is a
-      // registered alias kept only so existing documents keep their ids, and
-      // nothing new is ever created under it.
-      const { createHireling } = await import("../character-generator.js");
-      actor = await createHireling({ folder });
-    } else if (picked === "monster") {
-      const { createMonster } = await import("../monster-generator.js");
-      actor = await createMonster({ folder });
+    // All four PERSON-ish kinds go through one interactive route, which opens
+    // the creation dialog (roll one, or an empty sheet to fill in by hand) and
+    // dispatches. Note the hireling branch inside it mints TYPE npc with ROLE
+    // hireling — the `hireling` type is a registered alias kept only so
+    // existing documents keep their ids, and nothing new is created under it.
+    if (["character", "npc", "hireling", "monster"].includes(picked)) {
+      const { createActorInteractive } = await import("../character-generator.js");
+      actor = await createActorInteractive(picked, { folder });
     } else {
       actor = await this.createThing(picked, { folder });
     }
     actor?.sheet?.render(true);
     return actor ?? null;
+  }
+
+  /**
+   * DELETING THE DROPPED ITEM PILE SAYS WHAT GOES WITH IT (2026-10-04, user
+   * ask, after asking what happens if a Warden deletes it by accident). Its
+   * items go with it and nothing brings them back — Foundry's undo covers the
+   * canvas only — while core's confirm reads the same for an empty crate. So
+   * the pile's confirm keeps core's sentence and adds the count, and only when
+   * there is something to lose.
+   *
+   * Core's own sentence is REBUILT here, from core's own keys, because
+   * `deleteDialog` composes its default content only when none is passed
+   * (client-document.mjs:901-907) — the same shape core's folder Delete entries
+   * use. Every other actor, and a pile that holds nothing, gets core's dialog
+   * untouched. The Party folder's Delete All does not come through here: it
+   * deletes contents without asking each one, and core's own warning there
+   * already says everything inside goes.
+   * @override
+   */
+  async deleteDialog(options = {}, operation = {}) {
+    if (!isDroppedPile(this) || !this.items.size || options.content) {
+      return super.deleteDialog(options, operation);
+    }
+    const type = game.i18n.localize(this.constructor.metadata.label);
+    const question = game.i18n.localize("COMMON.AreYouSure");
+    const warning = game.i18n.format("SIDEBAR.DeleteWarning", { type });
+    const lost = formatCount("CAIRN.Pile.DeleteWarning", this.items.size);
+    return super.deleteDialog({
+      ...options,
+      content: `<p><strong>${question}</strong> ${warning}</p><p>${lost}</p>`,
+    }, operation);
   }
 
   /**
@@ -712,12 +879,19 @@ export class CairnActor extends Actor {
    * `forHire`, then on the hireling role, now on the npc-person edge — three
    * spellings of one fact, which is the argument the collapse was made on).
    *
-   * Only from the Foundry defaults, and only on the becoming-a-person edge. A
-   * Warden who has deliberately made an NPC hostile-ringed, or unlinked it on
-   * purpose, keeps that — the same "an explicit value wins" rule `_preCreate`
-   * follows, applied to a value chosen earlier rather than passed in the same
-   * breath. Leaving the role is not the mirror image and does nothing: ceasing
-   * to be a person is not a reason to turn something hostile.
+   * Only from the Foundry defaults, and only on the becoming-a-person edge —
+   * the same "an explicit value wins" rule `_preCreate` follows, applied to a
+   * value chosen earlier rather than passed in the same breath. Leaving the
+   * role is not the mirror image and does nothing: ceasing to be a person is
+   * not a reason to turn something hostile.
+   *
+   * **It cannot tell a DELIBERATE default from the default**, and this note
+   * used to claim it could ("a Warden who unlinked it on purpose keeps that").
+   * A stored `false` is a stored `false`: a monster the Warden unlinked by
+   * hand is promoted and re-linked exactly like one that was never touched,
+   * because every monster starts unlinked and nothing records the difference.
+   * The honest promise is the one `docs/tokens-and-sheets.md` now makes —
+   * untick it again after promoting.
    *
    * Only the prototype, which is all this can honestly promise. Tokens already on
    * a scene are their own documents and are left alone.
@@ -908,6 +1082,14 @@ export class CairnActor extends Actor {
       }
     }
 
+    // DEPRIVED IS NEVER DERIVED. For one day (2026-10-02 to 2026-10-03) Crawler
+    // Combat Mode made an overburdened player character Deprived here, as a
+    // total assignment `stored || encumbered`, with the sheet's checkbox locked
+    // while it held. The user reversed it ("attempting to use deprived in this
+    // way was a mistake"): Deprived is Cairn's lack-of-food-or-rest condition,
+    // a box a person ticks, and the hack now has no rule of its own beyond its
+    // options. `system.deprived` is read straight off the stored value again.
+
     // Panic stays for all three types: unlike encumbrance it is a checkbox the
     // Warden ticks deliberately, never a state a full inventory derives, and a
     // panicked horse at 0 HP is the rule working as intended.
@@ -1007,7 +1189,7 @@ export class CairnActor extends Actor {
     // each its own document write and sheet re-render. A fresh clone per copy:
     // the same object reference N times lets one document's write reach the rest.
     const n = Math.max(1, count);
-    await this.createEmbeddedDocuments(
+    const created = await this.createEmbeddedDocuments(
       "Item",
       Array.from({ length: n }, () => foundry.utils.deepClone(payload)),
     );
@@ -1015,6 +1197,10 @@ export class CairnActor extends Actor {
     // change refreshes the owner's open sheet. Ungated: an npc can be a
     // container now, and the call is a no-op for anything unconnected.
     this._synchronizeOwnerSheets();
+    // Returned since 2026-09-06: the offer delivery (item-offer.js) must
+    // distinguish a landed create from a refusal before it confirms the
+    // hand-off to the giver. Void before that, so nothing else reads it.
+    return created;
   }
 
   /* `createOwnedContainer` lived here and is gone with the `container` type
@@ -1388,23 +1574,20 @@ export class CairnActor extends Actor {
   }
 
   calcSlotsUsed() {
-    let totalSlots = this.items.reduce(
-      (memo, item) =>
-        memo +
-        (item.system.bulky ?? false
-          ? item.system.quantity != undefined
-            ? 2 * item.system.quantity
-            : 2
-          : item.system.weightless ?? false
-          ? 0
-          : item.system.quantity != undefined
-          ? item.system.quantity
-          : 1),
-      0
-    );
+    // `itemSlotCost` (utils.js) is the ONE copy of this arithmetic: the Fatigue
+    // drop picker reads it too, to tell a player what each row would free, and a
+    // picker that disagreed with this number would offer a trade at the wrong
+    // price. It is the same reduce this line used to spell out inline.
+    let totalSlots = this.items.reduce((memo, item) => memo + itemSlotCost(item), 0);
     // One coin-weight rule for every actor type (Cairn 2e, p.9): first N petty,
     // then 1 slot per further N. N is the GM's coins-per-slot setting.
     totalSlots += this._calcGoldSlots();
+    // EVERY FATIGUE FILLS A SLOT, as Cairn has it. For a day a house rule made
+    // the first one free ("petty"), with a chip on its row and a "costed one
+    // first" rule for clearing; the user withdrew it on 2026-10-03 ("remove
+    // the rule about making the Fatigue petty if the PC is only carrying
+    // one"). A Fatigue is an ordinary item to this count, so nothing here
+    // mentions it.
     return totalSlots;
   }
 
@@ -1432,6 +1615,13 @@ export class CairnActor extends Actor {
    * @returns {number}
    */
   calcCurrentMaxSlots() {
+    // THE DROPPED ITEM PILE HAS NO LIMIT, and this is the one place that says
+    // so. `slotsMax` is assigned from here, `isEncumbered` compares against it,
+    // and `capacityVerdict`, the drop handler and the marketplace all read one or
+    // the other — so Infinity here makes every one of those paths accept, with no
+    // second rule to keep in step. A very large NUMBER was the alternative and is
+    // worse: the sheet would read "47 / 9999", which is not what unlimited means.
+    if (isDroppedPile(this)) return Infinity;
     const override = this.system.slots ?? 0;
     if (["npc", "hireling"].includes(this.type) && override > 0) return override;
     if (game.settings.get(SETTINGS_NS, "character-inventory-limit") && override > 0) return override;
@@ -1462,6 +1652,33 @@ export class CairnActor extends Actor {
   _synchronizeOwnerSheets(also = []) {
     const refs = new Set([this.system.connectedTo, ...also].filter(Boolean));
     for (const uuid of refs) game.actors.find((a) => a.uuid === uuid)?.render(false);
+  }
+
+  /**
+   * The directory's right-click Import Data fed a KETTLEWRIGHT export gets a
+   * toast pointing at the right door, not a mangled actor (reported
+   * 2026-09-02: people read the two imports as one feature). The shapes are
+   * unmistakable — a Foundry actor export ALWAYS carries `type` and `system`,
+   * a Kettlewright export never does and always spells its stats out in
+   * snake_case at the top level — so a legitimate export can never trip this.
+   * Without it, core's `fromImport` validates the file against the Actor
+   * schema and throws a "type: may not be undefined" wall — into the import
+   * dialog's bare `.then()` (client-document.mjs:1088), so the user sees
+   * NOTHING happen. Refuse by toast and never by throw, for the same reason.
+   * @override
+   */
+  async importFromJSON(json) {
+    let parsed = null;
+    try { parsed = JSON.parse(json); } catch (_e) { /* let super throw core's own error */ }
+    const kettlewrightShaped = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      && parsed.type === undefined && parsed.system === undefined
+      && ["strength", "dexterity", "willpower", "hp_max", "custom_background", "image_url"]
+        .some((key) => key in parsed);
+    if (kettlewrightShaped) {
+      ui.notifications.warn(game.i18n.localize("CAIRN.KWImport.WrongDoor"));
+      return this;
+    }
+    return super.importFromJSON(json);
   }
 
   /**
@@ -1655,6 +1872,30 @@ export class CairnActor extends Actor {
     }
     if (!foundry.utils.isEmpty(audit)) stash.audit = audit;
 
+    // A PARENT update may carry EMBEDDED diffs (`changed.items`), and those
+    // never reach _preUpdateDescendantDocuments — MEASURED 2026-10-03: a
+    // parent-carried item diff fires no item hook and no descendant callback,
+    // only this actor's own `_preUpdate`/`_onUpdate`, with the item's source
+    // changing all the same. The Rest writes the ration it eats this way, so
+    // that one press is ONE ledger card carrying both the HP line and the
+    // ration's uses line. The item-side stash cannot see such a diff, so the
+    // actor side takes the same two audited fields here, in the same shape.
+    if (Array.isArray(changed.items)) {
+      const itemAudit = {};
+      for (const change of changed.items) {
+        const item = change?._id ? this.items.get(change._id) : null;
+        if (!item) continue;
+        const flat = foundry.utils.flattenObject(change);
+        if (!("system.quantity" in flat) && !("system.uses.value" in flat)) continue;
+        const isrc = item.toObject();
+        const a = {};
+        if ("system.quantity" in flat) a.quantity = isrc.system.quantity ?? 1;
+        if ("system.uses.value" in flat) a.uses = isrc.system.uses?.value ?? 0;
+        itemAudit[change._id] = a;
+      }
+      if (!foundry.utils.isEmpty(itemAudit)) stash.itemAudit = itemAudit;
+    }
+
     return result;
   }
 
@@ -1764,28 +2005,30 @@ export class CairnActor extends Actor {
   #postChangeLog(stash, options, userId) {
     if (userId !== game.user.id) return;
     if (options.abNoStatusCard) return;
-    const before = stash.audit;
-    if (!before) return;
+    // Either half may be absent: a parent update carrying ONLY an embedded
+    // ration diff (a Rest at full Hit Protection, where the HP write is a no-op) has an
+    // itemAudit and no field audit, and must still post its one card.
+    const before = stash?.audit ?? {};
+    const itemAudit = stash?.itemAudit;
+    if (!stash?.audit && !itemAudit) return;
     if (!game.settings.get(SETTINGS_NS, "change-log")) return;
 
     const src = this.toObject();
-    const lines = [];
-    for (const [p, label] of Object.entries(AUDIT_LABELS)) {
+    // ENTRIES, not lines: a kind and the values, rendered per viewer by
+    // `changeLogLine` (review #30). Trait display and the "—" for an empty
+    // value live there now, once, for every reader.
+    const entries = [];
+    for (const p of Object.keys(AUDIT_LABELS)) {
       if (!(p in before)) continue;
       const now = foundry.utils.getProperty(src, p);
       if (now === before[p]) continue;
-      // Trait values are stored English and displayed through the overlay, so
-      // the ledger shows what the pick-list shows; numbers pass through.
-      const disp = AUDIT_TRAIT_PATHS.has(p)
-        ? (v) => (v ? t("table.result", String(v)) : "—")
-        : (v) => (v === "" || v === undefined || v === null ? "—" : String(v));
-      lines.push(game.i18n.format("CAIRN.ChangeLog.Field", { label: label(), from: disp(before[p]), to: disp(now) }));
+      entries.push({ k: "field", p, from: before[p] ?? null, to: now ?? null });
     }
-    for (const [p, key] of Object.entries(AUDIT_BOOLEANS)) {
+    for (const p of Object.keys(AUDIT_BOOLEANS)) {
       if (!(p in before)) continue;
       const now = foundry.utils.getProperty(src, p) === true;
       if (now === before[p]) continue;
-      lines.push(game.i18n.format(now ? "CAIRN.ChangeLog.Marked" : "CAIRN.ChangeLog.Cleared", { label: game.i18n.localize(key) }));
+      entries.push({ k: "bool", p, on: now });
     }
     // Scars are free-typed strings and may repeat, so the diff is a MULTISET
     // one: matching occurrences cancel, whatever their positions.
@@ -1794,14 +2037,33 @@ export class CairnActor extends Actor {
       for (const s of src.system.scars ?? []) {
         const i = old.indexOf(s);
         if (i >= 0) old.splice(i, 1);
-        else lines.push(game.i18n.format("CAIRN.ChangeLog.ScarAdded", { name: s }));
+        else entries.push({ k: "scar", added: true, name: s });
       }
-      for (const s of old) lines.push(game.i18n.format("CAIRN.ChangeLog.ScarRemoved", { name: s }));
+      for (const s of old) entries.push({ k: "scar", added: false, name: s });
     }
-    if (lines.length) {
+    // Item diffs carried by THIS parent update (see _preUpdate): the same two
+    // audited fields the item-side half logs, from the same kind of stash, so
+    // a Rest's ration sits on the Rest's own card.
+    if (itemAudit) {
+      const monster = this.npcRole === "monster";
+      for (const [id, b] of Object.entries(itemAudit)) {
+        const d = this.items.get(id);
+        if (!d) continue;
+        const isrc = d.toObject();
+        if (b.quantity !== undefined) {
+          const now = isrc.system.quantity ?? 1;
+          if (now !== b.quantity) entries.push({ k: "qty", name: d.name, monster, from: b.quantity, to: now });
+        }
+        if (b.uses !== undefined) {
+          const now = isrc.system.uses?.value ?? 0;
+          if (now !== b.uses) entries.push({ k: "uses", name: d.name, monster, from: b.uses, to: now });
+        }
+      }
+    }
+    if (entries.length) {
       // Whitelisted or dropped — never pass a wire-supplied key through raw.
       const actionKey = AUDIT_ACTIONS.has(options.abChangeLogAction) ? options.abChangeLogAction : null;
-      this.#postChangeLogCard(lines, userId, actionKey);
+      this.#postChangeLogCard(entries, userId, actionKey);
     }
   }
 
@@ -1819,14 +2081,13 @@ export class CairnActor extends Actor {
     if (userId !== game.user.id) return;
     if (options.abNoStatusCard) return;
     if (!game.settings.get(SETTINGS_NS, "change-log")) return;
-    const ns = this.npcRole === "monster" ? "monster.itemName" : "item.name";
-    const lines = documents.map((d) => {
-      if (d.name === FATIGUE_NAME) {
-        return game.i18n.localize(added ? "CAIRN.ChangeLog.FatigueAdded" : "CAIRN.ChangeLog.FatigueRemoved");
-      }
-      return game.i18n.format(added ? "CAIRN.ChangeLog.ItemAdded" : "CAIRN.ChangeLog.ItemRemoved", { name: t(ns, d.name) });
-    });
-    if (lines.length) this.#postChangeLogCard(lines, userId);
+    // The overlay namespace is decided by the READER from the `monster` bit;
+    // the ENGLISH name travels (the overlay is keyed on the source string).
+    const monster = this.npcRole === "monster";
+    const entries = documents.map((d) => (d.name === FATIGUE_NAME
+      ? { k: "fatigue", added }
+      : { k: "item", added, name: d.name, monster }));
+    if (entries.length) this.#postChangeLogCard(entries, userId);
   }
 
   /**
@@ -1844,27 +2105,22 @@ export class CairnActor extends Actor {
     if (userId !== game.user.id) return;
     if (options.abNoStatusCard) return;
     if (!game.settings.get(SETTINGS_NS, "change-log")) return;
-    const ns = this.npcRole === "monster" ? "monster.itemName" : "item.name";
-    const lines = [];
+    const monster = this.npcRole === "monster";
+    const entries = [];
     for (const d of documents) {
       const before = options.airBladder?.[d.id]?.itemAudit;
       if (!before) continue;
       const src = d.toObject();
-      const name = t(ns, d.name);
       if (before.quantity !== undefined) {
         const now = src.system.quantity ?? 1;
-        if (now !== before.quantity) {
-          lines.push(game.i18n.format("CAIRN.ChangeLog.Field", { label: name, from: before.quantity, to: now }));
-        }
+        if (now !== before.quantity) entries.push({ k: "qty", name: d.name, monster, from: before.quantity, to: now });
       }
       if (before.uses !== undefined) {
         const now = src.system.uses?.value ?? 0;
-        if (now !== before.uses) {
-          lines.push(game.i18n.format("CAIRN.ChangeLog.Uses", { name, from: before.uses, to: now }));
-        }
+        if (now !== before.uses) entries.push({ k: "uses", name: d.name, monster, from: before.uses, to: now });
       }
     }
-    if (lines.length) this.#postChangeLogCard(lines, userId);
+    if (entries.length) this.#postChangeLogCard(entries, userId);
   }
 
   /** @override */
@@ -1926,26 +2182,29 @@ export class CairnActor extends Actor {
    * attach a Roll here: `ChatMessage#visible` returns true for any whispered
    * message that isRoll (chat-message.mjs:101-104), which would silently
    * publish the ledger to the whole table — the same caveat concealmentWhisper
-   * documents. Lines are localized TEXT; esc() at assembly is what makes a
-   * user-authored item name or scar safe in the markup.
+   * documents. `esc()` at assembly is what makes a user-authored item name or
+   * scar safe in the markup.
    *
    * `actionKey` (already vetted against AUDIT_ACTIONS by the caller) names
    * the operation — "Rest", "Restore Abilities" — between the user line and
    * the diff, so a button's card stops being indistinguishable from a hand
-   * edit. Localized at post time on the acting client, stored localized in
-   * content — the same contract as every other ledger line.
+   * edit.
+   *
+   * The ENTRIES ride a flag and every reader renders them (review #30 —
+   * `localizeChangeLogCard`); the stored content is this client's rendering,
+   * kept for a client without the hook. For a month this stored the composer's
+   * language for the owners AND the Wardens who read it.
    */
-  #postChangeLogCard(lines, userId, actionKey = null) {
-    const user = game.users.get(userId);
+  #postChangeLogCard(entries, userId, actionKey = null) {
     const speaker = this.token
       ? ChatMessage.getSpeaker({ token: this.token })
       : ChatMessage.getSpeaker({ actor: this });
     const whisper = game.users.filter((u) => this.testUserPermission(u, "OBSERVER")).map((u) => u.id);
-    const content = `<div class="change-log">`
-      + `<p class="change-log-user">${esc(game.i18n.format("CAIRN.ChangeLog.By", { user: user?.name ?? userId }))}</p>`
-      + (actionKey ? `<p class="change-log-action">${esc(game.i18n.localize(actionKey))}</p>` : "")
-      + `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>`;
-    return ChatMessage.create({ speaker, content, whisper });
+    const data = { user: userId, action: actionKey, entries };
+    return ChatMessage.create({
+      speaker, content: changeLogBody(data), whisper,
+      flags: { "air-bladder": { [CHANGE_LOG_FLAG]: data } },
+    });
   }
 
   /**

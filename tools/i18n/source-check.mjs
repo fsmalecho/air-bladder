@@ -112,8 +112,18 @@ const CORE_RESOLVED = [/^TYPES\./];
  * prefix: a prefix would hide a typo'd COMBAT.* key of our own, which is
  * this gate's whole job to catch. (Review #11: these three rows kept the
  * gate permanently red, which is the failure mode its docstring names.)
+ * `COMMON.Yes` / `COMMON.No` (2026-10-03) are the Drop confirm's buttons,
+ * kept as core's own words so that dialog added no string to translate; both
+ * verified present in core's en.json. The gate was red on them from the
+ * commit that introduced them (a5e3f58e) until this line.
+ * `COMMON.AreYouSure` / `SIDEBAR.DeleteWarning` (2026-10-04) are core's own
+ * delete-confirm sentence, rebuilt by `CairnActor#deleteDialog` for the
+ * Dropped Item Pile because core composes it only when no content is passed;
+ * both read by core's client (client-document.mjs:904-905) and present in its
+ * en.json.
  */
-const CORE_SUPPLIED = new Set(["COMBATANT.Ping", "COMBATANT.PanTo", "COMBAT.InitiativeRoll"]);
+const CORE_SUPPLIED = new Set(["COMBATANT.Ping", "COMBATANT.PanTo", "COMBAT.InitiativeRoll",
+  "COMMON.Yes", "COMMON.No", "COMMON.AreYouSure", "SIDEBAR.DeleteWarning"]);
 
 /** Literal keys, plus the PREFIXES of keys built by interpolation. */
 const collectKeys = () => {
@@ -322,12 +332,32 @@ const JS_PATTERNS = [
   [/(?:^|[{,])\s*(title|label|hint|placeholder|flavor)\s*:\s*(["'])((?:[^"'\\]|\\.)*)\2/g, 3, "property"],
 ];
 
+/**
+ * A BARE CAPITALISED WORD IS A LABEL, not an id.
+ *
+ * The single-token exemption below is what a `label: "Cancel"` hides behind,
+ * and three of them shipped in one batch on `dev` before anybody noticed:
+ * DialogV2 localizes a button label, "Cancel" resolves through core's English
+ * fallback because core ships only English, and a Spanish Warden read "Cancel"
+ * on three dialogs while every other dialog in the session read "Cancelar".
+ *
+ * So single tokens stay exempt EXCEPT one shape: `Capitalised`, at least three
+ * letters, nothing else in it. An id, a class, a path fragment and a formula
+ * are all lowercase, kebab, dotted or mixed, so none of them match — measured
+ * across every `module/**\/*.js` in the tree, where this flags exactly zero
+ * false positives. `STR`/`DEX`/`WIL` are already excluded above it and are
+ * all-caps anyway.
+ */
+const bareLabelWord = (v) => /^[A-Z][a-z]{2,}$/.test(v);
+
 /** A literal that is a key, a path, a css class or a formula is not prose. */
 const looksTranslatable = (v) =>
   /[A-Za-z]{3}/.test(v) &&
   !/^(CAIRN|TYPES)\./.test(v) &&
   !/^(STR|DEX|WIL)$/.test(v) &&
-  !/^[\w.-]+$/.test(v) && // single token: an id, a class, a path fragment
+  // single token: an id, a class, a path fragment — unless it is a bare
+  // capitalised word, which is a label somebody forgot to key.
+  (!/^[\w.-]+$/.test(v) || bareLabelWord(v)) &&
   !/^(icons|systems|modules|worlds)\//.test(v);
 
 const scanJs = () => {

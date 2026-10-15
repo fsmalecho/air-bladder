@@ -1,14 +1,72 @@
 /** @name CONFIG.Cairn */
 export const Cairn = {};
 
+// EVERY "pack;Table Name" declaration below resolves WORLD FIRST (2026-09-13,
+// compendium.js `findDeclaredTable`): a RollTable in the Warden's world with
+// the same name is what rolls, and the pack half only says where the SHIPPED
+// copy lives — the fallback, never a lock. So a Warden re-writes the Physique
+// table, the NPC Quirks or a monster's Weaknesses the same way they replace
+// Bonds (docs/customizing-bonds.md): import the shipped table, keep its name,
+// edit. Before this the Dashboard buttons resolved world-first and the
+// generators did not, and one table answered two ways depending on the button.
+// Twenty-five declarations here, plus Scars in damage.js and the Barebones
+// creation tables in character-generator.js, all read the same way now.
+
+// A PLAYER CHARACTER's generation dice, the Warden's since 2026-10-02 (user
+// ask). Abilities and starting gold each pick one of three TIERS; Hit
+// Protection takes a formula outright, because "a flat value that the warden
+// provides" was the ask and no tier can express it.
+//
+// THIS IS THE ONE MAP, and three things read it: both settings' `choices`
+// (settings.js), both tier helpers (character-generator.js), and the
+// `dev:pc-dice` leg that holds each rendered option label in step with it. The
+// consequence is accepted on purpose — gold cannot gain a fourth tier without
+// abilities gaining one too.
+//
+// NPCs, hirelings and monsters are untouched and that is STRUCTURAL, not a
+// promise: an NPC reads `npcGenerator.ability` below, a hireling takes its
+// statblock off the career catalogue with no dice at all, a monster uses
+// weighted picks, and both person payloads set `gold: 0` flat.
+//
+// Every tier is checked against the Cairn `+` overload (utils.js
+// `evaluateFormula`), which rewrites `a + b` to keep-highest when EVERY
+// `+`-separated term is a bare die: `3d6` and `4d6kh3` carry no `+`, and
+// `2d6 + 3`'s second term is not a die, so all three roll verbatim. A tier
+// added here must be re-checked against that rule — `d6 + d6 + d6` would
+// silently become max(d6,d6,d6), 1..6 — and must cap at 18, because a save is
+// `d20cs<=@abilities.X.value` and an ability of 20 makes every save against it
+// succeed in silence. (Crawler caps at 15 and floors at 5; it was `2d6 + 6`,
+// 8..18, until the user changed it on 2026-10-03.)
+//
+// The stored value is the KEY, never the formula, so a label can be reworded
+// and a formula corrected without orphaning what worlds already hold — and a
+// key must say what its label says, so a renamed label takes its key with it
+// (the first tier became `default` on 2026-10-03, user ruling). A world still
+// holding a retired key reads as `default` (character-generator.js
+// `pcTierFormula`).
+Cairn.pcDiceTiers = {
+  default: "3d6",
+  adventurer: "4d6kh3",
+  crawler: "2d6 + 3",
+};
+
+// Hit Protection's default. NOT a tier — that setting is free text — so this is
+// the ONE copy, the same arrangement `characterGenerator2e.biography.age` has
+// below: `pc-hp-formula` registers it as its default, and `effectivePcHpFormula`
+// falls back to it when the Warden's own formula is blank or unusable.
+Cairn.pcHpFormula = "1d6";
+
 // Cairn 2e generation config. Backgrounds, gear, and bonds come from their own
 // packs (see character-generator.js); this covers the shared biography, which
 // draws the 8 physical/personality traits from tables-2e and rolls age.
 // 2e drops the 1e system's Misfortune and Reputation.
 Cairn.characterGenerator2e = {
-  // Cairn 2e starts every character with 3d6 coins, on top of any coins their
-  // bond or background choice-tables grant.
-  gold: "3d6",
+  // `gold: "3d6"` was here and is GONE (2026-10-02) — a player character's
+  // starting coins are the Warden's now, read through
+  // `effectivePcGoldFormula()` off `pc-gold-dice`. The fact the old comment
+  // carried is worth keeping and has moved to that setting's HINT, where a
+  // Warden reads it rather than a maintainer: the coins a bond or a background
+  // question grants are added ON TOP of this roll and are not affected by it.
   biography: {
     // No sentence template here, on purpose (review #13). One lived here —
     // "I have a <strong>{physique}</strong> physique, …" — with no reader:
@@ -40,6 +98,18 @@ Cairn.characterGenerator2e = {
       vice: "air-bladder.tables-2e;Vice",
       virtue: "air-bladder.tables-2e;Virtue"
     }
+  },
+  // The random-spell pool: a RollTable, declared like every other generator
+  // table and resolved the same way (world by name, then the declared pack —
+  // user ruling 2026-09-14, "exactly the same way as marketplace, bonds,
+  // omens"). Two declarations because the GLOG hack swaps the pool wholesale:
+  // under it only the GLOG wordings plus the custom set are dealt, canon
+  // excluded (ruling 2026-08-05). Both tables are importer-owned snapshots of
+  // the spell packs (tools/import/spell-tables.mjs); a Warden makes them
+  // theirs with "Create a Custom Spell Table…" (module/take-over.js).
+  spells: {
+    canon: "air-bladder.tables-2e;Spells — Canon (1d100)",
+    glog: "air-bladder.tables-glog;Spells — GLOG"
   }
 };
 
@@ -54,21 +124,22 @@ Cairn.characterGenerator2e = {
 // Warden's Guide "NPC Tables" — already shipped in warden-npcs, twenty entries
 // each, and until this split only `Name` and `Faction` had a reader.
 //
-// These are the WARDEN'S tables and their drawn state must stay clean. The NAME
-// and FACTION dice take `table.roll()`, which cannot mark anything. BACKGROUND
-// and the four TRAITS go through `drawTableText` -> `table.draw()`, and that is
-// safe for TWO independent reasons, both of which have to hold: every one of
-// these tables is `replacement: true`, AND core skips the drawn-marking write
-// entirely for a table that lives in a pack (`if (!this.replacement && !this.pack)`,
-// client/documents/roll-table.mjs:109). Faction is the one that could ever be a
-// WORLD table — findTableByName resolves world-first — which is exactly why it
-// is on the roll() path and must stay there.
+// These are the WARDEN'S tables and their drawn state must stay clean. EVERY
+// reader is on `table.roll()` now, which reads the drawn state and writes
+// nothing. It matters more than it did: `draw()` marks rows drawn on any table
+// that is neither `replacement` nor in a pack (`if (!this.replacement &&
+// !this.pack)`, client/documents/roll-table.mjs:109), and until 2026-09-13
+// BACKGROUND and the four TRAITS went through `draw()` — safe only because
+// every table they could reach lived in a pack. Now every declaration can
+// resolve to a WORLD table, so that safety net is gone and the reader had to
+// move (compendium.js `rollTable`). Faction was on `roll()` from the start for
+// exactly this reason; the rest have joined it.
 Cairn.npcGenerator = {
   name: "air-bladder.warden-npcs;Warden: NPC - Name",
-  // The Faction die's table, by NAME ONLY — no pack prefix, deliberately: it
-  // resolves world-first (findTableByName), so a Warden's own RollTable named
-  // "Warden: NPC - Faction" always beats the shipped warden-npcs copy and
-  // their faction list survives a system update.
+  // The Faction die's table, by NAME ONLY. It was the first world-first table
+  // here, before the rule became general, and the bare form still works (a
+  // bare name hunts every RollTable pack after the world). Kept bare as the
+  // record of where the rule started.
   faction: "Warden: NPC - Faction",
   // Role `npc` only. `background` answers the same question `profession` does
   // for a hireling, off a different table — which is the whole of what
@@ -99,7 +170,7 @@ Cairn.npcGenerator = {
   // items each. So an NPC gets the gear of its nearest Barebones counterpart,
   // through the same resolveRefs path a Barebones PC and a 2e hireling use.
   //
-  // Keyed on the ENGLISH table text, and that is load-bearing: `drawTableText`
+  // Keyed on the ENGLISH table text, and that is load-bearing: `rollTableText`
   // returns the raw result, NOT the content overlay's translation, so
   // `system.background` stores English in every language while the SHEET shows
   // `backgroundDisplay`. A map keyed on what the Warden reads would miss on
@@ -142,9 +213,10 @@ Cairn.npcGenerator = {
 
 // Monster generation (SRD "Creating Monsters", CC BY-SA 4.0 — the design of
 // record is docs/monster-generation.md). The eight tables ship in the
-// warden-monsters pack and they are the WARDEN'S tables: the generator rolls
-// them with table.roll(), never draw(), so their drawn state stays clean —
-// the same invariant rollNameFromTable documents for the NPC name table.
+// warden-monsters pack, resolve world-first like everything above, and they
+// are the WARDEN'S tables: the generator rolls them with table.roll(), never
+// draw(), so their drawn state stays clean — the same invariant
+// rollNameFromTable documents for the NPC name table.
 Cairn.monsterGenerator = {
   physique: "air-bladder.warden-monsters;Warden: Monster - Appearance (Physique)",
   feature: "air-bladder.warden-monsters;Warden: Monster - Appearance (Feature)",
@@ -161,9 +233,15 @@ Cairn.monsterGenerator = {
 // dropped 1e's name tables and Barebones ships none of its own.
 Cairn.barebonesGenerator = {
   name: "air-bladder.warden-npcs;Warden: NPC - Name",
-  ability: "3d6",
-  hitProtection: "1d6",
-  gold: "3d6",
+  // `ability: "3d6"`, `hitProtection: "1d6"` and `gold: "3d6"` were here and
+  // are GONE (2026-10-02). A player character's dice are the Warden's now and
+  // no longer differ by content source — which collapses a 2e/Barebones
+  // distinction that was a no-op anyway, every branch having been the same
+  // formula. Every site reads `effectivePcAbilityFormula()`,
+  // `effectivePcHpFormula()` or `effectivePcGoldFormula()`
+  // (character-generator.js). Left in place these would have been dead config
+  // that reads as live, which is the liability this file's own notes keep
+  // recording.
 };
 
 CONFIG.Cairn = Cairn;

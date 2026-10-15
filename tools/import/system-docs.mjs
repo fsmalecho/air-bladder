@@ -81,14 +81,24 @@ const journalShell = (id, name, pages) => [
 // documents (design-of-record files, plans, i18n process, release testing)
 // stay repo-side on purpose.
 const ROSTER = [
+  // The window that puts all 41 Warden tables on a button. First, because it
+  // is the surface a Warden reaches for at the table and the one that leads to
+  // most of the guides below it.
+  ["warden-dashboard.md", "The Warden's Dashboard"],
   ["encounter-tables.md", "Encounter Tables"],
   ["generating-characters.md", "Generating Characters"],
   ["generating-npcs.md", "Generating NPCs and Hirelings"],
   ["generating-monsters.md", "Generating Monsters"],
   ["generating-factions.md", "Generating Factions"],
+  // What you do with what you generated, and the one page that explains why a
+  // Monster's tokens each take their own damage while an NPC's share a sheet
+  // (2026-09-10, after a player lost a session's damage tracking to it).
+  ["tokens-and-sheets.md", "Tokens and Sheets"],
+  ["keeping-time.md", "Keeping Time"],
   ["creating-custom-backgrounds.md", "Creating Custom Backgrounds"],
   ["sharing-custom-backgrounds.md", "Sharing Custom Backgrounds"],
   ["customizing-bonds.md", "Customizing Bonds"],
+  ["customizing-the-marketplace.md", "Customizing the Marketplace"],
   // `custom-portrait-gallery.md` used to sit here and is deliberately gone
   // (2026-08-20). It is a design record — decisions, code paths, non-goals —
   // and a Warden reading the in-game journal was being shown sentences naming
@@ -96,6 +106,8 @@ const ROSTER = [
   // generating-monsters.md ships, monster-generation.md does not.
   ["using-your-own-portraits.md", "Using Your Own Portraits"],
   ["glog-magic.md", "GLOG Magic in Foundry"],
+  // The optional combat rules (2026-10-02; "Crawler Combat Mode" until 2026-10-03).
+  ["optional-combat-rules.md", "Optional Combat Rules"],
   ["supplied-macros.md", "Supplied Macros"],
   // The Age formula setting's hint names this page by title ("the Dice
   // Formulas page of the System Docs journal") — renaming the entry breaks

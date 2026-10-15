@@ -118,15 +118,46 @@ for (const pack of manifest.packs ?? []) {
 // the macros pack 24 (2026-08-08, a2b15d1c) — the floor sat at 22 through
 // both (review #13) — then spellbooks-glog 25, tables-glog + journals-glog
 // 27 (2026-08-09), journals-2e + journals-docs 29 (2026-08-10), and
-// journals-vald 30 (2026-08-21). A floor is a "this check is matching
-// nothing" tripwire, so it must RISE with the count or it slowly stops
-// being one.
-const EXPECTED_PACKS = 30;
+// journals-vald 30 (2026-08-21), and DOWN to 29 when more-spellbooks left the
+// repo (2026-09-14, 1c566f02) — that commit did not carry this line, so the
+// gate was red at HEAD for a day and nobody ran it. A floor is a "this check
+// is matching nothing" tripwire, so it must MOVE with the count or it slowly
+// stops being one; a floor above the count is worse, a gate that always fails
+// and is always skipped.
+const EXPECTED_PACKS = 29;
 if (packsChecked < EXPECTED_PACKS) {
   fail(`only ${packsChecked} pack source dirs found, expected at least ${EXPECTED_PACKS} — `
     + "this check is matching nothing rather than passing");
 } else {
   ok(`all ${packsChecked} declared packs have sources in src/packs/`);
+}
+
+// THE OTHER DIRECTION, for the same reason check:fields walks htmlFields both
+// ways and this file already walks packFolders and languages both ways. Asking
+// only "does every declaration have sources" leaves the opposite failure
+// completely silent: a compendium authored as src/packs/<name>/*.yml whose
+// system.json entry was forgotten is never compiled (tools/packs.mjs builds
+// from the manifest list alone), is actively PRUNED from the built output as
+// "not in system.json", ships in no release, and is reported by nothing. Worse,
+// check:refs walks src/packs directly and would count it, so two totals that
+// look identical would be measuring different sets.
+//
+// Both of this file's other one-directional checks were closed after they bit —
+// packFolders when the macros pack sat unfiled for ten days, languages at
+// review #10. This was the last member of that set.
+// Named apart from the `declaredPacks` the packFolders check builds further
+// down: one `const` per scope, and a clash here is a module that will not load.
+const declaredPackNames = new Set((manifest.packs ?? []).map((p) => p.name));
+const packSrc = join(ROOT, "src", "packs");
+const onDiskPacks = existsSync(packSrc)
+  ? readdirSync(packSrc, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+  : [];
+const undeclaredPacks = onDiskPacks.filter((name) => !declaredPackNames.has(name));
+if (undeclaredPacks.length) {
+  fail(`src/packs/ holds ${undeclaredPacks.join(", ")}, which system.json declares in no pack entry — `
+    + "an undeclared pack is never built, never shipped, and reported by nothing else");
+} else {
+  ok(`all ${onDiskPacks.length} pack source dirs are declared in system.json`);
 }
 
 // Warden-facing packs are hidden from players (review #13 fix #6): every

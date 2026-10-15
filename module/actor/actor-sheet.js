@@ -1,8 +1,9 @@
-import { canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, promptPickOmen, promptPickBond, promptPickQuestionOption, promptPickName, findOmensTable, rollNameFromTable, rollAge, rollTextItems, effectiveAgeFormula, resolveActorBackground, redealBackgroundGear, rerollAllBonds, reorderInventory, postGenerationRolls } from "../character-generator.js";
+import { dieIconOrGeneric } from "../utils.js";
+import { canRegenerateContainers, drawBond, bondRecordFrom, withGrantSource, bondEntitlement, resolveRefs, replaceGrantedContainers, promptBackground, changeBackground, promptFailedCareer, rollFailedCareerName, buildFailedCareerItem, getPortraitManifest, pairedTokenFor, randomPortraitInSameFolder, portraitCategoryFor, regenerateNpc, regenerateHireling, rerollNpcBackground, rerollHirelingCareer, rerollNpcName, rerollNpcFaction, promptHirelingCareer, promptNpcBackground, promptNpcFaction, promptPickOmen, promptPickBond, promptPickQuestionOption, promptPickName, findOmensTable, rollNameFromTable, rollAge, rollTextItems, effectiveAgeFormula, effectivePcAbilityFormula, effectivePcGoldFormula, effectivePcHpFormula, rollPcHitProtection, resolveActorBackground, redealBackgroundGear, rerollAllBonds, reorderInventory, postGenerationRolls, isHandBuilt, clearHandBuilt, FLAG_SCOPE } from "../character-generator.js";
 import { promptMonsterTier, regenerateMonster } from "../monster-generator.js";
 import { openMarketplace, TRANSPORTS_CATEGORY } from "../marketplace.js";
-import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel } from "../utils.js";
-import { resultText } from "../compendium.js";
+import { evaluateFormula, cleanDescription, bindEditorClickAwaySave, formatCount, sourceLabel, askDamageQuality, damageFormulaFor, damageQualityLabel, damageQualityKind, d20CardBody, d20CardFlavor, D20_CARD_ABILITIES, combatOption, combatDamageFormula, askImprovisedAttack, IMPROVISED_FORMULA } from "../utils.js";
+import { resultText, compendiumInfoFromString } from "../compendium.js";
 import { SETTINGS_NS } from "../settings.js";
 import { CONTAINER_ART_CHOICES, CONTAINER_CLASSES } from "../icons.js";
 import { NPC_ROLES, PERSON_ROLES } from "../data-models.js";
@@ -37,7 +38,13 @@ const NPC_TRAIT_LABELS = {
   vice: "CAIRN.Trait.Vice",
 };
 import { atConnectionLimit, maxConnections, connectionsUiEnabled, brokenOwnershipShape, OWNERSHIP_SYNC_FLAG } from "../connections.js";
+import { findMatchingStack, rationsLeft, rationToEat } from "../gear.js";
+import {
+  canOfferItem, promptOfferTarget, createItemOffer, offerFromDrop,
+  canReceiveOffer, settleOwnOffer,
+} from "../item-offer.js";
 import { actorDisplayName, localizeNameDesc, sourceOf, t } from "../i18n-content.js";
+import { dropItemToPile, isDroppedPile, buildWhereField, cleanDropNote, pileDisplayName } from "../party-pile.js";
 import { FATIGUE_NAME } from "../item/item.js";
 import { castFromGrimoire, castScroll, grimoiresOn, pagesOfGrimoire, ensureGrimoireKey,
   groupPagesUnderBooks } from "../grimoire.js";
@@ -148,6 +155,27 @@ for (const hook of [
   Hooks.on(hook, () => PACK_DOC_CACHE.clear());
 }
 
+/**
+ * A declared table for a pick-list, in `findDeclaredTable`'s ORDER — a world
+ * table of the name first, then the declared pack — with the pack half read
+ * off the cache above rather than the server (review #31). The first cut
+ * called `findDeclaredTable` itself, and `dev:smoke` stopped seeing a
+ * character sheet inside its three seconds: that resolver pays an index
+ * round trip and a document fetch per table, twelve pick-lists deep on a
+ * fresh client, where one cached `getDocuments()` per pack had served the
+ * lists for a month. Same answer as the die beside each list; only the pack
+ * read is shared. The world half is a synchronous collection read, so a
+ * Warden's own `Physique` is what both offer.
+ * @param {String} ref  "pack;Name"
+ * @returns {Promise<RollTable|undefined>}
+ */
+const declaredTableCached = async (ref) => {
+  const [packName, tableName] = compendiumInfoFromString(ref);
+  const world = game.tables?.find((t) => t.name === tableName);
+  if (world) return world;
+  return (await cachedPackDocuments(packName)).find((t) => t.name === tableName);
+};
+
 /* -------------------------------------------- */
 /*  Row animations (replacing jQuery slideUp/slideDown)                         */
 /* -------------------------------------------- */
@@ -232,6 +260,20 @@ const slideDown = (el) => {
 const omenVisible = (actor) =>
   actor?.system?.contentSource !== "barebones"
   && game.settings.get(SETTINGS_NS, "show-omens");
+
+/**
+ * May rolled traits and age be shown AT ALL? One term — the Warden's
+ * show-traits switch (2026-09-07) — but a function for omenVisible's reason:
+ * every surface must ask the same question, and print once regressed for a
+ * day by open-coding one of omen's two terms (review #16). Governs the trait
+ * rows, the trait sentence and the AGE row on every person sheet, the
+ * printed Traits section, and the Roll Character checklist's age/traits
+ * rows. Pronouns are NOT this switch's business — never rolled, never
+ * hidden. No per-actor term: unlike omens, traits are every edition's and
+ * every person role's.
+ * @returns {boolean}
+ */
+const traitsVisible = () => game.settings.get(SETTINGS_NS, "show-traits");
 
 const mayRandomize = (fn) => function (event, target) {
   if (!this._mayRandomize()) {
@@ -320,6 +362,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // Inventory
       itemCreate: owned(CairnActorSheet.#onItemCreate),
       itemShop: owned(CairnActorSheet.#onItemShop),
+      itemGive: owned(CairnActorSheet.#onItemGive),
       // NOT owned(): editing only OPENS the item's own sheet (a read), which
       // enforces its own edit permission. Like printSheet above, being able to
       // open this actor sheet is the whole gate — owned() wrongly refused a
@@ -327,6 +370,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // item, warning "not editable" for a view that writes nothing here.
       itemEdit: CairnActorSheet.#onItemEdit,
       itemDelete: owned(CairnActorSheet.#onItemDelete),
+      itemDrop: owned(CairnActorSheet.#onItemDrop),
       itemToggleEquipped: owned(CairnActorSheet.#onItemToggleEquipped),
       itemAddUse: owned(CairnActorSheet.#onItemAddUse),
       itemRemoveUse: owned(CairnActorSheet.#onItemRemoveUse),
@@ -349,10 +393,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rest: owned(CairnActorSheet.#onRest),
       restoreAbilities: owned(CairnActorSheet.#onRestoreAbilities),
       dieOfFate: CairnActorSheet.#onDieOfFate,
+      // NOT owned(): a damage roll is a READ, and owned() tests `isEditable`,
+      // which also refuses a locked compendium -- the bug review #18 fixed for
+      // Die of Fate. Its own ownership gate is inside the handler.
+      improvisedAttack: CairnActorSheet.#onImprovisedAttack,
       // Description tab
       rollAge: owned(mayRandomize(CairnActorSheet.#onRollAge)),
       rollOmen: owned(mayRandomize(CairnActorSheet.#onRollOmen)),
       pickOmen: owned(mayRandomize(CairnActorSheet.#onPickOmen)),
+      rollTrait: owned(mayRandomize(CairnActorSheet.#onRollTrait)),
       toggleTraits: CairnActorSheet.#onToggleTraits,
       toggleScars: CairnActorSheet.#onToggleScars,
       // Background / failed career
@@ -492,6 +541,23 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * `draggable` class to every row — that class carries Foundry styling of its own.
    * @override
    */
+  /**
+   * @override — drops normally bind only on an editable sheet (core's
+   * default). An UNOWNED sheet additionally accepts them so a player can
+   * drop-as-OFFER (item-offer.js): _onDropItem's first branch turns the
+   * would-be refusal into an offer card, and every other drop type still dies
+   * on core's own owner walls inside its _onDrop* handlers.
+   *
+   * THIS WAS THE THIRD GATE, and the one nobody had counted (2026-09-10).
+   * While it read `type === "character"`, drag-drop never BOUND on an unowned
+   * npc or container sheet at all — so `_onDropItem` was never reached and the
+   * type test inside `offerFromDrop` was dead code for exactly the targets
+   * that change was about. It asks the same one question now.
+   */
+  _canDragDrop() {
+    return this.isEditable || (!this.actor?.isOwner && canReceiveOffer(this.actor));
+  }
+
   get _dragDrop() {
     return this.#dragDrop ??= new foundry.applications.ux.DragDrop.implementation({
       dragSelector: ".cairn-items-list-row",
@@ -835,6 +901,43 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Foundry ROLE gate (Actor deletion is Assistant+, no player-grantable
     // permission) and stays isGM — the reason the two were never one flag.
     context.canManageConnections = game.user.isGM || this.actor.isOwner;
+    // Improvised Attack: a player attacks for a character they control, the Warden
+    // anywhere -- and `isOwner` is true for a GM on every actor, so that is both
+    // halves in one test. The handler repeats it as the refusal; this is only the
+    // affordance. NOT `isEditable`, which a locked compendium also fails.
+    //
+    // ONE PREDICATE, BOTH HALVES. The crate-and-wagon exclusion used to live in
+    // the template, as the `{{#unless system.isThing}}` block the button sat
+    // inside; the control moved into the items list on 2026-10-02 and that block
+    // is not around it any more. A gate spelled in two places is this codebase's
+    // thrice-repeated bug, so `isThing` is asked here and nowhere else -- a
+    // barrel has no fists.
+    context.canImprovise = this.actor.isOwner && !this.actor.system?.isThing;
+    // The row's damage tag AND its glyphs both derive from this, so Cairn's
+    // unarmed d4 is stated in exactly one place in the running system.
+    context.improvisedFormula = IMPROVISED_FORMULA;
+    // The Dropped Item Pile's maximum is Infinity (calcCurrentMaxSlots), which
+    // a template prints as the WORD. The symbol is not localized because it is
+    // a symbol, the same reasoning as the ⏎ cue on the quality dialog.
+    context.slotsMaxLabel = Number.isFinite(this.actor.system?.slotsMax)
+      ? this.actor.system.slotsMax
+      : "∞";
+    // Drop: an owner may put something on the floor. NOT on the pile itself,
+    // where it would offer to move an item from the pile to the pile.
+    // NOT on a compendium actor either (review #33): `owned()` tests only
+    // `isEditable`, which an unlocked world pack passes, and the move would
+    // delete the item from the pack entry and create it in the party's world
+    // pile — reference content walked into play. The offer system draws the
+    // same line (`canReceiveOffer … && !actor.pack`).
+    context.canDrop = this.actor.isOwner && !this.actor.pack && !isDroppedPile(this.actor);
+    // The Drop tooltip names the pile by its CURRENT name (review #33).
+    context.pileName = pileDisplayName();
+    // THE "where" NOTE SHOWS ON THE PILE AND NOWHERE ELSE — the one sheet where
+    // the question "where did this come from" is being asked. Gating on the SHEET
+    // rather than clearing the flag when the Warden hands something back leaves
+    // the offer flow untouched: a returned item keeps the flag harmlessly and
+    // simply stops advertising where it used to be.
+    context.isPile = isDroppedPile(this.actor);
     // The Warden's switch for player shopping (allow-player-marketplace, the
     // shipped macro's setting). Both sheet templates pass this straight into
     // the items-list partial's withShop — it was a hardcoded 1 there until the
@@ -1212,7 +1315,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (context.showBiography) {
         await this._prepareBiographyContext(context);
         context.showScars = true;
-        context.showAge = true;
+        // The show-traits switch reaches every person sheet (ruled in
+        // planning, 2026-09-07) — npc and hireling included.
+        context.showAge = traitsVisible();
+        context.showTraits = traitsVisible();
         context.showOmen = false;
       }
     }
@@ -1225,6 +1331,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // stay dumb.
     context.deprivedTipKey = this._wording("CAIRN.DeprivedTip");
     context.panickedTipKey = this._wording("CAIRN.PanickedTip");
+    // `deprivedLocked` lived here for a day (2026-10-02): Crawler Combat Mode
+    // derived Deprived from the load and the checkbox was disabled while it
+    // held. Reversed 2026-10-03 (user) — Deprived is a box a person ticks, and
+    // nothing locks it.
     return context;
   }
 
@@ -1345,6 +1455,36 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
+   * Which table each trait row reads — key -> "pack;Table Name", per role
+   * (2026-08-20). A character or a hireling gets 2e's eight; an NPC gets the
+   * six APPEARANCE ones plus the Warden's Guide Quirk, Goal, Virtue and Vice.
+   * The last two collide by key on purpose — same stored field, different
+   * list — and the spread order is what settles it: the NPC map is second, so
+   * its Virtue wins for an NPC and the 2e one is simply never reached.
+   *
+   * The rows a role does not use are ABSENT rather than blank, which is what
+   * keeps an NPC from showing an empty "Physique" it can never fill and a
+   * character from showing a "Goal". A value already stored under a key the
+   * current role does not list stays in the document untouched — nothing here
+   * writes — so re-roling an actor and re-roling it back loses nothing.
+   *
+   * ONE map for both consumers (the pick-list rows and the per-trait dice) —
+   * a second copy of a role predicate is this split's thrice-repeated bug.
+   * @returns {Object<String,String>}
+   * @private
+   */
+  _traitTableMapping() {
+    const biography2e = CONFIG.Cairn?.characterGenerator2e?.biography?.items ?? {};
+    const npcTraits = CONFIG.Cairn?.npcGenerator?.traits ?? {};
+    return this.actor.npcRole === "npc"
+      ? {
+        ...Object.fromEntries(Object.entries(biography2e).filter(([k]) => !(k in npcTraits))),
+        ...npcTraits,
+      }
+      : biography2e;
+  }
+
+  /**
    * The biography block (templates/parts/bio-block.html): trait pick-lists +
    * the constructed sentence, and the Scars checklist. Extracted from
    * _prepareCharacterContext when role-npc PEOPLE got the same block
@@ -1365,50 +1505,49 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       formula: effectiveAgeFormula(CONFIG.Cairn?.characterGenerator2e?.biography?.age).formula,
     });
     // Trait pick-lists: each trait's source table supplies a <select> of options
-    // so a player can pick a value (or keep an off-table one).
-    //
-    // WHICH tables depends on the role (2026-08-20). A character or a hireling
-    // gets 2e's eight; an NPC gets the six APPEARANCE ones plus the Warden's
-    // Guide Quirk, Goal, Virtue and Vice. The last two collide by key on
-    // purpose — same stored field, different list — and the spread order is
-    // what settles it: the NPC map is second, so its Virtue wins for an NPC and
-    // the 2e one is simply never reached.
-    //
-    // The rows a role does not use are ABSENT rather than blank, which is what
-    // keeps an NPC from showing an empty "Physique" it can never fill and a
-    // character from showing a "Goal". A value already stored under a key the
-    // current role does not list stays in the document untouched — nothing here
-    // writes — so re-roling an actor and re-roling it back loses nothing.
-    const biography2e = CONFIG.Cairn?.characterGenerator2e?.biography?.items ?? {};
+    // so a player can pick a value (or keep an off-table one). The role's
+    // key -> table mapping comes from _traitTableMapping, which the per-trait
+    // dice read too — one map, so a row's die and its dropdown cannot disagree
+    // about where the trait comes from. And ONE RESOLVER (review #31): the
+    // dice roll through `findDeclaredTable`, world-first, while these lists
+    // read the pack documents cached above — so a Warden's own `Physique`
+    // fed the die and never the dropdown beside it, on the eight 2e traits
+    // and the NPC four alike. Same ORDER now (`declaredTableCached`, above): a
+    // world table of the declared name is what both offer. The Scars
+    // checklist below stays on the pack on purpose (its namesake in Utils is
+    // the damage card's).
+    const mapping = this._traitTableMapping();
+    const tables = {};
+    for (const [key, ref] of Object.entries(mapping)) tables[key] = await declaredTableCached(ref);
     const npcTraits = CONFIG.Cairn?.npcGenerator?.traits ?? {};
-    const mapping = this.actor.npcRole === "npc"
-      ? {
-        ...Object.fromEntries(Object.entries(biography2e).filter(([k]) => !(k in npcTraits))),
-        ...npcTraits,
-      }
-      : biography2e;
-    const byPack = {};
-    for (const ref of Object.values(mapping)) {
-      const [packName] = ref.split(";");
-      if (!(packName in byPack)) byPack[packName] = await cachedPackDocuments(packName);
-    }
     context.traitRows = Object.entries(mapping).map(([key, ref]) => {
-      const [packName, tableName] = ref.split(";");
-      const table = (byPack[packName] ?? []).find((tbl) => tbl.name === tableName);
+      const [, tableName] = ref.split(";");
+      const table = tables[key];
       const value = this.actor.system.traits?.[key] ?? "";
       const texts = table ? table.results.map(resultText).sort() : [];
+      // A tables-2e trait's label IS its table name (Physique, Skin…), so it
+      // localizes through the same table.name namespace as the compendium
+      // list. The four NPC tables cannot: they are named "Warden: NPC -
+      // Quirk", which is a table name a Warden browses by and a terrible
+      // label to put beside a select. Those take a UI key instead — the
+      // labels are ours, and a UI translator can do them without touching
+      // the content overlay.
+      const label = NPC_TRAIT_LABELS[key] && key in npcTraits
+        ? game.i18n.localize(NPC_TRAIT_LABELS[key])
+        : t("table.name", tableName);
       return {
         key,
-        // A tables-2e trait's label IS its table name (Physique, Skin…), so it
-        // localizes through the same table.name namespace as the compendium
-        // list. The four NPC tables cannot: they are named "Warden: NPC -
-        // Quirk", which is a table name a Warden browses by and a terrible
-        // label to put beside a select. Those take a UI key instead — the
-        // labels are ours, and a UI translator can do them without touching
-        // the content overlay.
-        label: NPC_TRAIT_LABELS[key] && key in npcTraits
-          ? game.i18n.localize(NPC_TRAIT_LABELS[key])
-          : t("table.name", tableName),
+        label,
+        // The row's die tooltip, pre-formatted with the row's own label (the
+        // rollAgeTitle idiom — the value varies per row, so it cannot be a
+        // bare key the template localizes).
+        rollTitle: game.i18n.format("CAIRN.RollTrait", { trait: label }),
+        // THE DIE THE ROW WEARS IS THE DIE ITS TABLE ROLLS (2026-10-03, user —
+        // the 2e trait tables are d10 and the control said d20). Read off the
+        // same resolved table the dropdown and the die use, so a 2e row shows
+        // a d10, an NPC row a d20, and a Warden's own d12 Physique a d12; the
+        // generic d20 only when the table is missing or rolls no standard die.
+        dieIcon: dieIconOrGeneric(table?.formula),
         value,
         // Display-only: the <option> VALUE stays the English trait text (what
         // system.traits.<key> stores on save), only the visible label is
@@ -1430,9 +1569,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Scars pick-list from the same tables-2e pack. Neither Omen nor Scar is
     // generated: a player ticks the field's checkbox to enable it, then rolls
     // (Omen) or checks scars. Both are descriptive only.
-    const tables2e = byPack["air-bladder.tables-2e"] ?? (await cachedPackDocuments("air-bladder.tables-2e"));
+    const tables2e = await cachedPackDocuments("air-bladder.tables-2e");
     const scarTable = tables2e.find((tbl) => tbl.name === "Scars");
     const selectedScars = this.actor.system.scars ?? [];
+    // LEGACY RECOGNITION (review #30). For a month the damage flow's
+    // auto-record wrote the OTHER shipped Scars table's row — the SRD prose in
+    // `air-bladder.utils` — into system.scars, a string this checklist (built
+    // from tables-2e's short labels) could never match, so no box ticked and
+    // the next tick dropped it. The flow writes the checklist's row now
+    // (damage.js `_rollScarsTable`); a world that already holds the prose is
+    // healed by the sheet itself: the utils row for the same damage value
+    // counts as this row SELECTED, and the change handler below writes the
+    // label in its place. Same pack document the damage flow reads.
+    const utils = await cachedPackDocuments("air-bladder.utils");
+    const legacyScars = new Map(
+      (utils.find((tbl) => tbl.name === "Scars")?.results ?? []).map((r) => [r.range?.[0], resultText(r)]));
     // Same display/value split as the trait options above, and for the same reason:
     // `.scar-check` persists its `value` verbatim into system.scars, and `selected`
     // matches English↔English, so `name` must stay the English source. Only `display`
@@ -1441,13 +1592,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.scarOptions = scarTable
       ? scarTable.results.map((r) => {
           const name = resultText(r);
+          const legacy = legacyScars.get(r.range?.[0]) ?? "";
           return {
             name,
             display: t("table.result", name),
             // Our own per-row annotation, not the row's text — hence its own
             // namespace (see tools/i18n/extract-content.mjs).
             description: t("table.resultDesc", r.flags?.["air-bladder"]?.description ?? ""),
-            selected: selectedScars.includes(name),
+            legacy,
+            selected: selectedScars.includes(name) || (!!legacy && selectedScars.includes(legacy)),
           };
         })
       : [];
@@ -1502,12 +1655,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // the character sheet's hardcoded tab keeps the long wording. The DYNAMIC,
     // data-driven rename stays dead: two characters must not disagree on what
     // their own tabs are called.
-    // Scars and Age are never generated — a player fills each in by hand after
-    // the fact — so they are NOT edition-specific and show on both. Only
+    // Scars are never generated — a player fills them in by hand after the
+    // fact — so they are NOT edition-specific and show on both. Only
     // character CREATION differs between 2e and Barebones (see CLAUDE.md,
-    // "One system, two generators").
+    // "One system, two generators"). Age and the trait rows ride the
+    // Warden's show-traits switch instead (2026-09-07, also edition-blind);
+    // render-only like showOmen below, and for the same reasons.
     context.showScars = true;
-    context.showAge = true;
+    context.showAge = traitsVisible();
+    context.showTraits = traitsVisible();
     // Omen is the one exception, and it is a CONTENT question rather than a rule:
     // Barebones ships no omens table, so the field is 2e's alone. (A Warden
     // used to be able to lend it via show-omens-barebones; the lending was
@@ -1724,8 +1880,15 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
     // Encumbrance is a carry state, not an ability loss, but likewise forces HP
     // to 0, so surface it as a persistent banner too. Suppressed when dead.
-    if (!dead && this.actor.system.encumbered)
-      banners.push({ key: "encumbered", icon: "fa-weight-hanging", label: L("CAIRN.Overburdened"), text: L("CAIRN.OverburdenedBanner") });
+    if (!dead && this.actor.system.encumbered) {
+      // One wording for every table: the Crawler Combat Mode variant ("…and
+      // you are Deprived until you free a slot") went with the derived
+      // Deprived rule it described, reversed 2026-10-03.
+      banners.push({
+        key: "encumbered", icon: "fa-weight-hanging", label: L("CAIRN.Overburdened"),
+        text: L("CAIRN.OverburdenedBanner"),
+      });
+    }
     context.statusBanners = banners;
   }
 
@@ -1769,9 +1932,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // shares the read set with are not form elements, so only this one went
     // dead: a Warden with a locked-pack monster open could roll its attack but
     // not the die (review #18). Re-enabled after super, for exactly that case.
+    //
+    // IMPROVISED ATTACK IS DELIBERATELY NOT IN THIS LOOP, though it was for a few
+    // hours while it was a fourth button in that stack. It is an <a> in the items
+    // list now, and `_toggleDisabled` only reaches FORM elements -- which is
+    // precisely why every weapon row's roll control has always worked on a locked
+    // pack. Adding an anchor here would be an exemption from a sweep that never
+    // touches it: inert today, and a false claim about why it works.
     if (!this.isEditable) {
-      const dof = el.querySelector('[data-action="dieOfFate"]');
-      if (dof) dof.disabled = false;
+      for (const action of ["dieOfFate"]) {
+        const btn = el.querySelector(`[data-action="${action}"]`);
+        if (btn) btn.disabled = false;
+      }
     }
 
     // The title-bar generation buttons live on the frame, which is built once —
@@ -1920,8 +2092,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Scars are a checkbox list: persist the set of checked names (including
     // empty). Managed here rather than via form serialization so unchecking the
     // last one reliably stores an empty array. render:false keeps scroll/state.
+    //
+    // A STORED SCAR THE LIST CANNOT SHOW IS KEPT, NOT DROPPED (review #30):
+    // the boxes decide only the strings they represent — their own values and
+    // the legacy utils prose each one stands in for (`data-legacy`, which a
+    // ticked box REPLACES with its label, healing a pre-fix world one tick at
+    // a time). Anything else in the array — a Warden's world-first Scars
+    // table's text for a damage no checklist row covers — survives the tick.
+    // Before this, one tick anywhere rewrote the whole array from the boxes
+    // and silently ate every auto-recorded scar.
     on(".scar-check", "change", async () => {
-      const scars = [...el.querySelectorAll(".scar-check:checked")].map((o) => o.value);
+      const boxes = [...el.querySelectorAll(".scar-check")];
+      const owned = new Set(boxes.flatMap((o) => [o.value, o.dataset.legacy].filter(Boolean)));
+      const kept = (this.actor.system.scars ?? []).filter((s) => !owned.has(s));
+      const scars = [...kept, ...boxes.filter((o) => o.checked).map((o) => o.value)];
       await this.actor.update({ "system.scars": scars }, { render: false });
     });
   }
@@ -1939,16 +2123,34 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * A yes/no confirmation whose body reiterates the action's tooltip, then asks
    * the question, so the player re-reads the rule before committing.
    * @param {String} titleKey  i18n key for the dialog title
-   * @param {String} tipKey    i18n key for the explanatory text (may be HTML)
+   * @param {String|null} tipKey  i18n key for the explanatory text (may be
+   *   HTML), or null for no tip paragraph at all — the PC Rest (2026-10-03,
+   *   user ask) opens on its ration line alone, and a null here beats a second
+   *   copy of this markup, which probes read by its class.
    * @param {String} questionKey  i18n key for the yes/no question
    * @returns {Promise<Boolean>}
    * @private
    */
-  async _confirmAction(titleKey, tipKey, questionKey) {
+  async _confirmAction(titleKey, tipKey, questionKey, extraLines = []) {
     const k = (key) => this._wording(key);
+    // Already-localized sentences between the tip and the question (the Rest's
+    // ration line) — here rather than in a second copy
+    // of this markup, which a probe reads by its class. Escaped: a line may
+    // carry a number a sheet typed.
+    const extra = extraLines
+      .map((l) => `<p class="cairn-confirm-line">${foundry.utils.escapeHTML(String(l))}</p>`).join("");
+    const tip = tipKey ? game.i18n.localize(k(tipKey)) : "";
     return foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize(titleKey) },
-      content: `<div class="cairn-confirm">${game.i18n.localize(k(tipKey))}<p class="cairn-confirm-q">${game.i18n.localize(k(questionKey))}</p></div>`,
+      // IN THE SHEET'S OWN WINDOW (review #33). Every sheet here offers Pop
+      // Out, and a dialog opened from a popped-out sheet used to land in the
+      // MAIN window — `_insertElement` appends to `options.window.host`'s
+      // document, and the host is set only from `windowId` (application.mjs
+      // 663-669, 952-978) — where `modal: true` then locked that window behind
+      // a dialog the player could not see. Core's journal sheet passes exactly
+      // this; undefined on an attached sheet, which is a no-op.
+      renderOptions: { window: { windowId: this.window?.windowId } },
+      content: `<div class="cairn-confirm">${tip}${extra}<p class="cairn-confirm-q">${game.i18n.localize(k(questionKey))}</p></div>`,
       rejectClose: false,
       modal: true,
     });
@@ -2299,7 +2501,12 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this._grantingFailedCareerItem) return;
     this._grantingFailedCareerItem = true;
     try {
-      const item = careerName ? await buildFailedCareerItem(careerName) : null;
+      // Hand-built: the career NAME is the choice, the keepsake is not (user
+      // ruling 2026-09-11, HAND_BUILT_FLAG). Still routed through the replace
+      // with an empty set, so swapping careers clears a previous keepsake.
+      const item = careerName && !isHandBuilt(this.actor)
+        ? await buildFailedCareerItem(careerName)
+        : null;
       await this._replaceGrantedItems("failed-career", item ? [item] : []);
       // _replaceGrantedItems renders nothing (render:false, so a trailing update can
       // re-render once); the bond/question re-rolls have that trailing update, this
@@ -2538,7 +2745,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       !isChar && sys.panicked && L("CAIRN.Panicked"),
       sys.critical && L("CAIRN.CriticalDamage"),
     ].filter(Boolean).join(" · ");
-    const traitsProse = this._buildTraitSentence(sys.traits, sys.age);
+    // Empty when the Warden hides rolled flavor (show-traits, 2026-09-07):
+    // the {{#if traitsProse}} section drops heading and body together under
+    // the page's empty-sections rule, and hasSide collapses the band. Age
+    // reaches paper only inside this sentence, so it goes with it.
+    const traitsProse = traitsVisible() ? this._buildTraitSentence(sys.traits, sys.age) : "";
 
     // The background's own prose and its rolled question/answer pairs (user
     // additions 2026-08-08), routed exactly as the sheet routes them —
@@ -2601,9 +2812,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // The footer credits the art actually ON the page (user ruling
     // 2026-08-08): the portrait's PATH picks its attribution line, so an
     // Aspeheim page never credits Tlomdev and vice versa. Lydia Comer's
-    // grant is NOT CC — her line says all rights reserved. A custom image
-    // or core's mystery-man earns no art line at all; the game-text credit
-    // always prints, because the page always reproduces licensed prose.
+    // line says CC BY-NC-SA 4.0 — her galleries' licence since 2026-09-07
+    // (only the logo stays all rights reserved, and a logo is never sheet
+    // art). A custom image or core's mystery-man earns no art line at all;
+    // the game-text credit always prints, because the page always
+    // reproduces licensed prose.
     const ART_CREDITS = [
       ["art/jon-aspeheim/", "CAIRN.PrintCreditAspeheim"],
       ["art/tlomdev/", "CAIRN.PrintCreditTlomdev"],
@@ -2957,9 +3170,60 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const is2e = (actor.system.contentSource || "2e") !== "barebones";
     const bg = await resolveActorBackground(actor);
     const L = (k) => game.i18n.localize(k);
-    const row = (part, label, checked = true) =>
-      `<label class="reroll-row" data-part="${part}"><input type="checkbox" name="${part}"${checked ? " checked" : ""}>
-        <span class="reroll-label">${label}</span></label>`;
+    // THE DICE EACH ROW WILL ROLL, named in a tooltip (2026-10-02, user ask:
+    // "include the dice formulas in the tool tips like we do for the Age die
+    // and make it symmetric"). Read through the same helpers the rolls below
+    // read, so the label and the die cannot disagree — the review #18 contract,
+    // applied at last to the control review #18 never reached. The VISIBLE
+    // labels are untouched: the formula rides the tooltip and nothing else, so
+    // "the rows stay plain" still holds on the channel it was about.
+    //
+    // A ROW GETS A TOOLTIP IF AND ONLY IF IT ROLLS A DICE FORMULA. Six do.
+    // Everything else here rolls a TABLE (background, gear, the questions,
+    // bonds, failed career, keepsake, name, traits, omen) or scans a folder
+    // (portrait), and has no formula to name. A rule, not a subset somebody
+    // picked.
+    //
+    // `data-tooltip` ONLY, and deliberately NOT the age die's `data-tooltip` +
+    // `aria-label` pair: that control is an icon with no text, so `aria-label`
+    // is its only accessible name, while these spans already hold
+    // "STR (Strength)" and an `aria-label` would REPLACE it. Do not "fix" this
+    // to match the die.
+    //
+    // ON BOTH THE LABEL AND THE SPAN, because core's TooltipManager reads
+    // `event.target.dataset` directly with no `closest()` walk
+    // (tooltip-manager.mjs:133-143): on the span alone the row's padding is
+    // dead, on the label alone it dies the moment the pointer reaches the words.
+    //
+    // ESCAPED, because the HP formula is Warden-TYPED free text going into a
+    // quoted attribute.
+    //
+    // AND A TYPO IN THE ATTRIBUTE NAME FAILS SILENTLY, BY EITHER OF TWO
+    // MECHANISMS — measured 2026-10-02 against `foundry.utils.cleanHTML`, because
+    // the obvious half of this is only half true. Anything outside core's
+    // ALLOWED_HTML_ATTRIBUTES is DROPPED (`dat-tooltip`, `tooltip`, `wibble` all
+    // vanish), but `data-*` is whitelisted WHOLESALE, so a typo in the suffix
+    // SURVIVES sanitization and lands in the DOM — `data-toolip="x"` arrives as
+    // `dataset.toolip` — where TooltipManager simply never reads it. Neither
+    // mechanism logs anything. So the markup can look right, pass the sanitizer,
+    // and produce no tooltip at all, which is why `dev:pc-dice` reads
+    // `dataset.tooltip` off the RENDERED dialog instead of trusting this line.
+    // Worth the care because it is the first `data-tooltip` inside a DialogV2
+    // here, with no in-repo precedent to copy.
+    const esc = foundry.utils.escapeHTML;
+    const rollsTip = (formula) => esc(game.i18n.format("CAIRN.Reroll.RollsTip", { formula }));
+    const abilityTip = rollsTip(effectivePcAbilityFormula());
+    const row = (part, label, checked = true, tooltip = null) => {
+      // DIRECTION RIGHT, and it is not a preference. Core's default drops the
+      // tooltip BELOW its anchor, and in a thirteen-row vertical checklist that
+      // lands it squarely on the next row — hovering STR hid DEX completely.
+      // Seen only by opening the dialog and looking at it; the probe reads
+      // `dataset.tooltip` and passed throughout. The rows are short labels in a
+      // 440px dialog, so the space to their right is empty and covers nothing.
+      const t = tooltip ? ` data-tooltip="${tooltip}" data-tooltip-direction="RIGHT"` : "";
+      return `<label class="reroll-row" data-part="${part}"${t}><input type="checkbox" name="${part}"${checked ? " checked" : ""}>
+        <span class="reroll-label"${t}>${label}</span></label>`;
+    };
 
     const bgChecked = actor.getFlag("air-bladder", "backgroundChosen") !== true;
     // A 2e Name is the Background's child (its list is the background's own);
@@ -2983,13 +3247,25 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // shared STR/DEX/WIL keys — and spelled statically, because the i18n
     // source gate records a template literal as a dynamic prefix and goes
     // blind (the trait-labels rule at the top of this file).
-    list += row("STR", L("CAIRN.Reroll.STR"));
-    list += row("DEX", L("CAIRN.Reroll.DEX"));
-    list += row("WIL", L("CAIRN.Reroll.WIL"));
-    list += row("hp", L("CAIRN.HitProtectionLong"));
-    list += row("gold", L("CAIRN.Gold"));
-    list += row("age", L("CAIRN.Age"));
-    list += row("traits", L("CAIRN.Traits"));
+    list += row("STR", L("CAIRN.Reroll.STR"), true, abilityTip);
+    list += row("DEX", L("CAIRN.Reroll.DEX"), true, abilityTip);
+    list += row("WIL", L("CAIRN.Reroll.WIL"), true, abilityTip);
+    // `.formula`, so an unusable HP setting names the FALLBACK — what a click
+    // will actually roll, which is the whole point of reading the helper.
+    list += row("hp", L("CAIRN.HitProtectionLong"), true, rollsTip(effectivePcHpFormula().formula));
+    list += row("gold", L("CAIRN.Gold"), true, rollsTip(effectivePcGoldFormula()));
+    // The omen row's precedent below: a Warden who hid rolled flavor is not
+    // offered a re-roll of it. An unoffered row's checkbox never exists, so
+    // parts.age / parts.traits stay falsy and the run cannot roll them.
+    if (traitsVisible()) {
+      // Age's tooltip is the free half of this change — the helper already
+      // existed for the sheet's die, and this row has carried no tooltip since
+      // the checklist shipped. Including it is what makes the set symmetric,
+      // and it is why the tooltip count is SIX here and FIVE with traits off.
+      list += row("age", L("CAIRN.Age"), true,
+        rollsTip(effectiveAgeFormula(CONFIG.Cairn?.characterGenerator2e?.biography?.age).formula));
+      list += row("traits", L("CAIRN.Traits"));
+    }
     list += row("portrait", L("CAIRN.Reroll.PortraitToken"));
     // omenVisible, not an open-coded copy of its two terms (review #21): the
     // character's own switch stays a separate question, as everywhere.
@@ -3020,6 +3296,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           {
             action: "reroll",
             label: L("CAIRN.Reroll.Button"),
+            // `type: "button"` is what actually makes Cancel win the Enter key.
+            // The note below is right that Cancel is autofocused; it is wrong
+            // that this protects anything, because `default: true` sets
+            // autofocus ONLY (dialog.mjs:241) while every button defaults to
+            // `type="submit"` (`:227`), so implicit submission fires the FIRST
+            // submit button — this one. Measured before the fix: tick a row,
+            // press Enter, and the dialog resolved a full re-deal of
+            // background, name, gear, bonds, DEX, WIL, HP, gold, age, traits
+            // and portrait. Ticking rows is the whole reason this dialog
+            // opens, so focus is always inside the form at the moment the
+            // user commits.
+            type: "button",
             callback: () => {
               const parts = {};
               for (const input of dialog.element.querySelectorAll('.reroll-row input[type="checkbox"]')) {
@@ -3030,8 +3318,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           },
           // Cancel is the DEFAULT on purpose (review #21): DialogV2 autofocuses
           // the default button — the FIRST one when none is declared
-          // (dialog.mjs:228) — and Enter on an all-checked list must not be a
-          // full re-deal.
+          // (dialog.mjs:228). That is half of what "Enter must not re-deal"
+          // needs; the other half is the `type: "button"` above, without which
+          // autofocus was decoration and Enter re-dealt anyway (review #26).
+          // Autofocus decides where the caret STARTS, the submit type decides
+          // what Enter hits from anywhere else in the form.
           { action: "cancel", label: L("CAIRN.Cancel"), default: true, callback: () => finish(null) },
         ],
       });
@@ -3106,7 +3397,20 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // as one swap (and stamps the provenance flag rolled); unchecked, its
     // freed children re-roll in place against the CURRENT background.
     if (parts.background) {
-      if (!(await changeBackground(actor, null))) return;
+      // THE WAY OUT OF HAND-BUILT, and the only one. Asking the dice to deal a
+      // background is asking for a rolled character. A bare background die does
+      // not come through here and deliberately does not clear it: pressing that
+      // die is still choosing a background. See HAND_BUILT_FLAG.
+      //
+      // `ignoreHandBuilt` rather than clearing first (review #26). Clearing
+      // first was the obvious order and it broke the rule stated four lines
+      // above: changeBackground refuses before its first write on two paths —
+      // the container permission and an empty background pool — and the mark
+      // was already gone by then, so an aborted gesture left a character that
+      // had silently stopped being hand-built. The flag now moves only once
+      // the swap has actually landed.
+      if (!(await changeBackground(actor, null, { ignoreHandBuilt: true }))) return;
+      await clearHandBuilt(actor);
     } else {
       // Pre-flight the container permission for every checked part before the
       // FIRST delete: these run in sequence, and a refusal after the gear has
@@ -3148,7 +3452,14 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // The scalar fields, batched into one update.
     const update = {};
     const rolls = {};
-    const abilityFormula = is2e ? "3d6" : (CONFIG.Cairn?.barebonesGenerator?.ability ?? "3d6");
+    // The Warden's tier, not a 2e/Barebones ternary whose every branch was
+    // "3d6" (2026-10-02). THIS WAS ONE OF THE THREE SITES THAT BYPASSED THE
+    // ROLLERS: the checklist calls `evaluateFormula` directly, so a setting
+    // wired only into `rollAbilities` would have left the control a player
+    // reaches for most often — re-roll one STR — on the old literal, with
+    // generation obeying the Warden and the sheet not. `rollAbilities` itself
+    // is no use here because it rolls all three unconditionally.
+    const abilityFormula = effectivePcAbilityFormula();
     for (const ab of ["STR", "DEX", "WIL"]) {
       if (!parts[ab]) continue;
       const roll = await evaluateFormula(abilityFormula);
@@ -3160,7 +3471,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // then: re-rolling a portrait must not quietly heal anyone.
     if (parts.STR) update["system.critical"] = false;
     if (parts.hp) {
-      const roll = await evaluateFormula(is2e ? "1d6" : (CONFIG.Cairn?.barebonesGenerator?.hitProtection ?? "1d6"));
+      // `rollPcHitProtection`, never `evaluateFormula`, because this formula is
+      // Warden-TYPED: the wrapper validates it, refuses an `@` reference and
+      // WARNS naming the rejected text, so a bad setting behaves identically
+      // here and at generation. One warning site, the `rollAge` arrangement.
+      const roll = await rollPcHitProtection();
       rolls.hp = roll;
       update["system.hp.value"] = roll.total;
       update["system.hp.max"] = roll.total;
@@ -3169,9 +3484,10 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // The BASE roll plus whatever the (new or surviving) bonds and question
       // answers grant — the same sum generation writes. With gold unchecked,
       // the bond/question paths above already traded their deltas instead.
-      const roll = await evaluateFormula(is2e
-        ? (CONFIG.Cairn?.characterGenerator2e?.gold ?? "3d6")
-        : (CONFIG.Cairn?.barebonesGenerator?.gold ?? "3d6"));
+      // The Warden's gold tier. No validation wrapper and none needed: the
+      // three tier formulas are project-authored constants, which is the whole
+      // reason gold and abilities are dropdowns while HP is a text box.
+      const roll = await evaluateFormula(effectivePcGoldFormula());
       rolls.gold = roll;
       const bondGold = (actor.system.bonds ?? []).reduce((n, b) => n + (b.gold ?? 0), 0);
       const questionGold = (actor.system.questions ?? []).reduce((n, q) => n + (q.gold ?? 0), 0);
@@ -3430,6 +3746,40 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
+   * Offer this row's item to another character (item-offer.js): the picker
+   * asks who, the offer is a public chat card the target's player answers.
+   * The template's `canGive` gate is the affordance; `canOfferItem` here is
+   * the enforcement behind it (the Fatigue two-layer doctrine).
+   * @this {CairnActorSheet}
+   */
+  static async #onItemGive(event, target) {
+    event.preventDefault();
+    const row = target.closest("[data-item-id]");
+    const item = this.actor.items.get(row?.dataset.itemId ?? "");
+    if (!item) return;
+    const eligible = canOfferItem(item);
+    if (!eligible.ok) {
+      ui.notifications.warn(eligible.reason, { localize: true });
+      return;
+    }
+    const to = await promptOfferTarget(this.actor, item);
+    if (!to) return;
+    const message = await createItemOffer(this.actor, item, to);
+    // Giving to something you already own AND NOBODY ELSE COULD ANSWER FOR —
+    // your own mule, your own crate, an unowned innkeeper the Warden runs —
+    // settles at once. Posting a card and waiting for somebody to click Accept
+    // is theatre when the somebody is you. It goes through the ordinary accept
+    // (settleOwnOffer), so the capacity verdict and the over-burden confirm
+    // still run and the public card is still the ledger line.
+    //
+    // `settleOwnOffer` makes the second half of that test itself, and it has
+    // to: a GM owns every actor, so once the Warden could give, `isOwner` alone
+    // would have force-delivered into a player's pack past the confirm that
+    // exists to make them consent.
+    if (message) await settleOwnOffer(message, to);
+  }
+
+  /**
    * Open the marketplace (buy/take gear). Anything that cannot KEEP a
    * connection is scoped to gear only — no buying a cart into a sack.
    *
@@ -3474,8 +3824,111 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // all. On success the delete re-renders this sheet
     // — descendant deletes render the parent (client-document.mjs:691-694) — and
     // the row goes with it.
-    if (row.dataset.isContainer) this.actor.deleteOwnedContainer(row.dataset.itemId);
-    else this.actor.deleteOwnedItem(row.dataset.itemId);
+    if (row.dataset.isContainer) return void this.actor.deleteOwnedContainer(row.dataset.itemId);
+    // The pressed row is the row deleted, Fatigue included. For a day a Fatigue
+    // row redirected to a "costed" one first, to keep the free first Fatigue's
+    // Petty chip in place; the free Fatigue went on 2026-10-03 (user ruling)
+    // and the redirect with it.
+    // NOT named `target`: that is this method's own parameter, and a `const` of
+    // the same name is a duplicate declaration that makes the whole CLASS fail to
+    // parse. Two things made it expensive the one time it was written:
+    //   - the browser reports it as "Private field '#onItemDelete' must be
+    //     declared in an enclosing class", pointing at the static `actions` field
+    //     thousands of lines away rather than at the real line; and
+    //   - `node --check` on THIS file accepted it, exit 0 and silent (V8 parses
+    //     function bodies lazily, so the error surfaces only when the class is
+    //     actually compiled — a minimal repro of the same shape DOES fail the
+    //     check, which makes it worse than useless as a gate here).
+    // The symptom in Foundry is that the system module never loads at all: ZERO
+    // settings registered, every probe failing on something unrelated. Read
+    // `game.settings.settings.size` or run dev:smoke after editing a big class.
+    this.actor.deleteOwnedItem(row.dataset.itemId);
+  }
+
+  /**
+   * DROP an item: it goes to the party's Dropped Item Pile instead of ceasing to
+   * exist (2026-10-02, user ask).
+   *
+   * BESIDE THE TRASH, NOT INSTEAD OF IT (user ruling). The trash still destroys.
+   * This system already answered the same question for connected actors — Unlink
+   * sits beside Delete because "destroy this cart" and "drop this cart here" are
+   * different intentions — and a trash can that silently stopped destroying would
+   * leave a Warden correcting a typo with no way to make anything go away.
+   *
+   * IT CONFIRMS, though it is not destructive. Recovery is not the player's: the
+   * pile is OBSERVER for them, so getting something back means asking the Warden.
+   * An action only another person can undo is worth one question, and the confirm
+   * names the item in the language the row shows it in.
+   *
+   * @this {CairnActorSheet}
+   */
+  static async #onItemDrop(event, target) {
+    event.preventDefault();
+    const row = CairnActorSheet.#row(target);
+    if (!row || row.dataset.isContainer) return;
+    const item = this.actor.items.get(row.dataset.itemId);
+    if (!item) return;
+    // IT ASKS WHERE (2026-10-02, user ask), which turned this from a `confirm`
+    // into a `wait` with a field. Four traps, every one already written down
+    // here:
+    //   - `wait` merges no width, unlike `confirm` and `prompt`, so an auto-width
+    //     window would be as wide as its longest unwrapped line. State 400.
+    //   - the content element may carry NO attributes, a single class included,
+    //     or the constructor throws and the control does nothing — so the class
+    //     goes on a wrapper INSIDE the bare div.
+    //   - every button is `type: "submit"` and Enter fires the FIRST, so Drop is
+    //     first and Cancel is `type: "button"`. The field being optional is what
+    //     keeps today's gesture intact: Enter with nothing typed still drops.
+    //   - Cancel resolves to its own action STRING and a dismissal to null, so
+    //     the answer is tested by SHAPE and never by truthiness.
+    const content = document.createElement("div");
+    const inner = document.createElement("div");
+    inner.className = "cairn-drop-confirm";
+    const ask = document.createElement("p");
+    ask.textContent = game.i18n.format("CAIRN.Pile.ConfirmDrop",
+      { name: t("item.name", item.name), pile: pileDisplayName() });
+    inner.append(ask, buildWhereField());
+    content.append(inner);
+    // THE LABELS ARE CORE'S OWN `COMMON.Yes` / `COMMON.No`, which is what
+    // `DialogV2.confirm` put on this dialog before the field arrived
+    // (dialog.mjs:346-350). Keeping them means this change adds no user-facing
+    // wording at all and every language module already carries them — a new pair
+    // of strings here would be two more things to translate for a dialog whose
+    // question has not changed.
+    //
+    // Drop is the DEFAULT, unlike core's confirm (which focuses No). This is a
+    // form the player submits with an optional field, not a destructive guard —
+    // the pile is recoverable and the Warden hands things back — so Enter with
+    // nothing typed must still drop, exactly as it did yesterday.
+    const answer = await foundry.applications.api.DialogV2.wait({
+      classes: ["cairn-drop-dialog"],
+      // A TITLE (review #33): ApplicationV2's default is "", and this was the
+      // one unlabelled window in the feature.
+      window: { title: game.i18n.format("CAIRN.Pile.DropTitle", { name: t("item.name", item.name) }) },
+      position: { width: 400 },
+      renderOptions: { window: { windowId: this.window?.windowId } },   // see _confirmAction
+      content,
+      buttons: [
+        {
+          action: "drop",
+          label: game.i18n.localize("COMMON.Yes"),
+          icon: "fa-solid fa-down-to-line",
+          default: true,
+          callback: (_event, button) =>
+            ({ place: cleanDropNote(button.form?.elements?.place?.value) }),
+        },
+        {
+          action: "cancel",
+          label: game.i18n.localize("COMMON.No"),
+          icon: "fa-solid fa-xmark",
+          type: "button",
+        },
+      ],
+      rejectClose: false,
+      modal: true,
+    });
+    if (!answer || typeof answer !== "object") return;
+    await dropItemToPile(this.actor, item.id, { place: answer.place });
   }
 
   /**
@@ -3607,20 +4060,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const row = CairnActorSheet.#row(target);
     const item = this.actor.getOwnedItem(row?.dataset.itemId);
     if (!item) return;
-    // ONE write whether or not the tick rolls a unit over (review #13 #20).
-    // The rollover case used to be two sequential updates — quantity first,
-    // then the refilled uses — which was two operations for a single click,
-    // and once the ledger logs item updates, two whispered cards for one
-    // press of one button. Merged, quantity and uses also move together or
-    // not at all.
-    const update = {};
-    let val = Math.max(item.system.uses.value - 1, 0);
-    if (val === 0 && item.system.quantity > 1) {
-      update["system.quantity"] = item.system.quantity - 1;
-      val = item.system.uses.max;
-    }
-    update["system.uses.value"] = val;
-    await item.update(update);
+    // ONE write whether or not the tick rolls a unit over (review #13 #20) —
+    // and since 2026-10-03 ONE copy of the arithmetic, `CairnItem#spendUse`,
+    // which the Rest spends a ration through as well. It returns a diff so the
+    // Rest can fold it into the actor's own write; here it is simply written.
+    await item.update(item.spendUse());
   }
 
   /**
@@ -3674,11 +4118,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   }
 
-  /** @this {CairnActorSheet} */
+  /**
+   * Clear one Fatigue — the first in document order. Every Fatigue is the same
+   * document and fills one slot, so which one goes changes nothing. (For a day
+   * a "costed" one went first, to keep the free first Fatigue's Petty chip in
+   * place; that rule went on 2026-10-03.)
+   * @this {CairnActorSheet}
+   */
   static #onRemoveFatigue(event) {
     event.preventDefault();
-    const fatigue = this.actor.items.find((i) => i.name === FATIGUE_NAME);
-    if (fatigue) this.actor.deleteOwnedItem(fatigue.id);
+    const id = this.actor.items.find((i) => i.system?.isFatigue)?.id;
+    if (id) this.actor.deleteOwnedItem(id);
   }
 
   /**
@@ -3718,7 +4168,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       quality = await askDamageQuality(dataset.roll, dataset.label ?? "");
       if (quality === null) return; // dismissed: roll nothing
     }
-    const formula = damageFormulaFor(quality, dataset.roll);
+    // THE OPTIONAL COMBAT RULES, through the ONE gate (`combatDamageFormula`,
+    // utils.js): a player character's die explodes at roll time when that
+    // option is on, and the card is marked for the maneuver line when that one
+    // is. Called AFTER the quality substitution and after the dialog, for the
+    // reasons its docblock states. NO DIE-SIZE FLOOR since 2026-10-03 (user
+    // ruling): an impaired 1d4 is judged like any other die. Melee and ranged
+    // are the same to both since the night of 2026-10-03.
+    const base = damageFormulaFor(quality, dataset.roll);
+    const { formula, maneuver: mayManeuver } = combatDamageFormula(base, {
+      pc: this.actor.type === "character",
+    });
 
     const roll = await evaluateFormula(formula, this.actor.getRollData());
     // Two whole-sentence keys, not fragments glued with `+`: word order is not
@@ -3740,6 +4200,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         // sentence at render and cannot read it back out of localized prose.
         weapon: dataset.label ?? "",
         quality: damageQualityLabel(quality, { panicked }),
+        // The KIND rides beside the sentence, exactly as `weapon` rides beside
+        // the attack line, so the render hook can rebuild the badge per viewer
+        // instead of leaving one English word under a translated sentence.
+        qualityKind: damageQualityKind(quality, { panicked }),
+        // Which of the two whole-sentence weapon keys was used, so the hook can
+        // rebuild the line for a card that never got a target.
+        panic: panicked,
+        // The ONE thing the render hook cannot work out for itself: that this was
+        // a player character's attack and the maneuver option was on when the die
+        // was thrown. Die size and "did it roll its max" are both in the stored
+        // roll, so the hook reads those rather than trusting a datum for them.
+        maneuver: mayManeuver,
       }
     );
     roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor });
@@ -3999,24 +4471,48 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const dataset = target.dataset;
     if (!dataset.roll) return;
     const roll = await evaluateFormula(dataset.roll, this.actor.getRollData());
-    // A whole-sentence key, not localize()+concat — the translator owns the word order.
-    const label = dataset.label ? game.i18n.format("CAIRN.RollingWhat", { what: dataset.label }) : "";
     const rolled = roll.terms[0].results[0].result;
     const failed = roll.total === 0;
-    const result = failed ? game.i18n.localize("CAIRN.Fail") : game.i18n.localize("CAIRN.Success");
-    const resultCls = failed ? "failure" : "success";
     const str = this.actor.system.abilities?.STR;
     const offerCrit =
       dataset.ability === "STR" && failed &&
       Number(str?.value) > 0 && Number(str?.value) < Number(str?.max);
-    const critButton = offerCrit
-      ? `<button type="button" class="mark-critical-damage">${game.i18n.localize("CAIRN.MarkCriticalDamage")}</button>`
-      : "";
-    roll.toMessage({
+
+    // THE SHARED d20 CARD, and the same flag the damage flow's STR save carries.
+    // This card is public, so before the rebuild existed every other player read
+    // "Success"/"Fail" and the Critical Damage button in the ROLLER's language
+    // (review #28) — the class review #27 closed for four other cards, which
+    // this one and its twin in damage.js sat beside.
+    //
+    // The ability KEY travels, never `dataset.label`: the label is a sentence
+    // already localized by the template, and a stored sentence is exactly what
+    // cannot be rebuilt. An ability outside the three keeps the old label-built
+    // flavor and no flag — nothing in the templates produces one, and a card
+    // that cannot be rebuilt must not claim it can.
+    const known = dataset.ability && D20_CARD_ABILITIES.has(dataset.ability);
+    const card = {
+      kind: "abilityRoll", ability: dataset.ability, formula: roll.formula,
+      rolled, failed, crit: offerCrit,
+      // The Fatigue instead of Critical Damage option. Recorded on the
+      // card, so what was offered is frozen at the moment of the roll and
+      // switching the option off later cannot retract a choice already on
+      // screen. The sheet's STR save and the damage flow's are the same moment
+      // and both carry it — offering it on one and not the other is the
+      // asymmetry this codebase keeps finding.
+      fatigue: offerCrit && this.actor.type === "character"
+        && combatOption("fatigue-for-critical-damage"),
+    };
+    // A whole-sentence key, not localize()+concat — the translator owns the word order.
+    const flavor = known
+      ? d20CardFlavor(card.kind, card.ability)
+      : (dataset.label ? game.i18n.format("CAIRN.RollingWhat", { what: dataset.label }) : "");
+    const messageData = {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: label,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">${roll.formula}</div><div class="dice-tooltip" style="display: none;"><section class="tooltip-part"><div class="dice"><header class="part-header flexrow"><span class="part-formula">${roll.formula}</span></header><ol class="dice-rolls"><li class="roll die d20">${rolled}</li></ol></div></section></div><h4 class="dice-total ${resultCls}">${result} (${rolled})</h4></div></div>${critButton}`,
-    });
+      flavor,
+      content: d20CardBody(card),
+    };
+    if (known) messageData.flags = { [FLAG_SCOPE]: { d20Card: card } };
+    roll.toMessage(messageData);
   }
 
   /**
@@ -4039,18 +4535,70 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /**
    * Rest restores HP (a DEPRIVED character cannot benefit from a rest). The
    * confirm reiterates the rule before committing.
+   *
+   * A REST EATS A RATION (2026-10-03, user ask — a HOUSE RULE for every table,
+   * PLAYER CHARACTERS ONLY; an NPC's Rest is the branch at the top, untouched).
+   * The dialog says so and shows how many are left; with none on the sheet it
+   * refuses with one button. The spend is folded into the actor's OWN write —
+   * `items: [{_id, …spendUse()}]` — so one press is ONE ledger card: a
+   * parent-carried embedded diff never reaches the item-side ledger path
+   * (measured; see `CairnActor._preUpdate`'s itemAudit stash), and the actor
+   * side logs the ration beside the HP. Rations are counted by USES
+   * (`rationsLeft`, gear.js).
+   *
+   * A REST RESTORES TO THE MAXIMUM, always. For a day (2026-10-03) a Rest
+   * under Crawler Combat Mode ROLLED a die the size of the maximum and kept it
+   * only if it beat current HP, on a roll card of its own; the user removed it
+   * the same evening ("it should just restore to max HP. it still costs a
+   * ration"), and the mode with it.
    * @this {CairnActorSheet}
    */
   static async #onRest() {
-    if (this.actor.system.deprived) return;
-    if (!(await this._confirmAction("CAIRN.Rest", "CAIRN.RestTip", "CAIRN.RestConfirm"))) return;
-    // abChangeLogAction names the button on the ledger card (whitelisted in
-    // actor.js AUDIT_ACTIONS) — otherwise a Rest reads exactly like a hand
-    // edit of HP.
-    await this.actor.update(
-      { "system.hp.value": this.actor.system.hp.max },
-      { abChangeLogAction: "CAIRN.Rest" },
-    );
+    const actor = this.actor;
+    if (actor.system.deprived) return;
+    if (actor.type !== "character") {
+      if (!(await this._confirmAction("CAIRN.Rest", "CAIRN.RestTip", "CAIRN.RestConfirm"))) return;
+      // abChangeLogAction names the button on the ledger card (whitelisted in
+      // actor.js AUDIT_ACTIONS) — otherwise a Rest reads exactly like a hand
+      // edit of HP.
+      await actor.update({ "system.hp.value": actor.system.hp.max }, { abChangeLogAction: "CAIRN.Rest" });
+      return;
+    }
+
+    const ration = rationToEat(actor);
+    if (!ration) {
+      await foundry.applications.api.DialogV2.prompt({
+        window: { title: game.i18n.localize("CAIRN.Rest") },
+        renderOptions: { window: { windowId: this.window?.windowId } },   // see _confirmAction
+        content: `<div class="cairn-confirm"><p>${game.i18n.localize("CAIRN.RestNoRations")}</p></div>`,
+        rejectClose: false,
+        modal: true,
+      });
+      return;
+    }
+
+    const lines = [game.i18n.format("CAIRN.RestRationLine",
+      { rations: formatCount("CAIRN.NRation", rationsLeft(actor)) })];
+    // NO RestTip here (2026-10-03, user ask, having read the dialog): a PC's
+    // Rest opens on the ration line, then the question. Cairn's "few moments"
+    // prose still heads the NPC confirm above and is not edited; the PC
+    // sheet's tooltip carries the ration sentence instead.
+    if (!(await this._confirmAction("CAIRN.Rest", null, "CAIRN.RestRationConfirm", lines))) return;
+
+    // ONE write: the ration and the Hit Protection land together or not at
+    // all, and the ledger posts one card for the press, headed by the button.
+    await actor.update({
+      items: [{ _id: ration.id, ...ration.spendUse() }],
+      "system.hp.value": actor.system.hp.max,
+    }, { abChangeLogAction: "CAIRN.Rest" });
+    // THE RATION'S OWN SHEET, if open, is re-rendered by hand (review #33): a
+    // parent write carrying `items` fires no item hooks and re-renders only the
+    // ACTOR's apps, so an open Rations sheet kept showing the old count — and
+    // with `submitOnChange` its next edit resubmitted the whole form, stale
+    // uses included, and the eaten ration came back. The collection re-uses
+    // the instance (`EmbeddedCollection#_initializeDocument` re-initializes an
+    // existing document), so its `apps` are still the sheets on screen.
+    for (const app of Object.values(actor.items.get(ration.id)?.apps ?? {})) app.render(false);
   }
 
   /** @this {CairnActorSheet} */
@@ -4070,10 +4618,144 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /** @this {CairnActorSheet} */
   static async #onDieOfFate() {
     const roll = await evaluateFormula("1d6");
+    // The flavor is STORED in the presser's language, so it is flagged and
+    // rebuilt per viewer (utils.js, localizeRollFlavor). This control sits on
+    // the character sheet AND the npc sheet, so the composer is as often a
+    // player as the Warden, and the card is public: before the flag, a Spanish
+    // player's Die of Fate read "Dado del destino" in every English log
+    // (review #29). The flag carries a KIND and no text.
     roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       flavor: game.i18n.localize("CAIRN.DieOfFate"),
+      flags: { [FLAG_SCOPE]: { rollFlavor: "dieOfFate" } },
     });
+  }
+
+  /**
+   * An IMPROVISED ATTACK: a damage roll with no item behind it.
+   *
+   * Every other damage roll in the system hangs off an inventory row and reads
+   * `item.system.damageFormula`, so a character who grabs a chair leg, throws a
+   * rock or swings a fist had nothing to press — and Cairn has such attacks
+   * ("Unarmed attacks always do d4 damage"). This asks what it was and what it
+   * rolls, then posts the ORDINARY damage card, which is what brings targeting,
+   * Apply, scars and the optional combat rules along without any of them knowing it is
+   * a new caller.
+   *
+   * IT IS A ROW IN THE INVENTORY, not a button in the sheet's stack (user ruling
+   * 2026-10-02, the day it shipped as a button). A permanent row with the same
+   * roll control every equipped weapon carries reads as "the weapon you always
+   * have", and is pressed with the gesture a player already knows. It is NOT an
+   * Item document, which is what makes it unremovable and slotless by
+   * construction rather than by a rule somebody has to maintain.
+   *
+   * THE GATE IS `isOwner`, AND IT IS NOT `owned()`. A player may improvise for a
+   * character they control and the Warden may anywhere, which `isOwner` says in
+   * one test because a GM owns every actor. `owned()` would be wrong twice: it
+   * is documented as being for MUTATING actions, and it tests `isEditable`,
+   * which ALSO refuses a locked compendium — exactly the bug review #18 fixed
+   * when a Warden could roll a locked-pack monster's weapon but not its die. The
+   * template hides the button from a non-owner as the affordance; this is the
+   * refusal behind it.
+   *
+   * THE OPTIONAL COMBAT RULES FALL OUT WITH NO NEW RULES: `combatDamageFormula`
+   * is asked exactly as `#onRollDamage` asks it.
+   *
+   * @this {CairnActorSheet}
+   */
+  static async #onImprovisedAttack() {
+    if (!this.actor.isOwner) {
+      ui.notifications.warn(game.i18n.localize("CAIRN.Notify.ImprovisedNotYours"));
+      return;
+    }
+
+    const panicked = game.settings.get(SETTINGS_NS, "use-panic")
+      && this.actor.system.panicked === true;
+
+    const answer = await askImprovisedAttack({ panicked, windowId: this.window?.windowId });
+    if (!answer) return;                    // dismissed or cancelled: roll nothing
+
+    // The same three rules, in the same order, as the Warden's Damage field.
+    // The `@` guard comes FIRST because `Roll.validate` stubs every `@ref` to 1
+    // and then says yes to a formula the evaluator would silently gut.
+    const typed = answer.formula;
+
+    // PANIC OVERRIDES WHATEVER WAS TYPED, and it is overridden HERE rather than
+    // in the dialog: this is the one place that decides what gets rolled, and it
+    // is also the place that stamps the panic badge on the card below, so the two
+    // cannot disagree. The dialog's own note is what tells the player before they
+    // type; this is the rule.
+    //
+    // AND IT IS APPLIED BEFORE THE FORMULA IS JUDGED (review #33): the three
+    // rules below used to run on `typed`, so a panicked player who cleared the
+    // field, or typed "fist", was refused with "not a damage roll" — the exact
+    // case the dialog's note had just promised could not fail. What is validated
+    // is what will be rolled.
+    const base = panicked ? IMPROVISED_FORMULA : typed;
+    if (!base || base.includes("@") || !Roll.validate(base)) {
+      ui.notifications.warn(
+        game.i18n.format("CAIRN.Notify.WardenDamageBadFormula", { formula: base || "" }));
+      return;
+    }
+
+    // The same gate #onRollDamage reads, and since 2026-10-03 no die is too
+    // small: a panicked 1d4 explodes, and earns the maneuver line at its max,
+    // like any other.
+    const { formula, maneuver: mayManeuver } = combatDamageFormula(base, {
+      pc: this.actor.type === "character",
+    });
+
+    const roll = await evaluateFormula(formula, this.actor.getRollData());
+
+    // THE DESCRIPTION RIDES AS THE WEAPON. `data-weapon` exists to carry "the
+    // thing this attack was made with" verbatim so the sentences rebuild per
+    // viewer from it, and a typed description is the same kind of value as an
+    // item's name.
+    //
+    // LEFT BLANK IT NAMES THE ATTACK ITSELF, and that is a correction: this
+    // comment used to claim "" was a value both rebuilds already handled by
+    // falling back to the keys for a roll that names nothing. Only the TARGETED
+    // rebuild did -- "Adobe attacks Goblin!" is a complete sentence -- while the
+    // untargeted one returned on the empty weapon and left the card carrying an
+    // EMPTY `.dmg-label`, so the roll arrived with no sentence at all. Measured
+    // in the dev world's log: three cards stored `data-weapon=""` with empty
+    // text. A correct-sounding comment on contradicting code reads as
+    // verification, which is how it survived.
+    //
+    // The phrase is NEVER stored as the weapon -- see `data-unarmed` in
+    // dmg-roll-card.html for why it cannot be -- so `weapon: what` below stays
+    // "" when blank, and `unarmed: true` is what the two rebuilds read instead.
+    const what = answer.description;
+    const label = what
+      ? game.i18n.format(panicked ? "CAIRN.RollingDmgWithWeaponPanic" : "CAIRN.RollingDmgWithWeapon",
+        { weapon: what })
+      : game.i18n.localize(panicked ? "CAIRN.RollingDmgImprovisedPanic" : "CAIRN.RollingDmgImprovised");
+
+    const targetedTokens = Array.from(game.user.targets).map((tk) => tk.id);
+    const targetIds = targetedTokens.length ? targetedTokens.join(";") : null;
+
+    const flavor = await foundry.applications.handlebars.renderTemplate(
+      "systems/air-bladder/templates/chat/dmg-roll-card.html",
+      {
+        label, targets: targetIds,
+        weapon: what,
+        // Provenance, not a description of the field: emitted even when text
+        // WAS typed, because the attribute says "no item was behind this" and
+        // that never stops being true. Both readers ask `!weapon && unarmed`.
+        unarmed: true,
+        // THE BADGE ONLY APPEARS WHEN PANICKED, and it is the badge a panicked
+        // attack already wears everywhere else -- "impaired" with `panicked`
+        // yields BadgePanic and the `panic` kind, both of which the per-viewer
+        // rebuild already knows. There is no quality to report otherwise: the
+        // field IS the quality now, so Standard would be a label for "typed what
+        // they typed". No new keys, no new kind, no new branch.
+        quality: panicked ? damageQualityLabel("impaired", { panicked }) : "",
+        qualityKind: panicked ? damageQualityKind("impaired", { panicked }) : "",
+        panic: panicked,
+        maneuver: mayManeuver,
+      }
+    );
+    roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor });
   }
 
   /**
@@ -4172,6 +4854,27 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    *  English source string (the display half translates, _prepareContext). */
   async _applyOmen(text) {
     await this.actor.update({ "system.omen": text });
+  }
+
+  /**
+   * Die beside each trait pick-list (2026-09-05, user ask): re-roll ONE trait
+   * off the same table its <select> lists — the row's key travels on the
+   * anchor, and the table comes from the same role mapping the rows were
+   * built from (_traitTableMapping), so the die and the dropdown cannot
+   * disagree about a trait's source. rollTextItems is generation's own path,
+   * so a per-row roll and a full generate are the same event one trait wide.
+   * A missing or exhausted table answers "" — bail rather than blanking the
+   * stored trait (the omen die's review-#21 rule).
+   * @this {CairnActorSheet}
+   */
+  static async #onRollTrait(event, target) {
+    event.preventDefault();
+    const key = target?.dataset.key;
+    const ref = this._traitTableMapping()[key];
+    if (!ref) return;
+    const rolled = (await rollTextItems({ [key]: ref }))[key];
+    if (!rolled) return;
+    await this.actor.update({ [`system.traits.${key}`]: rolled });
   }
 
   /**
@@ -4332,10 +5035,17 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const bonds = this._effectiveBonds();
     const idx = bonds.findIndex((b) => b.id === id);
     if (idx < 0) return;
-    const newItems = (drawn.items ?? []).map((it) => withGrantSource(it, `bond:${id}`));
+    // Hand-built: the bond's TEXT is the choice; its gear and coins are not
+    // (user ruling 2026-09-11, HAND_BUILT_FLAG). Empty set rather than a skip,
+    // so re-rolling a bond on such a sheet still clears the last one's grants.
+    const handBuilt = isHandBuilt(this.actor);
+    const drawnGold = handBuilt ? 0 : drawn.gold;
+    const newItems = handBuilt
+      ? []
+      : (drawn.items ?? []).map((it) => withGrantSource(it, `bond:${id}`));
     await this._replaceGrantedItems(`bond:${id}`, newItems);
-    const gold = Math.max(0, (this.actor.system.gold ?? 0) - (bonds[idx].gold ?? 0) + drawn.gold);
-    bonds[idx] = { id, description: drawn.description, gold: drawn.gold };
+    const gold = Math.max(0, (this.actor.system.gold ?? 0) - (bonds[idx].gold ?? 0) + drawnGold);
+    bonds[idx] = { id, description: drawn.description, gold: drawnGold };
     // abNoStatusCard, as on every other bond/question write: the gold swing
     // is the die's, not the player's, and the ledger card read it as a manual
     // edit otherwise (review #18 — this was the one member of the family
@@ -4367,13 +5077,18 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         avoid: bonds.map((b) => b.description),
       }));
       if (!rec) return;
-      bonds.push(rec.bond);
-      if (rec.items.length) {
+      // Hand-built: the bond's text is the choice, its gear and coins are not
+      // (HAND_BUILT_FLAG). This handler CREATES ITEMS DIRECTLY rather than
+      // going through `_applyBond`, so suppressing it there was not enough —
+      // the probe leg that adds a real bond is what found the gap.
+      const handBuilt = isHandBuilt(this.actor);
+      bonds.push(handBuilt ? { ...rec.bond, gold: 0 } : rec.bond);
+      if (rec.items.length && !handBuilt) {
         // abNoStatusCard here and on the update below: a bond's grants are
         // machinery, same as _replaceGrantedItems.
         await this.actor.createEmbeddedDocuments("Item", rec.items, { render: false, abNoStatusCard: true });
       }
-      const gold = (this.actor.system.gold ?? 0) + rec.bond.gold;
+      const gold = (this.actor.system.gold ?? 0) + (handBuilt ? 0 : rec.bond.gold);
       await this.actor.update({ "system.bonds": bonds, "system.gold": gold }, { abNoStatusCard: true });
     } finally {
       this._rerolling = false;
@@ -4502,12 +5217,21 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * @param {Object} opt  the chosen/rolled option off the background's table
    */
   async _applyQuestionOption(idx, question, opt) {
-    const newItems = (await resolveRefs(opt.items)).map((it) => withGrantSource(it, `question:${idx}`));
+    // A HAND-BUILT sheet records the answer and is handed nothing — no items,
+    // no containers, no coins (user ruling 2026-09-11; see HAND_BUILT_FLAG).
+    // The replace calls are still made with an EMPTY set rather than skipped,
+    // so swapping between two answers on such a sheet still clears whatever a
+    // previous answer left behind — a sheet that stopped granting must not
+    // also stop tidying up.
+    const handBuilt = isHandBuilt(this.actor);
+    const newItems = handBuilt
+      ? []
+      : (await resolveRefs(opt.items)).map((it) => withGrantSource(it, `question:${idx}`));
     await this._replaceGrantedItems(`question:${idx}`, newItems);
-    await replaceGrantedContainers(this.actor, `question:${idx}`, opt.containers ?? []);
+    await replaceGrantedContainers(this.actor, `question:${idx}`, handBuilt ? [] : (opt.containers ?? []));
     const questions = foundry.utils.duplicate(this.actor.system.questions ?? []);
     const oldGold = questions[idx]?.gold ?? 0;
-    const newGold = opt.bonusGold ?? 0;
+    const newGold = handBuilt ? 0 : (opt.bonusGold ?? 0);
     const gold = Math.max(0, (this.actor.system.gold ?? 0) - oldGold + newGold);
     questions[idx] = { question, answer: opt.description ?? "", gold: newGold };
     // abNoStatusCard: a question swap's gold swing is grant machinery.
@@ -4566,21 +5290,23 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * Portrait picker — the actor counterpart to _pickContainerArt. Which
    * galleries appear is a ROLE question, not a type question:
    *
-   *   Player Character   Aspeheim + Custom + Tlomdev
-   *   NPC / Hireling     Aspeheim + Custom + Game-Icons + Tlomdev + Lydia
-   *   Monster            Custom + Game-Icons + Tlomdev + Lydia
+   *   Player Character   Aspeheim + Custom + Tlomdev + Lydia characters
+   *   NPC / Hireling     Aspeheim + Custom + Game-Icons + Tlomdev + Lydia characters
+   *   Monster            Custom + Game-Icons + Tlomdev + Lydia monsters
    *
-   * Aspeheim's art is human faces, so a Monster is not offered it. Lydia's is
-   * the mirror image — seventeen creatures drawn for this system, so a PLAYER
-   * CHARACTER is not offered it; the two exclusions are the same rule read from
-   * opposite ends, and between them every sheet keeps a gallery of faces and a
-   * gallery of beasts. Nothing else is withheld anywhere, and the URL row and
-   * Browse escape are on every sheet. Tlomdev's tokens are drawn for creatures
-   * AND people (its "human npcs" and Kettlewright folders are faces), so unlike
-   * either of those it appears everywhere. Thing roles (mount, transport,
-   * container) never reach here — _onEditPortrait routes them to the container
-   * gallery, which is not offered Lydia's art either: a mount wants a horse
-   * glyph, and her beasts are monsters rather than livestock.
+   * Lydia's gallery is TWO SETS since 2026-09-05, split the same way
+   * Aspeheim's exclusion reads: her characters (femme and non-binary faces)
+   * go where faces go — every person sheet, PCs included — and her monsters
+   * go where Aspeheim's faces do not. A Monster sheet is not offered the
+   * character set for the same reason it is not offered Aspeheim, and a
+   * person sheet is no longer offered her creatures: a set per role, never
+   * both. Nothing else is withheld anywhere, and the URL row and Browse
+   * escape are on every sheet. Tlomdev's tokens are drawn for creatures AND
+   * people (its "human npcs" and Kettlewright folders are faces), so it
+   * appears everywhere. Thing roles (mount, transport, container) never
+   * reach here — _onEditPortrait routes them to the container gallery, which
+   * is offered neither Lydia set: a mount wants a horse glyph, and her
+   * monsters are monsters rather than livestock.
    *
    * Picking swaps the portrait AND its token via _setPortrait.
    * @private
@@ -4595,7 +5321,7 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       custom: true,
       gameIcons: this.actor.type !== "character",
       tlomdev: true,
-      lydia: this.actor.type !== "character",
+      lydia: isMonster ? "monsters" : "characters",
       browseStart: (await getPortraitManifest())?.portraitDir ?? "systems/air-bladder/art/jon-aspeheim/portraits",
       onPick: (src) => this._setPortrait(src),
     });
@@ -4759,6 +5485,16 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // The Actor the item currently belongs to; null for a world or compendium item.
     const originalActor = originalItem.actor;
 
+    // A sheet this user does NOT own cannot receive a create at all — until
+    // 2026-09-06 the drop silently died on core's owner wall. It is an OFFER
+    // now (item-offer.js): dropping your item on another player's character
+    // posts the give/accept card instead of writing anything. FIRST branch,
+    // deliberately — nothing below (the background intercept included) may
+    // write on a sheet the dropper does not own.
+    if (!this.actor.isOwner) {
+      return offerFromDrop(this.actor, originalItem);
+    }
+
     // A background ARRIVING here is not inventory. Dropping one CHANGES the
     // character's background — the same operation as the magnifier's picker — so it
     // is intercepted before any capacity check and before any create. Without this
@@ -4867,23 +5603,11 @@ export class CairnActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // once that has actually succeeded. The old order created-then-decremented
     // unconditionally: a refused create (typically a permissions wall) threw AND
     // still decremented the source, so the item vanished.
-    const foundItem = this.actor.items.find(
-      (it) => it.name === originalItem.name && it.type === originalItem.type
-        // A stack is only a stack when the flag-shaped discriminators agree:
-        // a spellbook and a spellscroll share name AND type (gear.js stores a
-        // scroll under the bare spell name), so the name+type test merged a
-        // dropped book into a scroll stack — the book was never created, and
-        // a cross-actor drop deleted the source scroll while bumping the
-        // target's book (review #9). Any future flag-style splitter joins
-        // this test rather than growing a new merge.
-        && !!it.system?.scroll === !!originalItem.system?.scroll
-        // A bound page and the loose book of the same spell are different
-        // things (the page is the book's), and a GRIMOIRE never stacks at all:
-        // each book carries its own pages, and quantity 2 on one document
-        // would make two libraries indistinguishable.
-        && !!it.system?.bound === !!originalItem.system?.bound
-        && !it.system?.grimoire && !originalItem.system?.grimoire
-    );
+    // The stack discriminator lives in gear.js (findMatchingStack) since the
+    // offer delivery started merging by the same rule — one test, two
+    // callers, so they cannot disagree about what a stack is. Its review-#9
+    // history and the join-don't-grow rule are documented there.
+    const foundItem = findMatchingStack(this.actor, originalItem);
     let created = foundItem ?? null;
     if (foundItem) {
       await foundItem.update({ "system.quantity": (foundItem.system.quantity ?? 1) + 1 });

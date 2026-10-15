@@ -38,6 +38,41 @@ const WANT_SHOTS = process.argv.includes("--shots");
 if (WANT_SHOTS) fs.mkdirSync(outDir, { recursive: true });
 
 /**
+ * Put the client in one colour scheme the way a Warden does — through core's
+ * own `configureUI`, which is what `core.uiConfig`'s onChange calls.
+ *
+ * NOT `document.body.classList.add("theme-light")`, which is what every pass
+ * here used to do and what let a real defect through. ONE setting sets TWO
+ * themes and they land on DIFFERENT ELEMENTS (game.mjs:1852-1875): the
+ * Applications theme on <body>, the INTERFACE theme on #interface and on each
+ * open app. Interface chrome — the watch clock, the player list — resolves its
+ * variables from #interface, the nearer ancestor, so flipping <body> alone
+ * leaves that chrome in the scheme it already had.
+ *
+ * What that cost, measured 2026-09-13 on the live dev world: with <body> at
+ * theme-light and #interface still theme-dark, the clock kept `#e7d1b1` text
+ * and the light pass reported it CLEAN. Under a real light interface its text
+ * is `#333` on a `rgba(11,10,19,0.75)` slab — about 1.2:1, unreadable, and
+ * visible in a screenshot. The gate measured the dark clock twice and called
+ * one of them light. The CSS fix is in the same commit.
+ *
+ * Nothing is WRITTEN: `configureUI` takes the config as an argument, so the
+ * world's own stored setting is never touched and `restoreScheme` puts the
+ * live client back to it.
+ */
+async function setScheme(page, scheme) {
+  await page.evaluate((s) => {
+    const cfg = foundry.utils.deepClone(game.settings.get("core", "uiConfig"));
+    cfg.colorScheme = { applications: s, interface: s };
+    game.configureUI(cfg);
+  }, scheme);
+}
+
+async function restoreScheme(page) {
+  await page.evaluate(() => game.configureUI(game.settings.get("core", "uiConfig")));
+}
+
+/**
  * WCAG's 3:1 is the floor for large text and 4.5 for body text. We gate at 3.0
  * deliberately: the goal is "nobody is reading grey on grey", not AA compliance
  * for a fantasy character sheet. Under 3 is a defect; 3-4.5 is a judgement call
@@ -382,6 +417,165 @@ try {
     }
   }
 
+  /* ---- the watch clock: Foundry's chrome, not a sheet -------------------- */
+  //
+  // The ONE surface here that is deliberately NOT painted from the --ab-*
+  // palette. It sits in #ui-left-column-1 wearing core's `faded-ui`, and the
+  // panel it has to match is a translucent dark slab in BOTH schemes — so it
+  // reads core's chrome variables instead (docs/theming.md). That makes it
+  // exactly the thing this gate exists for: an exception is only safe if
+  // somebody measures it, and "invisible in light mode" is the failure it would
+  // otherwise ship with.
+  //
+  // It has no tabs and is not a window, so it gets its own short pass rather
+  // than joining the sheet loop.
+  const clockPresent = await page.evaluate(() => !!document.getElementById("cairn-watch-clock"));
+  if (!clockPresent) {
+    console.error("  FAIL  the watch clock is not on screen — nothing to measure");
+    process.exitCode = 1;
+  } else {
+    for (const scheme of ["light", "dark"]) {
+      await setScheme(page, scheme);
+      await page.waitForTimeout(250);
+      await page.evaluate(() => window.__abWarm(document.getElementById("cairn-watch-clock")));
+      const r = await page.evaluate(() => window.__abAudit("#cairn-watch-clock"));
+      if (r.error) throw new Error(r.error);
+      results.push({
+        what: "the watch clock (Foundry chrome)", label: "WatchClock", scheme, simulated: false,
+        strict: true, text: r.text, borders: r.borders,
+      });
+    }
+  }
+
+  /* ---- the clock again, in its VALD shape -------------------------------- */
+  //
+  // Four lines instead of two, a season glyph, and — the part that matters for
+  // a colour gate — the inner element becomes a real <button>. Core paints a
+  // button's ground, border and text from a later cascade layer, so without the
+  // system layer's `!important` the clock would render as a chrome button
+  // sitting inside its own panel. That is a light-mode failure by construction,
+  // which is exactly what this gate is for.
+  //
+  // The hack and the day's weather are both SHADOWED, never written: the
+  // world's setting is nobody's business here and the weather is a record of
+  // something that happened at somebody's table.
+  await page.evaluate(async () => {
+    const gt = await import("/systems/air-bladder/module/game-time.js");
+    const settings = game.settings;
+    window.__abRealGet2 = settings.get.bind(settings);
+    window.__abPrevCal2 = [CONFIG.time.worldCalendarConfig, CONFIG.time.worldCalendarClass];
+    settings.get = (ns, key, ...rest) => {
+      if (ns !== "air-bladder") return window.__abRealGet2(ns, key, ...rest);
+      if (key === "enable-vald-calendar") return true;
+      if (key === "vald-weather-today") return { day: gt.dayCount(), text: "Thunderstorms" };
+      return window.__abRealGet2(ns, key, ...rest);
+    };
+    CONFIG.time.worldCalendarConfig = gt.VALD_CALENDAR_CONFIG;
+    CONFIG.time.worldCalendarClass = gt.ValdCalendar;
+    game.time.initializeCalendar();
+  });
+
+  for (const scheme of ["light", "dark"]) {
+    await setScheme(page, scheme);
+    await page.evaluate(async () => {
+      const wc = await import("/systems/air-bladder/module/watch-clock.js");
+      await wc.refreshWatchClock();
+    });
+    await page.waitForTimeout(250);
+    const lines = await page.evaluate(() => ({
+      isButton: !!document.querySelector("#cairn-watch-clock button.cairn-watch-inner"),
+      weather: !!document.querySelector("#cairn-watch-clock .cairn-watch-weather"),
+    }));
+    if (!lines.isButton || !lines.weather) {
+      console.error(`  FAIL  the Vald clock did not render its button and fourth line (${scheme})`);
+      process.exitCode = 1;
+    }
+    await page.evaluate(() => window.__abWarm(document.getElementById("cairn-watch-clock")));
+    const r = await page.evaluate(() => window.__abAudit("#cairn-watch-clock"));
+    if (r.error) throw new Error(r.error);
+    results.push({
+      what: "the watch clock, Vald shape (button, glyph, weather)", label: "WatchClockVald",
+      scheme, simulated: false, strict: true, text: r.text, borders: r.borders,
+    });
+  }
+
+  await page.evaluate(async () => {
+    if (window.__abRealGet2) game.settings.get = window.__abRealGet2;
+    if (window.__abPrevCal2) {
+      [CONFIG.time.worldCalendarConfig, CONFIG.time.worldCalendarClass] = window.__abPrevCal2;
+      game.time.initializeCalendar();
+    }
+    delete window.__abRealGet2;
+    delete window.__abPrevCal2;
+    const wc = await import("/systems/air-bladder/module/watch-clock.js");
+    await wc.refreshWatchClock();
+  });
+
+  /* ---- the Vald calendar: a sheet, so the palette DOES apply ------------- */
+  //
+  // THE BOUNDARY, MEASURED. The clock above is chrome and reads core's
+  // variables; the calendar is an ordinary framed application sitting on the
+  // sheet ground, so it reads --ab-* throughout — including its five season
+  // tints, which are the first colours here that paint a BACKGROUND a reader
+  // has to see text through. That is exactly the shape that goes wrong in one
+  // scheme only, so both are measured.
+  //
+  // Opened with the hack SHADOWED on, never written: the world's own setting
+  // is nobody's business here and flipping it would require a reload.
+  const calendarOpened = await page.evaluate(async () => {
+    const gt = await import("/systems/air-bladder/module/game-time.js");
+    const vc = await import("/systems/air-bladder/module/vald-calendar.js");
+    const settings = game.settings;
+    window.__abRealGet = settings.get.bind(settings);
+    window.__abPrevCal = [CONFIG.time.worldCalendarConfig, CONFIG.time.worldCalendarClass];
+    settings.get = (ns, key, ...rest) =>
+      (ns === "air-bladder" && key === "enable-vald-calendar" ? true : window.__abRealGet(ns, key, ...rest));
+    CONFIG.time.worldCalendarConfig = gt.VALD_CALENDAR_CONFIG;
+    CONFIG.time.worldCalendarClass = gt.ValdCalendar;
+    game.time.initializeCalendar();
+    await vc.openValdCalendar();
+    return !!document.getElementById("cairn-vald-calendar");
+  });
+
+  if (!calendarOpened) {
+    console.error("  FAIL  the Vald calendar did not open — nothing to measure");
+    process.exitCode = 1;
+  } else {
+    for (const scheme of ["light", "dark"]) {
+      await setScheme(page, scheme);
+      // RE-RENDER AFTER THE SWITCH, and this is not belt-and-braces. An element
+      // that existed before the body's theme class changed keeps its RESOLVED
+      // colours: `getComputedStyle(el).getPropertyValue("--ab-ink")` reports the
+      // new light value while `color` still paints the old dark one, and setting
+      // the custom property inline on that element changes nothing. Measured
+      // 2026-09-10 — the calendar reported five light-mode findings that did not
+      // exist, all of them the previous scheme's paint. A freshly created element
+      // beside the stale one read correctly, which is what told the two apart.
+      await page.evaluate(async () => {
+        await foundry.applications.instances.get("cairn-vald-calendar")?.render();
+      });
+      await page.waitForTimeout(250);
+      await page.evaluate(() => window.__abWarm(document.getElementById("cairn-vald-calendar")));
+      const r = await page.evaluate(() => window.__abAudit("#cairn-vald-calendar"));
+      if (r.error) throw new Error(r.error);
+      results.push({
+        what: "the Vald calendar", label: "ValdCalendar", scheme, simulated: false,
+        text: r.text, borders: r.borders,
+      });
+    }
+  }
+
+  await page.evaluate(async () => {
+    foundry.applications.instances.get("cairn-vald-calendar")?.close();
+    if (window.__abRealGet) game.settings.get = window.__abRealGet;
+    if (window.__abPrevCal) {
+      [CONFIG.time.worldCalendarConfig, CONFIG.time.worldCalendarClass] = window.__abPrevCal;
+      game.time.initializeCalendar();
+    }
+    delete window.__abRealGet;
+    delete window.__abPrevCal;
+  });
+
   await page.evaluate(async ([a, n, w, owned, b]) => {
     if (!owned) await game.items.get(w)?.delete();
     await game.items.get(b)?.delete();
@@ -389,12 +583,26 @@ try {
     await game.actors.get(n)?.delete();
   }, [targets.actorId, targets.npcId, targets.weaponId, targets.weaponOwned, targets.bgId]);
 
+  // Put the client back on the world's own stored scheme. Nothing was written,
+  // so this only tidies the live page before it closes.
+  await restoreScheme(page);
+
   /**
    * Light is the shipping, accepted appearance, so it is the BASELINE: only a
    * finding that appears in dark and NOT in light fails the run. Without that,
    * the gate can never go green — Foundry's own chrome (a 1.24:1 button border
    * on parchment, the window header) flags in both schemes and is not ours to
    * fix. Light findings are still printed, as information.
+   *
+   * EXCEPT ON A `strict` SURFACE, and that exemption is what let a real defect
+   * ship. The rule above was written for the AppV1→AppV2 sheet port, where a
+   * ported window is full of core chrome nobody here can repaint. The watch
+   * clock is not that: it is a panel we paint from the first pixel, with no
+   * core element anywhere inside it, so a light-mode finding there is OURS.
+   * Left on the baseline rule it printed the defect and passed the run —
+   * `#333` text on a `rgba(11,10,19,0.75)` slab, about 1.2:1, reported as
+   * "pre-existing (baseline, not a failure)". On a strict surface a finding in
+   * EITHER scheme fails. Measured 2026-09-13.
    */
   const key = (x) => `${x.el}|${x.side ?? "text"}`;
   for (const r of results) {
@@ -405,13 +613,17 @@ try {
 
     const tag = `${r.what} — ${r.scheme}${r.simulated ? " (SIMULATED: post-port state)" : ""}`;
     const n = r.text.length + r.borders.length;
-    const verdict = r.scheme === "light"
-      ? (n ? `${n} pre-existing (baseline, not a failure)` : "clean")
-      : (regressions ? `${regressions} regression(s) vs light` : `clean${n ? ` (${n} shared with light)` : ""}`);
+    const hard = r.strict ? n : regressions;
+    const mark = (x) => (r.strict ? "FAIL" : isNew(x) ? "NEW " : "    ");
+    const verdict = r.strict
+      ? (n ? `${n} finding(s) — STRICT surface, both schemes must be clean` : "clean")
+      : r.scheme === "light"
+        ? (n ? `${n} pre-existing (baseline, not a failure)` : "clean")
+        : (regressions ? `${regressions} regression(s) vs light` : `clean${n ? ` (${n} shared with light)` : ""}`);
     console.log(`── ${tag}\n   ${verdict}`);
-    for (const t of r.text) console.log(`   ${isNew(t) ? "NEW " : "    "}text   ${t.ratio.toFixed(2)}:1  ${t.el}  ${t.color} on ${t.bg}  "${t.sample}"`);
-    for (const b of r.borders) console.log(`   ${isNew(b) ? "NEW " : "    "}border ${b.ratio.toFixed(2)}:1  ${b.el} ${b.side}  ${b.color} on ${b.bg}`);
-    if (regressions) failed = true;
+    for (const t of r.text) console.log(`   ${mark(t)}text   ${t.ratio.toFixed(2)}:1  ${t.el}  ${t.color} on ${t.bg}  "${t.sample}"`);
+    for (const b of r.borders) console.log(`   ${mark(b)}border ${b.ratio.toFixed(2)}:1  ${b.el} ${b.side}  ${b.color} on ${b.bg}`);
+    if (hard) failed = true;
     console.log("");
   }
   if (WANT_SHOTS) console.log(`screenshots: ${outDir}\n`);

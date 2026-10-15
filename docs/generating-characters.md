@@ -1,17 +1,65 @@
 # Generating Characters
 
-Cairn characters are not built — they are dealt. Air Bladder gives you two ways
-to deal one, and one loop for making the result yours. There is deliberately no
-step-by-step "character builder": the dice hand you a person, and the choices
+Cairn characters are not built — they are dealt. Air Bladder gives you three
+ways to get one, and one loop for making the result yours. There is deliberately
+no step-by-step "character builder": the dice hand you a person, and the choices
 come after.
 
-## Generate PC
+## Create PC
 
-The **Generate PC** button sits above the Actors sidebar. One click
-rolls everything a Cairn 2e character starts with — abilities, Hit Protection,
-a background with its gear and questions, traits, age, and a bond — and opens
-the finished sheet. With more than one content source enabled (Custom 2e,
-Barebones), a picker asks which table to deal from first.
+The **Create PC** button sits above the Actors sidebar. Clicking it asks one
+question, then rolls everything a Cairn 2e character starts with — abilities,
+Hit Protection, a background with its gear and questions, traits, age, and a
+bond — and opens the finished sheet. With more than one content source enabled
+(Custom 2e, Barebones), the same window asks which table to deal from.
+
+## Start from an empty sheet
+
+That question is a tick-box reading **Use random generation.** Leave it ticked
+and you get what you always got. Clear it and you get a character with nothing
+rolled: no background, no gear, no bonds, no traits, no age. Abilities start at
+10 and Hit Protection at 3, and you type over them.
+
+The same box sits on **Create NPC**, **Create Hireling** and **Create
+Monster**, so any of the four can arrive empty — and on **Create Faction**,
+where clearing it lets you pick each part of the faction from its table
+instead (see [Generating factions](generating-factions.md)).
+
+Players see the box only where they could use it. An empty sheet is filled in
+with the pick-list buttons, and those belong to Character Creation Mode — which
+the Warden's **Toggle Player Creation Tools** switch can take away. With that
+switch off, a player's dialog just confirms, because an empty sheet they cannot
+fill in is no use to them.
+
+**This is not a character builder, and it is not the way to make a character.**
+It is for the table that rolls on paper. Deal your character with the book and
+your own dice, then open an empty sheet and put it in: type the numbers, and use
+the **pick-list buttons** for anything that comes off a table. An empty sheet
+arrives with **Character Creation Mode** already on so those buttons are there
+waiting; turn it off when you are finished and the sheet goes quiet.
+
+**An empty sheet is never handed anything.** Choosing a background, a bond, an
+answer to a background question or a failed career records what you chose and
+nothing more — no gear, no coins. You already know what your character is
+carrying, so the sheet does not guess and then leave you deleting a pack's worth
+of things you never asked for. Type your inventory in.
+
+**The same is true of an empty NPC, hireling or monster.** Giving an empty
+hireling a career, or an empty NPC a background, records the choice and hands
+over none of the gear that normally comes with it. A career also leaves the
+statblock alone, so the numbers you typed off your paper sheet stay where you
+put them.
+
+That holds for as long as the sheet lives, not just while it is empty. If you
+change your mind and want the dice to furnish the character after all, use
+**Roll Character** with **Background** ticked: that deals a whole character, and
+from then on the sheet behaves like any other — pick a background later and it
+brings its gear. Ticking **Starting gear** on its own does the same. On an NPC,
+hireling or monster, the **Roll** button in the sheet's title bar is the way
+back.
+
+If you want a character and you do not have one already, roll it. That is the
+game.
 
 ## Import from Kettlewright
 
@@ -69,3 +117,105 @@ For players, the sheet tools ride their own switch — **"Let players use
 Character Creation tools on their sheets"**, flipped by the **Toggle Player
 Creation Tools** macro — so you can allow character creation but keep
 mid-campaign re-rolls to yourself, or hand players the dice entirely.
+
+## Choose the dice
+
+Under **Game Settings → Air Bladder → Configure Character Generation** are
+four settings that decide what a player character is rolled with. They apply
+to player characters only: NPCs, hirelings and monsters are not affected by
+any of them.
+
+| Setting | Choices |
+|---|---|
+| **Ability dice for player characters** | Default (3d6) · Adventurer (4d6kh3) · Crawler (2d6 + 3) |
+| **Gold dice for player characters** | the same three |
+| **Hit Protection formula for player characters** | any formula; `1d6` by default |
+| **Age formula for generated characters** | any formula; `2d20 + 10` by default |
+
+**Default is the book.** **Adventurer** rolls four dice and keeps the best
+three, which covers the same 3–18 range but makes high scores far more
+likely. **Crawler** rolls between 5 and 15. The two menus are independent, so
+Adventurer abilities with Default gold is a perfectly good table.
+
+Hit Protection takes a formula rather than a menu because a fixed value is
+the common want: type `4` and every character arrives with 4. Leave it blank
+for `1d6`. The notation is explained in **Dice Formulas**, also at
+airbladder.xyz under Guides.
+
+These govern the **base roll** only. Coins a bond or a background question
+grants are added on top, as they always were, so a Crawler character still
+receives them above the 5-gold floor.
+
+Whatever you choose, **the dice say what they are**: hover any row of the
+Roll Character checklist — STR, DEX, WIL, Hit Protection, Gold or Age — and
+it tells you the formula that row will roll. The die beside Age on the sheet
+names its formula the same way.
+
+## Make the tables yours
+
+Everything a generated character is dealt from is a rollable table, and a table
+in **your world** with a shipped table's name is what gets rolled instead. So
+the durable way to change what characters arrive with is to keep your own copies
+in your world, where no update can touch them. Think of the shipped compendiums
+as **templates**: the starting point you copy and make your own, never the place
+you edit.
+
+Three buttons do the copying, all Wardens only:
+
+- **Create a Custom Spell Table…**, on the **Rollable Tables** sidebar
+  tab. It copies the spell table a character is dealt a random spellbook or
+  scroll from — `Spells — Canon (1d100)`, or `Spells — GLOG` while the GLOG
+  Magic hack is on — into a **Custom Spells** folder, along with every spellbook
+  it can hand out, and points every row at your copies. The hack swaps the pool
+  wholesale and is a one-way campaign decision, so if you copy the canon list
+  and switch the hack on later, come back and press the button again for the
+  GLOG list.
+- **Create Custom Barebones Creation Tables…**, on the **Rollable
+  Tables** sidebar tab. It copies the six tables a Barebones character is dealt
+  from — Weapon, Armor, Additional Gear and the three Weapon Tier tables — into
+  a **Custom Barebones Character Creation** folder, along with every item, mount
+  and transport they can hand out — the items sorted into a subfolder per source compendium,
+  Armor, Background Items, Gear, Tools, Trinkets, Weapons — and points every
+  row at your copies.
+- **Create Custom 2e Backgrounds and Tables…**, the fourth button on the same
+  tab, and also at the top of the **Compendium** tab. That one is the 27 backgrounds plus the eleven
+  tables a 2e character rolls on; see
+  [Creating Custom Backgrounds](creating-custom-backgrounds.md) and
+  [Customizing Bonds](customizing-bonds.md).
+
+Why the items come too: a table row names a document, and generation hands over
+whatever that row points at. Import a table by itself and its rows still point
+into the compendium, so the Dagger a new character receives is the shipped
+Dagger however carefully you edited yours. With the rows pointed at your copies,
+changing a weapon's damage or a piece of gear's description changes what the
+next character is dealt.
+
+A window afterwards says what landed and offers to open the folders. Running
+either button again never overwrites: what you have edited is kept, and only
+what is missing is added.
+
+Every copy explains itself. Open one and a note at the top says what it is
+dealt for and how to add a row — and, since a table opens in view mode, that
+you press **Edit** at the top of the window first. Drag a spellbook onto the spell table and it
+re-sorts itself by name, formula included, so the new spell can be rolled.
+Drag an item onto a Barebones creation table and the table's die follows its
+rows, so the new item can be rolled too.
+
+## Taking a background out of play
+
+You do not need a copy to hide a shipped background. Open any Cairn 2e
+character with **Character Creation Mode** on, press the **pick-list button**
+beside Background, and every background in play is listed with an **eye** at
+the end of its row — the eyes show for the Warden only. Click the eye and that
+background is out: the row greys out for you, and for players it disappears
+from the list and the dice never land on it. Click the eye again to bring it
+back.
+
+It is per background, and the world remembers it, so it holds for every
+character and every session until you change it. It works the same on the
+Player's Guide twenty, the seven in **Backgrounds (Custom)**, and your own
+copies — and a copy made by **Create Custom 2e Backgrounds and Tables…** is the
+same background as far as the eye is concerned, so one you switched off stays
+off when its copy lands, and switching either back on switches on both. The
+last background left in play cannot be switched off, because generation must
+always have something to deal.

@@ -1,7 +1,7 @@
 import { CairnActor } from "./actor/actor.js";
 import { Cairn } from "./config.js";
-import { compendiumInfoFromString, findCompendiumItem, resultText } from "./compendium.js";
-import { getGameIconManifest, customPoolFor } from "./character-generator.js";
+import { rollTablePlainText } from "./compendium.js";
+import { getGameIconManifest, customPoolFor, promptCreation, clearHandBuilt } from "./character-generator.js";
 // Aliased: the tier config is locally `t` throughout generateMonster.
 import { t as tr } from "./i18n-content.js";
 
@@ -73,22 +73,14 @@ const pickWeighted = (pairs) => {
   return pairs[pairs.length - 1][0];
 };
 
-/**
- * One text result off a Warden table, by "packId;Table Name" config string.
- * roll(), never draw() — these are the WARDEN'S tables and a draw would dirty
- * their drawn state (the rollNameFromTable invariant). "" on a missing or
- * empty table: generation degrades, it never throws (the drawTableText
- * contract, and findCompendiumItem already warned).
- * @param {String} config
- * @returns {Promise<String>}
- */
-const rollTableText = async (config) => {
-  const [packName, tableName] = compendiumInfoFromString(config);
-  const table = await findCompendiumItem(packName, tableName);
-  if (!table) return "";
-  const { results } = await table.roll();
-  return resultText(results[0]).trim();
-};
+// The eight tables are rolled through compendium.js `rollTablePlainText` — the
+// SHARED reader, since 2026-09-13, which resolves each declaration WORLD FIRST
+// and rolls without marking. A private copy lived here for a month and was
+// the reason a Warden's own monster table came up on the Dashboard button and
+// never in a generated monster. PLAIN text, trimmed, not `rollTableText`: that
+// one returns chat text, which renders a document row as `@UUID[...]{name}`
+// — right in a trait string, wrong in a monster's name (review #30; the
+// comment here called the two "identical but for the lookup" for a day).
 
 /**
  * The tier picker — and, on a re-roll, the CONFIRMATION. It is dismissible
@@ -106,6 +98,12 @@ export const promptMonsterTier = async ({ regenerate = false } = {}) => {
       icon: "fas fa-dragon",
     },
     content: `<p>${game.i18n.localize(regenerate ? "CAIRN.MonsterGen.RegeneratePrompt" : "CAIRN.MonsterGen.TierPrompt")}</p>`,
+    // 400, stated: DialogV2.wait merges NO width where confirm and prompt merge
+    // 400 (dialog.mjs:353,374), so a wait() dialog inherits ApplicationV2's
+    // width "auto" and is as wide as its longest unwrapped line. The
+    // regenerate prompt is 131 characters and this dialog opens off a 600px
+    // actor sheet (review #28).
+    position: { width: 400 },
     buttons: [
       { action: "standard", label: game.i18n.localize("CAIRN.MonsterGen.TierStandard") },
       { action: "hardier", label: game.i18n.localize("CAIRN.MonsterGen.TierHardier") },
@@ -141,14 +139,14 @@ export const generateMonster = async (tierChoice) => {
   const t = TIERS[tier];
   const cfg = Cairn.monsterGenerator;
 
-  const physique = await rollTableText(cfg.physique);
-  const feature = await rollTableText(cfg.feature);
-  const quirk = await rollTableText(cfg.quirk);
-  const weakness = await rollTableText(cfg.weakness);
-  const attackType = await rollTableText(cfg.attackType);
-  const criticalDamage = await rollTableText(cfg.criticalDamage);
-  const abilityPower = await rollTableText(cfg.abilityPower);
-  const abilityTarget = await rollTableText(cfg.abilityTarget);
+  const physique = await rollTablePlainText(cfg.physique);
+  const feature = await rollTablePlainText(cfg.feature);
+  const quirk = await rollTablePlainText(cfg.quirk);
+  const weakness = await rollTablePlainText(cfg.weakness);
+  const attackType = await rollTablePlainText(cfg.attackType);
+  const criticalDamage = await rollTablePlainText(cfg.criticalDamage);
+  const abilityPower = await rollTablePlainText(cfg.abilityPower);
+  const abilityTarget = await rollTablePlainText(cfg.abilityTarget);
 
   // The rolled strings are table.result rows and go through the overlay for
   // everything DISPLAYED-and-stored: this path already bakes the localized
@@ -298,15 +296,46 @@ const randomMonsterIcon = async () => {
 };
 
 /**
- * The directory button's whole flow: ask the tier (dismiss = create nothing),
- * generate, create. The portrait doubles as the token texture — monsters have
- * no paired token art the way Aspeheim portraits do.
+ * The tier rows, as the creation dialog's dropdown. `promptMonsterTier`'s four
+ * BUTTONS survive for the regenerate path alone: there the dialog is a
+ * destructive confirm whose wording says what is about to be replaced, and it
+ * has no empty-sheet choice to offer. Creating is a different question, so it
+ * takes the shape every other creation route now has.
+ */
+const TIER_CHOICES = [
+  { value: "random", label: "CAIRN.MonsterGen.TierRandom", default: true },
+  { value: "standard", label: "CAIRN.MonsterGen.TierStandard" },
+  { value: "hardier", label: "CAIRN.MonsterGen.TierHardier" },
+  { value: "serious", label: "CAIRN.MonsterGen.TierSerious" },
+];
+
+/**
+ * The monster half of the creation dialog: the tier as a dropdown, plus the
+ * roll checkbox every creation route now carries. Called by
+ * `createActorInteractive`, which owns the dialog for all four kinds.
+ * @returns {Promise<{blank: Boolean, choice: String|null}|null>}
+ */
+export const promptMonsterCreation = () => promptCreation("monster", {
+  choices: TIER_CHOICES,
+  choiceLabel: "CAIRN.MonsterGen.TierPrompt",
+  // A tier chooses nothing on an empty sheet, so it greys out with the box.
+  lockChoiceWhenBlank: true,
+});
+
+/**
+ * Roll a monster and create it. NON-INTERACTIVE since 2026-09-11: it used to
+ * open the tier picker itself, and the picker moved out to
+ * `promptMonsterCreation` above when every creation route gained the
+ * empty-sheet checkbox. A caller that wants the dialog asks for it; a probe or
+ * a macro passes a tier and gets a monster.
+ *
+ * The portrait doubles as the token texture — monsters have no paired token art
+ * the way Aspeheim portraits do.
+ * @param {{folder?: Object|null, tier?: "standard"|"hardier"|"serious"|"random"}} [options]
  * @returns {Promise<CairnActor|null>}
  */
-export const createMonster = async ({ folder = null } = {}) => {
-  const choice = await promptMonsterTier();
-  if (!choice) return null;
-  const data = monsterToActorData(await generateMonster(choice));
+export const createMonster = async ({ folder = null, tier = "random" } = {}) => {
+  const data = monsterToActorData(await generateMonster(tier));
   const img = await randomMonsterIcon();
   data.img = img;
   data.prototypeToken.texture = { src: img };
@@ -327,6 +356,7 @@ export const createMonster = async ({ folder = null } = {}) => {
  */
 export const regenerateMonster = async (actor, tierChoice) => {
   const m = await generateMonster(tierChoice);
+  await clearHandBuilt(actor); // the way out, as in regenerateNpc (review #26)
   await actor.deleteEmbeddedDocuments("Item", [], { deleteAll: true, render: false, abNoStatusCard: true });
   // createEmbeddedDocuments, never `items` inside the update: the update route
   // creates embedded documents without firing createItem hooks. Same order as
